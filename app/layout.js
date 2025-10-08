@@ -3,6 +3,7 @@ import "./globals.css";
 import Nav from "./components/Nav/Nav";
 import FreeDelivery from "./components/FreeDelivery/FreeDelivery";
 import Footer from "./components/Footer/Footer";
+import AuthProvider from "./providers";
 
 // Konfiguracja czcionki Josefin Sans
 const josefinSans = Josefin_Sans({
@@ -21,10 +22,12 @@ export default function RootLayout({ children }) {
   return (
     <html lang="pl">
       <body className={`${josefinSans.className} antialiased`}>
-        <FreeDelivery />
-        <Nav />
-        {children}
-        <Footer />
+        <AuthProvider>
+          <FreeDelivery />
+          <Nav />
+          {children}
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

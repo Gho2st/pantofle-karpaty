@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import { ShoppingCart, Search, User } from "lucide-react";
-import { signIn } from "next-auth/react";
+import { signIn, signOut } from "next-auth/react";
 
 export default function Nav() {
   const baseMenuItemClasses = "p-2 hover:text-red-600 transition duration-300";
@@ -137,6 +137,15 @@ export default function Nav() {
               onClick={() => signIn()}
             >
               <User className="w-6 h-6" />
+            </button>
+
+            {/* IKONA Wylogowania  */}
+            <button
+              className={iconButtonClasses}
+              aria-label="Logowanie / Moje Konto"
+              onClick={() => signOut()}
+            >
+              <User className="w-12 h-12" />
             </button>
 
             {/* Koszyk */}
