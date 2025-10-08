@@ -1,47 +1,94 @@
+import { PrismaClient } from "@prisma/client";
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
-// Definicja konfiguracji (authOptions), tym razem BEZ export const
+// Inicjalizacja PrismaClient
+const prisma = new PrismaClient();
+
 const authOptions = {
-  // 1. Dostawcy uwierzytelniania
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
   ],
-
-  // 2. Strategia Sesji: Użycie JWT
   session: {
     strategy: "jwt",
   },
-
-  // 3. Strona Logowania
   pages: {
     signIn: "/login",
   },
-
-  // 4. Callbacks
   callbacks: {
     async signIn({ user, account, profile, email, credentials }) {
-      console.log("Użytkownik zalogowany:", user.email);
-      return true;
+      if (!user.email) {
+        console.error("❌ Brak emaila w danych użytkownika");
+        return false;
+      }
+
+      try {
+        // 🔹 Krok 1: Sprawdzamy, czy użytkownik istnieje
+        let dbUser = await prisma.user.findUnique({
+          where: { email: user.email },
+        });
+
+        if (!dbUser) {
+          // 🔹 Krok 2: Jeśli nie, tworzymy go w naszej bazie (z domyślną rolą 'USER')
+          await prisma.user.create({
+            data: {
+              email: user.email,
+              name: user.name ?? null,
+              image: user.image ?? null,
+              role: "USER",
+            },
+          });
+          console.log("✅ Utworzono nowego użytkownika:", user.email);
+        } else {
+          console.log("ℹ️ Użytkownik już istnieje:", user.email);
+        }
+
+        return true; // Kontynuuj logowanie
+      } catch (err) {
+        console.error("❌ Błąd podczas logowania/zapisu do DB:", err);
+        return false;
+      }
     },
     async jwt({ token, user }) {
-      if (user) {
-        token.role = user.role || "USER";
+      if (!token.email) return token;
+
+      const dbUser = await prisma.user.findUnique({
+        where: { email: token.email },
+        select: {
+          id: true,
+          role: true,
+          gender: true,
+        },
+      });
+
+      if (dbUser) {
+        token.id = dbUser.id;
+        token.role = dbUser.role;
+        token.profileComplete = !!dbUser.gender;
       }
+
       return token;
     },
     async session({ session, token }) {
-      // Ujawnienie roli w obiekcie sesji
-      session.user.role = token.role;
+      if (session.user) {
+        session.user.id = token.id;
+        session.user.role = token.role;
+        session.profileComplete = token.profileComplete;
+      }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      console.log("🔍 Callback redirect: url=", url, "baseUrl=", baseUrl);
+      // 🔹 Zawsze przekieruj na stronę główną po udanym logowaniu
+      console.log("ℹ️ Przekierowanie na stronę główną:", baseUrl);
+      return baseUrl; // Zwraca np. http://localhost:3000/
     },
   },
 };
 
-// Eksportujemy funkcje handlerów, używając konfiguracji authOptions
 const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };

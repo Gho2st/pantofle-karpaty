@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-export default function CollectionTile({ src, alt, label, href }) {
+export default function CollectionTitle({ src, alt, label, href }) {
   // Kontener obrazu bez zaokrągleń
   const imageContainerClasses = "relative w-full h-64 lg:h-80 overflow-hidden";
 

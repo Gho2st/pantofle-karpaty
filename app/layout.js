@@ -21,11 +21,13 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="pl">
-      <body className={`${josefinSans.className} antialiased`}>
+      <body
+        className={`${josefinSans.className} antialiased min-h-screen flex flex-col`}
+      >
         <AuthProvider>
           <FreeDelivery />
           <Nav />
-          {children}
+          <main className="flex-grow">{children}</main>
           <Footer />
         </AuthProvider>
       </body>

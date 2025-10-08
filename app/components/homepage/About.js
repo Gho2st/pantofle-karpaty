@@ -1,8 +1,6 @@
-import CollectionTile from "./CollectionTitle";
+import CollectionTitle from "../CollectionTitle";
 
 export default function About() {
-  const imageContainerClasses = "relative w-full h-64 lg:h-80 overflow-hidden ";
-
   return (
     // Dodajemy padding pionowy i horyzontalny do sekcji
     <section className="max-w-7xl mx-auto py-16 px-6 lg:px-8">
@@ -46,19 +44,19 @@ export default function About() {
       {/* oferta */}
 
       <div className="grid grid-cols-3 gap-10 mt-16">
-        <CollectionTile
+        <CollectionTitle
           src={"/pantofle/pantofle.jpg"}
           alt="Pantofle Damskie"
           label="Pantofle Damskie"
           href="/kobiety"
         />
-        <CollectionTile
+        <CollectionTitle
           src={"/pantofle/pantofle.jpg"}
           alt="Pantofle Damskie"
           label="Pantofle Damskie"
           href="/kobiety"
         />
-        <CollectionTile
+        <CollectionTitle
           src={"/pantofle/pantofle.jpg"}
           alt="Pantofle Damskie"
           label="Pantofle Damskie"

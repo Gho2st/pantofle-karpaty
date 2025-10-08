@@ -8,12 +8,75 @@ datasource db {
 }
 
 model User {
-  id                           Int            @id @default(autoincrement())
-  email                        String         @unique
-  name                         String?
-  image                        String?
-  createdAt                    DateTime       @default(now())
-  updatedAt                    DateTime       @updatedAt
-  birthdate                    DateTime?
+  id              Int              @id @default(autoincrement())
+  name            String?
+  email           String           @unique
+  image           String?
+  role            String           @default("USER")
+  gender          String?
+  billingAddress  BillingAddress?
+  shippingAddress ShippingAddress[]
+  orders          Order[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  @@map("users")
 }
 
+model BillingAddress {
+  id        Int     @id @default(autoincrement())
+  userId    Int     @unique
+  user      User    @relation(fields: [userId], references: [id])
+  firstName String
+  lastName  String
+  street    String
+  city      String
+  zipCode   String
+  country   String
+  @@map("billing_addresses")
+}
+
+model ShippingAddress {
+  id        Int     @id @default(autoincrement())
+  userId    Int
+  user      User    @relation(fields: [userId], references: [id])
+  label     String?
+  firstName String
+  lastName  String
+  street    String
+  city      String
+  zipCode   String
+  country   String
+  @@map("shipping_addresses")
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  name        String
+  slug        String   @unique
+  description String?  @db.Text
+  price       Float
+  images      String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  category    Category @relation(fields: [categoryId], references: [id])
+  categoryId  Int
+  @@map("products")
+}
+
+model Category {
+  id       Int      @id @default(autoincrement())
+  name     String
+  slug     String   @unique
+  products Product[]
+  @@map("categories")
+}
+
+model Order {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  totalAmount Float
+  status      String   @default("PENDING")
+  @@map("orders")
+}
