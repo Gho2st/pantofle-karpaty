@@ -1,9 +1,6 @@
-import { PrismaClient } from "@prisma/client";
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-
-// Inicjalizacja PrismaClient
-const prisma = new PrismaClient();
+import prisma from "@/app/lib/prisma";
 
 const authOptions = {
   providers: [
@@ -90,5 +87,6 @@ const authOptions = {
 };
 
 const handler = NextAuth(authOptions);
+const auth = NextAuth(authOptions);
 
-export { handler as GET, handler as POST };
+export { handler as GET, handler as POST, auth };

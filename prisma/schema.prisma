@@ -19,7 +19,6 @@ model User {
   orders          Order[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
-  @@map("users")
 }
 
 model BillingAddress {
@@ -32,7 +31,6 @@ model BillingAddress {
   city      String
   zipCode   String
   country   String
-  @@map("billing_addresses")
 }
 
 model ShippingAddress {
@@ -46,29 +44,16 @@ model ShippingAddress {
   city      String
   zipCode   String
   country   String
-  @@map("shipping_addresses")
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  name        String
 }
 
 model Product {
   id          Int      @id @default(autoincrement())
   name        String
-  slug        String   @unique
-  description String?  @db.Text
-  price       Float
-  images      String[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  category    Category @relation(fields: [categoryId], references: [id])
-  categoryId  Int
-  @@map("products")
-}
-
-model Category {
-  id       Int      @id @default(autoincrement())
-  name     String
-  slug     String   @unique
-  products Product[]
-  @@map("categories")
 }
 
 model Order {
@@ -78,5 +63,4 @@ model Order {
   createdAt   DateTime @default(now())
   totalAmount Float
   status      String   @default("PENDING")
-  @@map("orders")
 }
