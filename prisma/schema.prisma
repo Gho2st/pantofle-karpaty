@@ -47,13 +47,22 @@ model ShippingAddress {
 }
 
 model Category {
-  id          Int      @id @default(autoincrement())
-  name        String
+  id            Int         @id @default(autoincrement())
+  name          String
+  description   String?     // Pole opisu kategorii/podkategorii
+  parentId      Int?        // Dla hierarchii kategorii
+  parent        Category?   @relation("Subcategories", fields: [parentId], references: [id])
+  subcategories Category[]  @relation("Subcategories")
+  products      Product[]   // Relacja z produktami
 }
 
 model Product {
   id          Int      @id @default(autoincrement())
   name        String
+  price       Float
+  description String?
+  categoryId  Int
+  category    Category @relation(fields: [categoryId], references: [id])
 }
 
 model Order {

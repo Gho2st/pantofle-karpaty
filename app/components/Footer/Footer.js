@@ -84,7 +84,7 @@ export default function Footer() {
             </a>
           </li>
           <li>
-            <a href="/konto" className="hover:text-primary transition">
+            <a href="/profil" className="hover:text-primary transition">
               Moje konto
             </a>
           </li>

@@ -1,20 +1,20 @@
 "use client";
-
 import { signIn, signOut } from "next-auth/react";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Profil() {
   const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState("orders"); // Domyślna zakładka: zamówienia
+  const router = useRouter();
 
-  // Ładowanie danych użytkownika po załadowaniu sesji
+  // Przekierowanie dla admina
   useEffect(() => {
-    if (status === "authenticated" && session?.user) {
-    } else if (status === "unauthenticated") {
-      console.log("niezalogowany");
+    if (status === "authenticated" && session?.user?.role === "ADMIN") {
+      router.push("/admin");
     }
-  }, [status, session]);
+  }, [status, session, router]);
 
   // Funkcja do przełączania zakładek
   const handleTabChange = (tab) => {
