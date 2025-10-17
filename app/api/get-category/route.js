@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
-import prisma from "@/app/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
+import prisma from "@/app/lib/prisma";
+import { NextResponse } from "next/server";
 
 export async function GET(request) {
   const session = await getServerSession(authOptions);
@@ -34,17 +34,39 @@ export async function GET(request) {
                     name: true,
                     price: true,
                     description: true,
+                    description2: true,
+                    additionalInfo: true,
+                    sizes: true,
+                    categoryId: true,
                   },
                 },
               },
             },
             products: {
-              select: { id: true, name: true, price: true, description: true },
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                description: true,
+                description2: true,
+                additionalInfo: true,
+                sizes: true,
+                categoryId: true,
+              },
             },
           },
         },
         products: {
-          select: { id: true, name: true, price: true, description: true },
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            description: true,
+            description2: true,
+            additionalInfo: true,
+            sizes: true,
+            categoryId: true,
+          },
         },
       },
       orderBy: { id: "asc" },

@@ -61,6 +61,10 @@ model Product {
   name        String
   price       Float
   description String?
+  description2 String?
+  additionalInfo  String?  // Dodatkowe informacje
+  sizes Json? // Rozmiary i stany, np. [{"size": "38", "stock": 10}, {"size": "39", "stock": 5}]
+  images          Json?    // Tablica URL-i zdjęć, np. ["https://my-shop-images.s3.eu-west-1.amazonaws.com/..."]
   categoryId  Int
   category    Category @relation(fields: [categoryId], references: [id])
 }

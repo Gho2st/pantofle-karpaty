@@ -3,7 +3,20 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
 
-export async function PUT(request, context) {
+function validateSizes(sizes) {
+  if (!sizes) return true; // sizes jest opcjonalne
+  if (!Array.isArray(sizes)) {
+    throw new Error("Pole sizes musi być tablicą");
+  }
+  sizes.forEach((item) => {
+    if (!item.size || typeof item.stock !== "number" || item.stock < 0) {
+      throw new Error("Nieprawidłowy format rozmiaru lub stanu");
+    }
+  });
+  return true;
+}
+
+export async function PUT(request, { params }) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "ADMIN") {
     return NextResponse.json({
@@ -13,20 +26,37 @@ export async function PUT(request, context) {
   }
 
   try {
-    const { id } = await context.params;
+    const { id } = params;
     const productId = parseInt(id);
     if (isNaN(productId)) {
       return NextResponse.json({
-        error: "Id produktu musi być liczbą",
+        error: "ID produktu musi być liczbą",
         status: 400,
       });
     }
 
-    const { name, price, description } = await request.json();
+    const {
+      name,
+      price,
+      description,
+      description2,
+      additionalInfo,
+      sizes,
+      categoryId,
+    } = await request.json();
 
     if (!name || !price) {
       return NextResponse.json(
         { error: "Nazwa i cena produktu są wymagane" },
+        { status: 400 }
+      );
+    }
+
+    // Walidacja ceny
+    const parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice) || parsedPrice <= 0) {
+      return NextResponse.json(
+        { error: "Cena musi być dodatnią liczbą" },
         { status: 400 }
       );
     }
@@ -42,13 +72,33 @@ export async function PUT(request, context) {
       );
     }
 
+    // Sprawdź, czy kategoria istnieje (jeśli przesłano categoryId)
+    if (categoryId) {
+      const category = await prisma.category.findUnique({
+        where: { id: parseInt(categoryId) },
+      });
+      if (!category) {
+        return NextResponse.json(
+          { error: "Kategoria nie została znaleziona" },
+          { status: 404 }
+        );
+      }
+    }
+
+    // Walidacja sizes
+    validateSizes(sizes);
+
     // Zaktualizuj produkt
     const updatedProduct = await prisma.product.update({
       where: { id: productId },
       data: {
         name,
-        price: parseFloat(price),
-        description,
+        price: parsedPrice,
+        description: description || null,
+        description2: description2 || null,
+        additionalInfo: additionalInfo || null,
+        sizes: sizes || null,
+        categoryId: categoryId ? parseInt(categoryId) : product.categoryId, // Zachowaj istniejące categoryId, jeśli nie przesłano nowego
       },
     });
 
@@ -59,7 +109,7 @@ export async function PUT(request, context) {
   } catch (error) {
     console.error("Błąd podczas aktualizacji produktu:", error);
     return NextResponse.json(
-      { error: "Błąd serwera podczas aktualizacji produktu" },
+      { error: error.message || "Błąd serwera podczas aktualizacji produktu" },
       { status: 500 }
     );
   }

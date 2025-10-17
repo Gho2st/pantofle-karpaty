@@ -15,9 +15,20 @@ export default function Products({
     name: "",
     price: "",
     description: "",
+    description2: "",
+    additionalInfo: "",
+    sizes: [], // Inicjalizujemy jako pustą tablicę
   });
   const [isAdding, setIsAdding] = useState(false);
+  const [newSize, setNewSize] = useState("");
+  const [newStock, setNewStock] = useState("");
+  const [stockUpdate, setStockUpdate] = useState({
+    productId: null,
+    size: "",
+    stock: "",
+  });
 
+  // Obsługa zmian w formularzu dodawania produktu
   const handleNewProductChange = (e) => {
     const { name, value } = e.target;
     setNewProduct((prev) => ({
@@ -26,6 +37,29 @@ export default function Products({
     }));
   };
 
+  // Dodawanie nowego rozmiaru do newProduct.sizes
+  const handleAddSize = () => {
+    if (!newSize || !newStock || newStock < 0) {
+      toast.error("Podaj prawidłowy rozmiar i dodatni stan magazynowy");
+      return;
+    }
+    setNewProduct((prev) => ({
+      ...prev,
+      sizes: [...prev.sizes, { size: newSize, stock: parseInt(newStock) }],
+    }));
+    setNewSize("");
+    setNewStock("");
+  };
+
+  // Usuwanie rozmiaru z newProduct.sizes
+  const handleRemoveSize = (sizeToRemove) => {
+    setNewProduct((prev) => ({
+      ...prev,
+      sizes: prev.sizes.filter((item) => item.size !== sizeToRemove),
+    }));
+  };
+
+  // Obsługa wysyłania nowego produktu
   const handleAddProductSubmit = async (e) => {
     e.preventDefault();
     if (!selectedCategory) {
@@ -38,14 +72,16 @@ export default function Products({
     }
     setIsAdding(true);
     try {
-      console.log(
-        "Adding product:",
-        newProduct,
-        "to category:",
-        selectedCategory.id
-      ); // Debug: log danych produktu
       await handleAddProduct(selectedCategory.id, newProduct);
-      setNewProduct({ name: "", price: "", description: "" });
+      setNewProduct({
+        name: "",
+        price: "",
+        description: "",
+        description2: "",
+        additionalInfo: "",
+        sizes: [],
+      });
+      toast.success("Produkt dodany pomyślnie!");
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -53,7 +89,32 @@ export default function Products({
     }
   };
 
-  console.log("Products:", products); // Debug: log listy produktów
+  // Obsługa aktualizacji stanu magazynowego
+  const handleUpdateStock = async (productId) => {
+    if (!stockUpdate.size || stockUpdate.stock < 0) {
+      toast.error("Podaj prawidłowy rozmiar i dodatni stan magazynowy");
+      return;
+    }
+    try {
+      const res = await fetch("/api/update-stock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId,
+          size: stockUpdate.size,
+          newStock: parseInt(stockUpdate.stock),
+        }),
+      });
+      if (!res.ok) {
+        throw new Error("Nie udało się zaktualizować stanu");
+      }
+      toast.success(`Stan dla rozmiaru ${stockUpdate.size} zaktualizowany!`);
+      setStockUpdate({ productId: null, size: "", stock: "" });
+      // Odśwież listę produktów (możesz użyć np. SWR lub refetch)
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
 
   return (
     <div className="mt-6">
@@ -113,6 +174,81 @@ export default function Products({
               className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
               rows="4"
             />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Dodatkowy opis (opcjonalny)
+            </label>
+            <textarea
+              name="description2"
+              value={newProduct.description2}
+              onChange={handleNewProductChange}
+              placeholder="Dodatkowy opis produktu"
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+              rows="4"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Dodatkowe informacje (opcjonalne)
+            </label>
+            <textarea
+              name="additionalInfo"
+              value={newProduct.additionalInfo}
+              onChange={handleNewProductChange}
+              placeholder="Dodatkowe informacje (np. materiał, instrukcje pielęgnacji)"
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+              rows="4"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Rozmiary i stany magazynowe
+            </label>
+            <div className="flex gap-4 mb-2">
+              <input
+                type="text"
+                value={newSize}
+                onChange={(e) => setNewSize(e.target.value)}
+                placeholder="Rozmiar (np. 38)"
+                className="flex-1 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="number"
+                value={newStock}
+                onChange={(e) => setNewStock(e.target.value)}
+                placeholder="Stan magazynowy"
+                className="flex-1 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                min="0"
+              />
+              <button
+                type="button"
+                onClick={handleAddSize}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200"
+              >
+                Dodaj rozmiar
+              </button>
+            </div>
+            <div className="mt-2">
+              {newProduct.sizes.length > 0 ? (
+                <ul className="list-disc pl-5">
+                  {newProduct.sizes.map((item) => (
+                    <li key={item.size} className="text-gray-600">
+                      Rozmiar: {item.size}, Stan: {item.stock}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSize(item.size)}
+                        className="ml-2 text-red-500 hover:text-red-700"
+                      >
+                        Usuń
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-600">Brak dodanych rozmiarów</p>
+              )}
+            </div>
           </div>
         </div>
         <button
@@ -208,6 +344,110 @@ export default function Products({
                       rows="4"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Dodatkowy opis (opcjonalny)
+                    </label>
+                    <textarea
+                      value={editingProduct?.description2 || ""}
+                      onChange={(e) =>
+                        setEditingProduct({
+                          ...editingProduct,
+                          description2: e.target.value,
+                        })
+                      }
+                      className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+                      rows="4"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Dodatkowe informacje (opcjonalne)
+                    </label>
+                    <textarea
+                      value={editingProduct?.additionalInfo || ""}
+                      onChange={(e) =>
+                        setEditingProduct({
+                          ...editingProduct,
+                          additionalInfo: e.target.value,
+                        })
+                      }
+                      className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+                      rows="4"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Rozmiary i stany magazynowe
+                    </label>
+                    <div className="flex gap-4 mb-2">
+                      <input
+                        type="text"
+                        value={newSize}
+                        onChange={(e) => setNewSize(e.target.value)}
+                        placeholder="Rozmiar (np. 38)"
+                        className="flex-1 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <input
+                        type="number"
+                        value={newStock}
+                        onChange={(e) => setNewStock(e.target.value)}
+                        placeholder="Stan magazynowy"
+                        className="flex-1 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        min="0"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!newSize || !newStock || newStock < 0) {
+                            toast.error(
+                              "Podaj prawidłowy rozmiar i dodatni stan"
+                            );
+                            return;
+                          }
+                          setEditingProduct({
+                            ...editingProduct,
+                            sizes: [
+                              ...(editingProduct.sizes || []),
+                              { size: newSize, stock: parseInt(newStock) },
+                            ],
+                          });
+                          setNewSize("");
+                          setNewStock("");
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200"
+                      >
+                        Dodaj rozmiar
+                      </button>
+                    </div>
+                    <div className="mt-2">
+                      {editingProduct?.sizes?.length > 0 ? (
+                        <ul className="list-disc pl-5">
+                          {editingProduct.sizes.map((item) => (
+                            <li key={item.size} className="text-gray-600">
+                              Rozmiar: {item.size}, Stan: {item.stock}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setEditingProduct({
+                                    ...editingProduct,
+                                    sizes: editingProduct.sizes.filter(
+                                      (s) => s.size !== item.size
+                                    ),
+                                  })
+                                }
+                                className="ml-2 text-red-500 hover:text-red-700"
+                              >
+                                Usuń
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-gray-600">Brak dodanych rozmiarów</p>
+                      )}
+                    </div>
+                  </div>
                   <div className="flex gap-3">
                     <button
                       onClick={() => handleEditProduct(product)}
@@ -238,7 +478,28 @@ export default function Products({
                   <p className="text-gray-600 line-clamp-2">
                     {product.description || "Brak opisu"}
                   </p>
-                  <div className="flex gap-3">
+                  <p className="text-gray-600 line-clamp-2">
+                    {product.description2 || "Brak dodatkowego opisu"}
+                  </p>
+                  <p className="text-gray-600 line-clamp-2">
+                    {product.additionalInfo || "Brak dodatkowych informacji"}
+                  </p>
+                  <div className="text-gray-600">
+                    <p>Rozmiary i stany:</p>
+                    {product.sizes?.length > 0 ? (
+                      <ul className="list-disc pl-5">
+                        {product.sizes.map((item) => (
+                          <li key={item.size}>
+                            Rozmiar: {item.size}, Stan: {item.stock}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>Brak rozmiarów</p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3 mt-4">
                     <button
                       onClick={() =>
                         setEditingProduct({
@@ -246,6 +507,9 @@ export default function Products({
                           name: product.name,
                           price: product.price ?? "",
                           description: product.description ?? "",
+                          description2: product.description2 ?? "",
+                          additionalInfo: product.additionalInfo ?? "",
+                          sizes: product.sizes ?? [],
                         })
                       }
                       className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-200"

@@ -62,7 +62,15 @@ export default function Category({
         const res = await fetch(`/api/update-product/${product.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(editingProduct),
+          body: JSON.stringify({
+            name: editingProduct.name,
+            price: editingProduct.price,
+            description: editingProduct.description,
+            description2: editingProduct.description2,
+            additionalInfo: editingProduct.additionalInfo,
+            sizes: editingProduct.sizes,
+            categoryId: editingProduct.categoryId || product.categoryId, // Zachowaj istniejące categoryId, jeśli nie zmieniono
+          }),
         });
         const data = await res.json();
         if (!res.ok) {
@@ -94,7 +102,7 @@ export default function Category({
         toast.error(err.message);
       }
     },
-    [fetchCategories, onCategoryUpdate, selectedCategory]
+    [fetchCategories, onCategoryUpdate, selectedCategory, editingProduct]
   );
 
   const handleAddProduct = useCallback(
@@ -110,14 +118,12 @@ export default function Category({
           throw new Error(data.error || "Nie udało się dodać produktu");
         }
 
-        // Pobierz zaktualizowane kategorie
         const updatedCategories = await fetchCategories();
         console.log(
           "Full updatedCategories:",
           JSON.stringify(updatedCategories, null, 2)
         );
 
-        // Znajdź kategorię lub podkategorię
         const findCategoryById = (categories, id) => {
           for (const cat of categories) {
             if (cat.id === id) return cat;
@@ -132,10 +138,8 @@ export default function Category({
         console.log("Found updatedCategory:", updatedCategory);
         console.log("Products in updatedCategory:", updatedCategory?.products);
 
-        // Aktualizuj stan nadrzędny
         onCategoryUpdate(updatedCategories || categories);
 
-        // Ustaw zaktualizowaną kategorię
         if (updatedCategory) {
           setSelectedCategory(updatedCategory);
         } else {
