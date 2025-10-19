@@ -8,43 +8,30 @@ datasource db {
 }
 
 model User {
-  id              Int               @id @default(autoincrement())
-  name            String?
-  email           String            @unique
-  image           String?
-  role            String            @default("USER")
-  gender          String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  billingAddress  BillingAddress?
-  cart            Cart[]            @relation("UserCart")
-  orders          Order[]
-  shippingAddress ShippingAddress[]
+  id          Int       @id @default(autoincrement())
+  name        String?
+  email       String    @unique
+  image       String?
+  role        String    @default("USER")
+  gender      String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  cart        Cart[]    @relation("UserCart")
+  orders      Order[]   @relation("UserOrders")
+  addresses   Address[] @relation("UserAddresses")
 }
 
-model BillingAddress {
-  id        Int    @id @default(autoincrement())
-  userId    Int    @unique
-  firstName String
-  lastName  String
-  street    String
-  city      String
-  zipCode   String
-  country   String
-  user      User   @relation(fields: [userId], references: [id])
-}
-
-model ShippingAddress {
-  id        Int     @id @default(autoincrement())
-  userId    Int
-  label     String?
-  firstName String
-  lastName  String
-  street    String
-  city      String
-  zipCode   String
-  country   String
-  user      User    @relation(fields: [userId], references: [id])
+model Address {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  street      String
+  city        String
+  postalCode  String
+  phone       String
+  paczkomat   String // Kod paczkomatu, np. "POZ01A"
+  user        User      @relation("UserAddresses", fields: [userId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Category {
@@ -60,36 +47,57 @@ model Category {
 }
 
 model Product {
-  id             Int      @id @default(autoincrement())
-  name           String
-  slug           String   @unique
-  price          Float
-  description    String?
-  description2   String?
-  additionalInfo String?
-  sizes          Json?
-  images         Json?
-  categoryId     Int
-  cart           Cart[]   @relation("ProductCart")
-  category       Category @relation(fields: [categoryId], references: [id])
-}
-
-model Order {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  createdAt   DateTime @default(now())
-  totalAmount Float
-  status      String   @default("PENDING")
-  user        User     @relation(fields: [userId], references: [id])
+  id              Int       @id @default(autoincrement())
+  name            String
+  slug            String    @unique
+  price           Float
+  description     String?
+  description2    String?
+  additionalInfo  String?
+  sizes           Json?
+  images          Json?
+  categoryId      Int
+  cart            Cart[]    @relation("ProductCart")
+  orderItems      OrderItem[] @relation("ProductOrderItems")
+  category        Category  @relation(fields: [categoryId], references: [id])
 }
 
 model Cart {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  productId Int
-  size      String
-  quantity  Int
-  createdAt DateTime @default(now())
-  product   Product  @relation("ProductCart", fields: [productId], references: [id])
-  user      User     @relation("UserCart", fields: [userId], references: [id])
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  productId   Int
+  size        String
+  quantity    Int
+  createdAt   DateTime  @default(now())
+  product     Product   @relation("ProductCart", fields: [productId], references: [id])
+  user        User      @relation("UserCart", fields: [userId], references: [id])
+}
+
+model Order {
+  id          Int        @id @default(autoincrement())
+  userId      Int?       // Opcjonalne dla zamówień gości
+  email       String
+  firstName   String
+  lastName    String
+  street      String
+  city        String
+  postalCode  String
+  phone       String
+  paczkomat   String?    // Opcjonalny kod paczkomatu
+  totalAmount Float
+  isGuest     Boolean    @default(false)
+  items       OrderItem[] @relation("OrderItems")
+  user        User?      @relation("UserOrders", fields: [userId], references: [id])
+  createdAt   DateTime   @default(now())
+}
+
+model OrderItem {
+  id         Int     @id @default(autoincrement())
+  orderId    Int
+  productId  Int
+  size       String
+  quantity   Int
+  price      Float
+  order      Order   @relation("OrderItems", fields: [orderId], references: [id])
+  product    Product @relation("ProductOrderItems", fields: [productId], references: [id])
 }

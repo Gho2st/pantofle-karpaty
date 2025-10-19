@@ -8,9 +8,12 @@ import { useCart } from "@/app/context/cartContext";
 
 export default function Nav() {
   const { data: session } = useSession();
-  const { cartCount, fetchCart } = useCart();
+  const { cartItems, fetchCart } = useCart(); // Zmiana z cartCount na cartItems
   const [categories, setCategories] = useState([]);
-  const [animateCart, setAnimateCart] = useState(false); // Nowy stan dla animacji
+  const [animateCart, setAnimateCart] = useState(false);
+
+  // Oblicz liczbę elementów w koszyku
+  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   // Pobierz kategorie
   const fetchCategories = useCallback(async () => {
@@ -27,6 +30,7 @@ export default function Nav() {
 
   useEffect(() => {
     fetchCategories(); // Pobierz kategorie przy montowaniu
+    fetchCart(); // Pobierz koszyk przy montowaniu (dla zalogowanych lub z localStorage)
 
     // Nasłuchuj na zdarzenie categoriesUpdated
     const handleCategoriesUpdate = () => fetchCategories();
@@ -35,13 +39,12 @@ export default function Nav() {
     return () => {
       window.removeEventListener("categoriesUpdated", handleCategoriesUpdate);
     };
-  }, [fetchCategories]);
+  }, [fetchCategories, fetchCart]);
 
-  // Animacja przy zmianie cartCount
+  // Animacja przy zmianie liczby elementów w koszyku
   useEffect(() => {
     if (cartCount > 0) {
       setAnimateCart(true);
-      // Wyłącz animację po 1 sekundzie
       const timer = setTimeout(() => setAnimateCart(false), 1000);
       return () => clearTimeout(timer);
     }

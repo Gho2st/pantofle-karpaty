@@ -1,7 +1,26 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useAdmin } from "../context/adminContext";
+
+// Funkcja do generowania sluga z nazwy kategorii
+const generateSlug = (name) => {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/ą/g, "a")
+    .replace(/ć/g, "c")
+    .replace(/ę/g, "e")
+    .replace(/ł/g, "l")
+    .replace(/ń/g, "n")
+    .replace(/ó/g, "o")
+    .replace(/ś/g, "s")
+    .replace(/ź/g, "z")
+    .replace(/ż/g, "z")
+    .replace(/[^a-z0-9\s-]/g, "") // Usuwa znaki specjalne
+    .replace(/\s+/g, "-") // Zamienia spacje na myślniki
+    .replace(/-+/g, "-"); // Usuwa wielokrotne myślniki
+};
 
 export default function CategoryForm() {
   const {
@@ -18,6 +37,16 @@ export default function CategoryForm() {
   const [isAdding, setIsAdding] = useState(false);
   const [newCategorySlug, setNewCategorySlug] = useState("");
   const [newCategoryImage, setNewCategoryImage] = useState(null);
+
+  // Automatyczne generowanie sluga przy zmianie nazwy kategorii
+  useEffect(() => {
+    if (newCategoryName) {
+      const generatedSlug = generateSlug(newCategoryName);
+      setNewCategorySlug(generatedSlug);
+    } else {
+      setNewCategorySlug("");
+    }
+  }, [newCategoryName]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -95,7 +124,7 @@ export default function CategoryForm() {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Slug (opcjonalny)
+            Slug (automatycznie generowany, można edytować)
           </label>
           <input
             type="text"

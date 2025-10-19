@@ -3,10 +3,11 @@ import { signIn, signOut } from "next-auth/react";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import AddressForm from "./AddressForm"; // Import nowego komponentu
 
 export default function Profil() {
   const { data: session, status } = useSession();
-  const [activeTab, setActiveTab] = useState("orders"); // Domyślna zakładka: zamówienia
+  const [activeTab, setActiveTab] = useState("orders");
   const router = useRouter();
 
   // Przekierowanie dla admina
@@ -16,12 +17,10 @@ export default function Profil() {
     }
   }, [status, session, router]);
 
-  // Funkcja do przełączania zakładek
   const handleTabChange = (tab) => {
     setActiveTab(tab);
   };
 
-  // Styl dla przycisków menu
   const tabButtonClasses = (isActive) =>
     `block w-full text-left px-4 py-3 text-lg font-medium transition duration-300 ${
       isActive
@@ -80,6 +79,12 @@ export default function Profil() {
               Adresy
             </button>
           </div>
+          <button
+            onClick={() => signOut()}
+            className="mt-4 w-full text-left px-4 py-3 text-lg font-medium text-gray-700 hover:bg-gray-100"
+          >
+            Wyloguj
+          </button>
         </div>
 
         {/* Zawartość (po prawej) */}
@@ -118,14 +123,7 @@ export default function Profil() {
             </div>
           )}
 
-          {activeTab === "address" && (
-            <div>
-              <h1 className="text-3xl mb-4">Adresy</h1>
-              <div className="space-y-4">
-                <p>Dodaj lub zmień swój adres</p>
-              </div>
-            </div>
-          )}
+          {activeTab === "address" && <AddressForm />}
         </div>
       </div>
     </div>

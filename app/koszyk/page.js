@@ -3,26 +3,17 @@ import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { toast } from "react-toastify";
 import { useCart } from "@/app/context/cartContext";
+import { ToastContainer } from "react-toastify";
 
 export default function Checkout() {
   const { data: session } = useSession();
-  const {
-    cartItems,
-    setCartItems,
-    loading,
-    setLoading,
-    fetchCart,
-    updateQuantity,
-    removeFromCart,
-  } = useCart();
+  const { cartItems, loading, fetchCart, updateQuantity, removeFromCart } =
+    useCart();
 
   useEffect(() => {
-    if (session) {
-      fetchCart(); // Pobierz koszyk przy montowaniu, jeśli użytkownik jest zalogowany
-    }
-  }, [session, fetchCart]);
+    fetchCart(); // Pobierz koszyk (z bazy lub localStorage)
+  }, [fetchCart]);
 
   // Oblicz sumę koszyka
   const calculateTotal = () => {
@@ -30,20 +21,6 @@ export default function Checkout() {
       .reduce((sum, item) => sum + item.product.price * item.quantity, 0)
       .toFixed(2);
   };
-
-  if (!session) {
-    return (
-      <div className="max-w-7xl mx-auto my-24">
-        <h1 className="text-3xl font-bold mb-6">Koszyk</h1>
-        <p className="text-gray-600">
-          Musisz być zalogowany, aby zobaczyć koszyk.{" "}
-          <Link href="/login" className="text-blue-500 hover:underline">
-            Zaloguj się
-          </Link>
-        </p>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
@@ -120,6 +97,7 @@ export default function Checkout() {
           </div>
         </div>
       )}
+      <ToastContainer position="bottom-right" autoClose={3000} />
     </div>
   );
 }

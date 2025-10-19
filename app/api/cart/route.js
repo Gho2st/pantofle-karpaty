@@ -8,7 +8,6 @@ export async function GET(request) {
   try {
     let cart = [];
     if (session) {
-      // Dla zalogowanych użytkowników pobierz koszyk z bazy danych
       cart = await prisma.cart.findMany({
         where: { userId: session.user.id },
         include: {
@@ -23,7 +22,6 @@ export async function GET(request) {
         },
       });
     }
-    // Zwracamy koszyk (pusty dla niezalogowanych, jeśli nie używasz sesji lokalnej)
     return NextResponse.json({ cart }, { status: 200 });
   } catch (error) {
     console.error("Błąd podczas pobierania koszyka:", error);
@@ -36,13 +34,6 @@ export async function GET(request) {
 
 export async function POST(request) {
   const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json(
-      { error: "Musisz być zalogowany, aby dodać produkt do koszyka" },
-      { status: 401 }
-    );
-  }
-
   try {
     const { productId, size, quantity } = await request.json();
 
@@ -53,7 +44,6 @@ export async function POST(request) {
       );
     }
 
-    // Sprawdź, czy produkt istnieje
     const product = await prisma.product.findUnique({
       where: { id: parseInt(productId) },
       select: { sizes: true },
@@ -66,7 +56,6 @@ export async function POST(request) {
       );
     }
 
-    // Sprawdź dostępność rozmiaru i stanu magazynowego
     const sizeData = product.sizes.find((s) => s.size === size);
     if (!sizeData || sizeData.stock < quantity) {
       return NextResponse.json(
@@ -75,31 +64,37 @@ export async function POST(request) {
       );
     }
 
-    // Sprawdź, czy produkt w danym rozmiarze już istnieje w koszyku
-    let cartItem = await prisma.cart.findFirst({
-      where: {
-        userId: session.user.id,
-        productId: parseInt(productId),
-        size,
-      },
-    });
-
-    if (cartItem) {
-      // Zaktualizuj ilość, jeśli produkt już jest w koszyku
-      cartItem = await prisma.cart.update({
-        where: { id: cartItem.id },
-        data: { quantity: cartItem.quantity + parseInt(quantity) },
-      });
-    } else {
-      // Dodaj nowy produkt do koszyka
-      cartItem = await prisma.cart.create({
-        data: {
+    let cartItem;
+    if (session) {
+      cartItem = await prisma.cart.findFirst({
+        where: {
           userId: session.user.id,
           productId: parseInt(productId),
           size,
-          quantity: parseInt(quantity),
         },
       });
+
+      if (cartItem) {
+        cartItem = await prisma.cart.update({
+          where: { id: cartItem.id },
+          data: { quantity: cartItem.quantity + parseInt(quantity) },
+        });
+      } else {
+        cartItem = await prisma.cart.create({
+          data: {
+            userId: session.user.id,
+            productId: parseInt(productId),
+            size,
+            quantity: parseInt(quantity),
+          },
+        });
+      }
+    } else {
+      cartItem = {
+        productId: parseInt(productId),
+        size,
+        quantity: parseInt(quantity),
+      };
     }
 
     return NextResponse.json(
@@ -117,13 +112,6 @@ export async function POST(request) {
 
 export async function PUT(request) {
   const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json(
-      { error: "Musisz być zalogowany, aby zaktualizować koszyk" },
-      { status: 401 }
-    );
-  }
-
   try {
     const { cartItemId, quantity } = await request.json();
 
@@ -134,42 +122,49 @@ export async function PUT(request) {
       );
     }
 
-    // Sprawdź, czy pozycja w koszyku istnieje
-    const cartItem = await prisma.cart.findUnique({
-      where: { id: parseInt(cartItemId) },
-      include: { product: { select: { sizes: true } } },
-    });
+    if (session) {
+      const cartItem = await prisma.cart.findUnique({
+        where: { id: parseInt(cartItemId) },
+        include: { product: { select: { sizes: true } } },
+      });
 
-    if (!cartItem || cartItem.userId !== session.user.id) {
-      return NextResponse.json(
-        { error: "Pozycja w koszyku nie znaleziona" },
-        { status: 404 }
+      if (!cartItem || cartItem.userId !== session.user.id) {
+        return NextResponse.json(
+          { error: "Pozycja w koszyku nie znaleziona" },
+          { status: 404 }
+        );
+      }
+
+      const sizeData = cartItem.product.sizes.find(
+        (s) => s.size === cartItem.size
       );
-    }
+      if (!sizeData || sizeData.stock < quantity) {
+        return NextResponse.json(
+          {
+            error: `Niewystarczający stan magazynowy dla rozmiaru ${cartItem.size}`,
+          },
+          { status: 400 }
+        );
+      }
 
-    // Sprawdź stan magazynowy
-    const sizeData = cartItem.product.sizes.find(
-      (s) => s.size === cartItem.size
-    );
-    if (!sizeData || sizeData.stock < quantity) {
+      const updatedCartItem = await prisma.cart.update({
+        where: { id: parseInt(cartItemId) },
+        data: { quantity: parseInt(quantity) },
+      });
+
+      return NextResponse.json(
+        { message: "Koszyk zaktualizowany", cartItem: updatedCartItem },
+        { status: 200 }
+      );
+    } else {
       return NextResponse.json(
         {
-          error: `Niewystarczający stan magazynowy dla rozmiaru ${cartItem.size}`,
+          message: "Koszyk zaktualizowany",
+          cartItem: { id: cartItemId, quantity },
         },
-        { status: 400 }
+        { status: 200 }
       );
     }
-
-    // Zaktualizuj ilość
-    const updatedCartItem = await prisma.cart.update({
-      where: { id: parseInt(cartItemId) },
-      data: { quantity: parseInt(quantity) },
-    });
-
-    return NextResponse.json(
-      { message: "Koszyk zaktualizowany", cartItem: updatedCartItem },
-      { status: 200 }
-    );
   } catch (error) {
     console.error("Błąd podczas aktualizacji koszyka:", error);
     return NextResponse.json(
@@ -181,15 +176,19 @@ export async function PUT(request) {
 
 export async function DELETE(request) {
   const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json(
-      { error: "Musisz być zalogowany, aby usunąć produkt z koszyka" },
-      { status: 401 }
-    );
-  }
-
   try {
-    const { cartItemId } = await request.json();
+    const { cartItemId, clearAll } = await request.json();
+
+    if (clearAll && session) {
+      // Wyczyść cały koszyk dla zalogowanego użytkownika
+      await prisma.cart.deleteMany({
+        where: { userId: session.user.id },
+      });
+      return NextResponse.json(
+        { message: "Koszyk wyczyszczony" },
+        { status: 200 }
+      );
+    }
 
     if (!cartItemId) {
       return NextResponse.json(
@@ -198,22 +197,22 @@ export async function DELETE(request) {
       );
     }
 
-    // Sprawdź, czy pozycja w koszyku istnieje
-    const cartItem = await prisma.cart.findUnique({
-      where: { id: parseInt(cartItemId) },
-    });
+    if (session) {
+      const cartItem = await prisma.cart.findUnique({
+        where: { id: parseInt(cartItemId) },
+      });
 
-    if (!cartItem || cartItem.userId !== session.user.id) {
-      return NextResponse.json(
-        { error: "Pozycja w koszyku nie znaleziona" },
-        { status: 404 }
-      );
+      if (!cartItem || cartItem.userId !== session.user.id) {
+        return NextResponse.json(
+          { error: "Pozycja w koszyku nie znaleziona" },
+          { status: 404 }
+        );
+      }
+
+      await prisma.cart.delete({
+        where: { id: parseInt(cartItemId) },
+      });
     }
-
-    // Usuń pozycję z koszyka
-    await prisma.cart.delete({
-      where: { id: parseInt(cartItemId) },
-    });
 
     return NextResponse.json(
       { message: "Produkt usunięty z koszyka" },

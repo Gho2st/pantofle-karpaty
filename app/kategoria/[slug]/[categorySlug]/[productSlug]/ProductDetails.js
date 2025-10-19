@@ -1,6 +1,5 @@
 "use client";
 import Image from "next/image";
-import { redirect } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { toast } from "react-toastify";
@@ -8,18 +7,13 @@ import { useCart } from "@/app/context/cartContext";
 
 export default function ProductDetails({ product }) {
   const { data: session } = useSession();
-  const { fetchCart } = useCart();
+  const { addToCart } = useCart();
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [isAdded, setIsAdded] = useState(false); // Nowy stan dla feedbacku
+  const [isAdded, setIsAdded] = useState(false);
 
   const handleAddToCart = async (e) => {
     e.preventDefault();
-    if (!session) {
-      toast.error("Musisz być zalogowany, aby dodać produkt do koszyka");
-      redirect("/login");
-      return;
-    }
 
     if (!selectedSize) {
       toast.error("Wybierz rozmiar");
@@ -27,29 +21,9 @@ export default function ProductDetails({ product }) {
     }
 
     try {
-      const response = await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productId: product.id,
-          size: selectedSize,
-          quantity,
-        }),
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        toast.success("Produkt dodany do koszyka");
-        setIsAdded(true); // Ustaw stan na "dodano"
-        await fetchCart(); // Odśwież koszyk
-
-        // Resetuj stan po 2 sekundach
-        setTimeout(() => {
-          setIsAdded(false);
-        }, 2000);
-      } else {
-        toast.error(data.error || "Błąd podczas dodawania do koszyka");
-      }
+      await addToCart(product.id, selectedSize, quantity, product);
+      setIsAdded(true);
+      setTimeout(() => setIsAdded(false), 2000);
     } catch (error) {
       console.error("Błąd podczas dodawania do koszyka:", error);
       toast.error("Błąd serwera");
@@ -73,7 +47,6 @@ export default function ProductDetails({ product }) {
         <span className="font-light text-2xl">{product.price} PLN</span>
         <p className="mt-10">{product.description}</p>
 
-        {/* Formularz wyboru rozmiaru i ilości */}
         <form onSubmit={handleAddToCart} className="mt-6">
           <div className="mb-4">
             <label htmlFor="size" className="block text-lg font-medium mb-2">
@@ -132,7 +105,7 @@ export default function ProductDetails({ product }) {
             className={`mt-4 px-6 py-2 rounded-md text-white transition duration-300 ${
               isAdded ? "bg-green-600" : "bg-red-600 hover:bg-red-700"
             }`}
-            disabled={isAdded} // Wyłącz przycisk na czas animacji
+            disabled={isAdded}
           >
             {isAdded ? "Dodano!" : "Dodaj do koszyka"}
           </button>

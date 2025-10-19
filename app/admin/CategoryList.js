@@ -10,6 +10,7 @@ export default function CategoryList() {
     setEditingCategory,
     handleCategoryClick,
     handleEditCategory,
+    setShowDeleteModal,
   } = useAdmin();
 
   const getBreadcrumbs = () => {
