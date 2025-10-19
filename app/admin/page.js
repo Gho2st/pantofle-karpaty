@@ -1,51 +1,13 @@
 "use client";
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Category from "./Category";
-import { ToastContainer, toast } from "react-toastify";
+import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 export default function Admin() {
   const { data: session, status } = useSession();
-  const [categories, setCategories] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const fetchCategories = async (parentId = null) => {
-    setIsLoading(true);
-    try {
-      const res = await fetch(
-        `/api/get-category${parentId ? `?parentId=${parentId}` : ""}`,
-        { cache: "no-store" } // Wyłącz cache
-      );
-      if (!res.ok) {
-        throw new Error("Nie udało się pobrać kategorii");
-      }
-      const data = await res.json();
-      console.log("Fetched categories:", data.categories); // Debug: log pobranych kategorii
-      setCategories(data.categories || []);
-      setIsLoading(false);
-      return data.categories; // Zwróć dane do użycia w Category.js
-    } catch (err) {
-      setError(err.message);
-      toast.error(err.message);
-      setIsLoading(false);
-      return null;
-    }
-  };
-
-  const handleCategoryUpdate = (updatedCategories) => {
-    console.log("Updating categories:", updatedCategories); // Debug: log aktualizacji
-    setCategories(updatedCategories);
-    toast.success("Operacja zakończona pomyślnie!");
-  };
-
-  useEffect(() => {
-    if (status === "authenticated" && session?.user?.role === "ADMIN") {
-      fetchCategories();
-    }
-  }, [status, session]);
 
   if (status === "loading") {
     return (
@@ -83,7 +45,7 @@ export default function Admin() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="text-xl font-semibold text-red-600">
-          You are not an admin
+          Nie jesteś administratorem
         </div>
       </div>
     );
@@ -98,7 +60,7 @@ export default function Admin() {
         } fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 z-20`}
       >
         <div className="p-6">
-          <h2 className="text-2xl font-bold text-gray-800">Admin Dashboard</h2>
+          <h2 className="text-2xl font-bold text-gray-800">Panel Admina</h2>
           <nav className="mt-6">
             <ul>
               <li>
@@ -106,7 +68,7 @@ export default function Admin() {
                   href="#"
                   className="block py-2 px-4 text-gray-700 hover:bg-gray-200 rounded"
                 >
-                  Categories
+                  Kategorie
                 </a>
               </li>
               <li>
@@ -114,7 +76,7 @@ export default function Admin() {
                   href="#"
                   className="block py-2 px-4 text-gray-700 hover:bg-gray-200 rounded"
                 >
-                  Users
+                  Użytkownicy
                 </a>
               </li>
               <li>
@@ -122,7 +84,7 @@ export default function Admin() {
                   href="#"
                   className="block py-2 px-4 text-gray-700 hover:bg-gray-200 rounded"
                 >
-                  Settings
+                  Ustawienia
                 </a>
               </li>
             </ul>
@@ -154,17 +116,13 @@ export default function Admin() {
               </svg>
             </button>
           </div>
-          <div className="text-gray-600">Admin: {session?.user?.name || "Admin"}</div>
+          <div className="text-gray-600">
+            Admin: {session?.user?.name || "Admin"}
+          </div>
         </header>
 
         <main className="flex-1 p-6 overflow-y-auto">
-          <Category
-            categories={categories}
-            isLoading={isLoading}
-            error={error}
-            fetchCategories={fetchCategories}
-            onCategoryUpdate={handleCategoryUpdate}
-          />
+          <Category />
         </main>
       </div>
 

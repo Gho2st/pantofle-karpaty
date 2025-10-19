@@ -37,6 +37,7 @@ export async function GET(request) {
                     description2: true,
                     additionalInfo: true,
                     sizes: true,
+                    images: true, // Dodane pole images
                     categoryId: true,
                   },
                 },
@@ -51,6 +52,7 @@ export async function GET(request) {
                 description2: true,
                 additionalInfo: true,
                 sizes: true,
+                images: true, // Dodane pole images
                 categoryId: true,
               },
             },
@@ -65,6 +67,7 @@ export async function GET(request) {
             description2: true,
             additionalInfo: true,
             sizes: true,
+            images: true, // Dodane pole images
             categoryId: true,
           },
         },

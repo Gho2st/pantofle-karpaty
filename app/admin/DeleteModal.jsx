@@ -1,11 +1,9 @@
 "use client";
 import { useState } from "react";
+import { useAdmin } from "../context/adminContext";
 
-export default function DeleteModal({
-  showDeleteModal,
-  setShowDeleteModal,
-  handleDelete,
-}) {
+export default function DeleteModal() {
+  const { showDeleteModal, setShowDeleteModal, handleDelete } = useAdmin();
   const [isDeleting, setIsDeleting] = useState(false);
 
   const onDelete = async () => {

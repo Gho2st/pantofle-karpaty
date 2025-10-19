@@ -4,13 +4,13 @@ import Nav from "./components/Nav/Nav";
 import FreeDelivery from "./components/FreeDelivery/FreeDelivery";
 import Footer from "./components/Footer/Footer";
 import AuthProvider from "./providers";
+import { CartProvider } from "./context/cartContext";
+import { AdminProvider } from "./context/adminContext";
 
 // Konfiguracja czcionki Josefin Sans
 const josefinSans = Josefin_Sans({
   subsets: ["latin"],
-  // Możesz dodać zmienną CSS, jeśli planujesz używać jej w stylach CSS
-  // variable: "--font-josefin-sans",
-  weight: ["200", "300", "400", "500", "600", "700"], // Dodaj wagi, których faktycznie używasz
+  weight: ["200", "300", "400", "500", "600", "700"],
 });
 
 export const metadata = {
@@ -25,10 +25,14 @@ export default function RootLayout({ children }) {
         className={`${josefinSans.className} antialiased min-h-screen flex flex-col`}
       >
         <AuthProvider>
-          <FreeDelivery />
-          <Nav />
-          <main className="flex-grow">{children}</main>
-          <Footer />
+          <CartProvider>
+            <AdminProvider>
+              <FreeDelivery />
+              <Nav />
+              <main className="flex-grow">{children}</main>
+              <Footer />
+            </AdminProvider>
+          </CartProvider>
         </AuthProvider>
       </body>
     </html>

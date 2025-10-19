@@ -2,6 +2,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { v4 as uuidv4 } from "uuid";
 
 function validateSizes(sizes) {
   if (!sizes) return true; // sizes jest opcjonalne
@@ -16,6 +18,41 @@ function validateSizes(sizes) {
   return true;
 }
 
+const s3Client = new S3Client({
+  region: "eu-central-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ID,
+    secretAccessKey: process.env.AWS_SECRET,
+  },
+});
+
+const BUCKET_NAME = "pantofle-karpaty";
+
+async function uploadFileToS3(fileBuffer, fileName, contentType) {
+  const uniqueFileName = `${uuidv4()}-${fileName}`; // Unikalna nazwa pliku
+  const params = {
+    Bucket: BUCKET_NAME,
+    Key: `products/${uniqueFileName}`, // Folder 'products' w buckecie
+    Body: fileBuffer,
+    ContentType: contentType || "application/octet-stream",
+  };
+
+  const command = new PutObjectCommand(params);
+  await s3Client.send(command);
+
+  return `https://${BUCKET_NAME}.s3.eu-central-1.amazonaws.com/products/${uniqueFileName}`;
+}
+
+function generateSlug(name) {
+  if (!name) return "";
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "") // Usuń znaki specjalne
+    .replace(/\s+/g, "-") // Zamień spacje na myślniki
+    .replace(/-+/g, "-"); // Usuń wielokrotne myślniki
+}
+
 export async function POST(request) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "ADMIN") {
@@ -26,15 +63,17 @@ export async function POST(request) {
   }
 
   try {
-    const {
-      name,
-      price,
-      description,
-      description2,
-      additionalInfo,
-      sizes,
-      categoryId,
-    } = await request.json();
+    const formData = await request.formData();
+    const name = formData.get("name");
+    const slug = formData.get("slug") || generateSlug(name); // Pobierz slug lub wygeneruj z name
+    const price = formData.get("price");
+    const description = formData.get("description") || null;
+    const description2 = formData.get("description2") || null;
+    const additionalInfo = formData.get("additionalInfo") || null;
+    const sizesJson = formData.get("sizes");
+    const sizes = sizesJson ? JSON.parse(sizesJson) : null;
+    const categoryId = formData.get("categoryId");
+    const files = formData.getAll("files");
 
     if (!name || !price || !categoryId) {
       return NextResponse.json(
@@ -66,15 +105,28 @@ export async function POST(request) {
     // Walidacja sizes
     validateSizes(sizes);
 
+    // Upload zdjęć do S3
+    const uploadPromises = files.map(async (file) => {
+      if (file instanceof File) {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        return await uploadFileToS3(buffer, file.name, file.type);
+      }
+      return null;
+    });
+
+    const imageUrls = (await Promise.all(uploadPromises)).filter((url) => url);
+
     // Utwórz nowy produkt
     const product = await prisma.product.create({
       data: {
         name,
+        slug, // Zapisz slug (wygenerowany lub podany)
         price: parsedPrice,
-        description: description || null,
-        description2: description2 || null,
-        additionalInfo: additionalInfo || null,
+        description,
+        description2,
+        additionalInfo,
         sizes: sizes || null,
+        images: imageUrls.length > 0 ? imageUrls : null,
         categoryId: parseInt(categoryId),
       },
     });

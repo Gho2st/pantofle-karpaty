@@ -8,23 +8,24 @@ datasource db {
 }
 
 model User {
-  id              Int              @id @default(autoincrement())
-  name            String?
-  email           String           @unique
-  image           String?
-  role            String           @default("USER")
-  gender          String?
-  billingAddress  BillingAddress?
+  id             Int                @id @default(autoincrement())
+  name           String?
+  email          String             @unique
+  image          String?
+  role           String             @default("USER")
+  gender         String?
+  billingAddress BillingAddress?
   shippingAddress ShippingAddress[]
-  orders          Order[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  orders         Order[]
+  cart           Cart[]             @relation("UserCart") // Dodano nazwę relacji
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 }
 
 model BillingAddress {
-  id        Int     @id @default(autoincrement())
-  userId    Int     @unique
-  user      User    @relation(fields: [userId], references: [id])
+  id        Int    @id @default(autoincrement())
+  userId    Int    @unique
+  user      User   @relation(fields: [userId], references: [id])
   firstName String
   lastName  String
   street    String
@@ -47,26 +48,30 @@ model ShippingAddress {
 }
 
 model Category {
-  id            Int         @id @default(autoincrement())
+  id            Int        @id @default(autoincrement())
   name          String
-  description   String?     // Pole opisu kategorii/podkategorii
-  parentId      Int?        // Dla hierarchii kategorii
-  parent        Category?   @relation("Subcategories", fields: [parentId], references: [id])
-  subcategories Category[]  @relation("Subcategories")
-  products      Product[]   // Relacja z produktami
+  description   String?    // Pole opisu kategorii/podkategorii
+  parentId      Int?       // Dla hierarchii kategorii
+  slug          String?    // Dla dynamicznych URL-i
+  image         String?    // Obraz kategorii
+  parent        Category?  @relation("Subcategories", fields: [parentId], references: [id])
+  subcategories Category[] @relation("Subcategories")
+  products      Product[]  // Relacja z produktami
 }
 
 model Product {
-  id          Int      @id @default(autoincrement())
-  name        String
-  price       Float
-  description String?
-  description2 String?
-  additionalInfo  String?  // Dodatkowe informacje
-  sizes Json? // Rozmiary i stany, np. [{"size": "38", "stock": 10}, {"size": "39", "stock": 5}]
-  images          Json?    // Tablica URL-i zdjęć, np. ["https://my-shop-images.s3.eu-west-1.amazonaws.com/..."]
-  categoryId  Int
-  category    Category @relation(fields: [categoryId], references: [id])
+  id             Int     @id @default(autoincrement())
+  name           String
+  slug String    @unique // unikalny slug 
+  price          Float
+  description    String?
+  description2   String?
+  additionalInfo String? // Dodatkowe informacje
+  sizes          Json?   // Rozmiary i stany, np. [{"size": "38", "stock": 10}, {"size": "39", "stock": 5}]
+  images         Json?   // Tablica URL-i zdjęć
+  categoryId     Int
+  category       Category @relation(fields: [categoryId], references: [id])
+  cart           Cart[]   @relation("ProductCart") // Dodano nazwę relacji
 }
 
 model Order {
@@ -76,4 +81,15 @@ model Order {
   createdAt   DateTime @default(now())
   totalAmount Float
   status      String   @default("PENDING")
+}
+
+model Cart {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  productId Int
+  size      String
+  quantity  Int
+  user      User     @relation("UserCart", fields: [userId], references: [id])
+  product   Product  @relation("ProductCart", fields: [productId], references: [id])
+  createdAt DateTime @default(now())
 }
