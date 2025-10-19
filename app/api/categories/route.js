@@ -2,6 +2,9 @@ import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET(request) {
+  console.log("Prisma:", prisma); // Sprawdź, czy prisma jest zdefiniowane
+  console.log("Prisma.category:", prisma.category); // Sprawdź, czy prisma.category istnieje
+
   const { searchParams } = new URL(request.url);
   const parentId = searchParams.get("parentId")
     ? parseInt(searchParams.get("parentId"))
@@ -9,9 +12,7 @@ export async function GET(request) {
 
   try {
     const categories = await prisma.category.findMany({
-      where: {
-        parentId, // Pobierz kategorie główne lub podkategorie
-      },
+      where: { parentId },
       select: {
         id: true,
         name: true,
@@ -45,7 +46,10 @@ export async function GET(request) {
   } catch (error) {
     console.error("Błąd podczas pobierania kategorii:", error);
     return NextResponse.json(
-      { error: "Błąd serwera podczas pobierania danych" },
+      {
+        error: "Błąd serwera podczas pobierania danych",
+        details: error.message,
+      },
       { status: 500 }
     );
   }
