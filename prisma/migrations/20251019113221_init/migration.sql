@@ -1,47 +1,3 @@
-/*
-  Warnings:
-
-  - You are about to drop the `billing_addresses` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `categories` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `orders` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `products` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `shipping_addresses` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `users` table. If the table is not empty, all the data it contains will be lost.
-
-*/
--- DropForeignKey
-ALTER TABLE "public"."billing_addresses" DROP CONSTRAINT "billing_addresses_userId_fkey";
-
--- DropForeignKey
-ALTER TABLE "public"."categories" DROP CONSTRAINT "categories_parent_id_fkey";
-
--- DropForeignKey
-ALTER TABLE "public"."orders" DROP CONSTRAINT "orders_userId_fkey";
-
--- DropForeignKey
-ALTER TABLE "public"."products" DROP CONSTRAINT "products_categoryId_fkey";
-
--- DropForeignKey
-ALTER TABLE "public"."shipping_addresses" DROP CONSTRAINT "shipping_addresses_userId_fkey";
-
--- DropTable
-DROP TABLE "public"."billing_addresses";
-
--- DropTable
-DROP TABLE "public"."categories";
-
--- DropTable
-DROP TABLE "public"."orders";
-
--- DropTable
-DROP TABLE "public"."products";
-
--- DropTable
-DROP TABLE "public"."shipping_addresses";
-
--- DropTable
-DROP TABLE "public"."users";
-
 -- CreateTable
 CREATE TABLE "User" (
     "id" SERIAL NOT NULL,
@@ -89,8 +45,10 @@ CREATE TABLE "ShippingAddress" (
 CREATE TABLE "Category" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
-    "slug" TEXT NOT NULL,
-    "parent_id" INTEGER,
+    "description" TEXT,
+    "parentId" INTEGER,
+    "slug" TEXT,
+    "image" TEXT,
 
     CONSTRAINT "Category_pkey" PRIMARY KEY ("id")
 );
@@ -99,6 +57,13 @@ CREATE TABLE "Category" (
 CREATE TABLE "Product" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "price" DOUBLE PRECISION NOT NULL,
+    "description" TEXT,
+    "description2" TEXT,
+    "additionalInfo" TEXT,
+    "sizes" JSONB,
+    "images" JSONB,
     "categoryId" INTEGER NOT NULL,
 
     CONSTRAINT "Product_pkey" PRIMARY KEY ("id")
@@ -115,6 +80,18 @@ CREATE TABLE "Order" (
     CONSTRAINT "Order_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "Cart" (
+    "id" SERIAL NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "productId" INTEGER NOT NULL,
+    "size" TEXT NOT NULL,
+    "quantity" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Cart_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -122,7 +99,7 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 CREATE UNIQUE INDEX "BillingAddress_userId_key" ON "BillingAddress"("userId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Category_slug_key" ON "Category"("slug");
+CREATE UNIQUE INDEX "Product_slug_key" ON "Product"("slug");
 
 -- AddForeignKey
 ALTER TABLE "BillingAddress" ADD CONSTRAINT "BillingAddress_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -131,10 +108,16 @@ ALTER TABLE "BillingAddress" ADD CONSTRAINT "BillingAddress_userId_fkey" FOREIGN
 ALTER TABLE "ShippingAddress" ADD CONSTRAINT "ShippingAddress_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Category" ADD CONSTRAINT "Category_parent_id_fkey" FOREIGN KEY ("parent_id") REFERENCES "Category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Category" ADD CONSTRAINT "Category_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Product" ADD CONSTRAINT "Product_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Order" ADD CONSTRAINT "Order_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Cart" ADD CONSTRAINT "Cart_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Cart" ADD CONSTRAINT "Cart_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
