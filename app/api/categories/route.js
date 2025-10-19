@@ -2,8 +2,8 @@ import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET(request) {
-  console.log("Prisma:", prisma); // Sprawdź, czy prisma jest zdefiniowane
-  console.log("Prisma.category:", prisma.category); // Sprawdź, czy prisma.category istnieje
+  console.log("Prisma:", prisma); // Sprawdź, czy prisma istnieje
+  console.log("Prisma.category:", prisma.category); // Sprawdź, czy model category istnieje
 
   const { searchParams } = new URL(request.url);
   const parentId = searchParams.get("parentId")
@@ -11,6 +11,10 @@ export async function GET(request) {
     : null;
 
   try {
+    if (!prisma.category) {
+      throw new Error("Prisma.category is undefined");
+    }
+
     const categories = await prisma.category.findMany({
       where: { parentId },
       select: {
