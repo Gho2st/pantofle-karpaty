@@ -54,7 +54,7 @@ export default function Nav() {
   const iconButtonClasses = `relative text-gray-700 ${baseMenuItemClasses}`;
 
   return (
-    <nav className="bg-white p-4">
+    <nav className="bg-white py-4">
       <div className="flex justify-between items-center max-w-7xl mx-auto">
         {/* 1. Logo */}
         <Link href="/">

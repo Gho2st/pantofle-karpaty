@@ -79,8 +79,8 @@ export default function Footer() {
             </a>
           </li>
           <li>
-            <a href="/rodo" className="hover:text-primary transition">
-              RODO
+            <a href="/polityka-prywatnosci" className="hover:text-primary transition">
+              Polityka Prywatności
             </a>
           </li>
           <li>
