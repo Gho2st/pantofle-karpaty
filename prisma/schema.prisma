@@ -28,10 +28,11 @@ model Address {
   city        String
   postalCode  String
   phone       String
-  paczkomat   String // Kod paczkomatu, np. "POZ01A"
+  paczkomat   String?
   user        User      @relation("UserAddresses", fields: [userId], references: [id])
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  isPrimary   Boolean   @default(false) // New field for primary address
 }
 
 model Category {

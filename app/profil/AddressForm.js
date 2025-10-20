@@ -1,8 +1,9 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
-import { toast } from "react-toastify";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 
 export default function AddressForm() {
+  const { data: session } = useSession();
   const [addresses, setAddresses] = useState([]);
   const [formData, setFormData] = useState({
     street: "",
@@ -10,156 +11,69 @@ export default function AddressForm() {
     postalCode: "",
     phone: "",
     paczkomat: "",
+    isPrimary: false,
   });
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingAddressId, setEditingAddressId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const geowidgetRef = useRef(null);
-
-  const INPOST_TOKEN = process.env.NEXT_PUBLIC_INPOST_TOKEN;
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [addressToDelete, setAddressToDelete] = useState(null);
 
   useEffect(() => {
-    // Ładuj skrypty i CSS Geowidget dynamicznie
-    const loadGeowidget = () => {
-      if (document.getElementById("inpost-geowidget-css")) return; // Już załadowane
-
-      // CSS
-      const cssLink = document.createElement("link");
-      cssLink.id = "inpost-geowidget-css";
-      cssLink.rel = "stylesheet";
-      cssLink.href = "https://geowidget.inpost.pl/inpost-geowidget.css";
-      document.head.appendChild(cssLink);
-
-      // JS
-      const script = document.createElement("script");
-      script.src = "https://geowidget.inpost.pl/inpost-geowidget.js";
-      script.defer = true;
-      script.onload = () => {
-        // Inicjalizuj widget po załadowaniu skryptu
-        initGeowidget();
-      };
-      document.head.appendChild(script);
-    };
-
-    loadGeowidget();
-
-    // Listener na wybór paczkomatu
-    const handlePointSelect = (event) => {
-      if (event.detail && event.detail.name) {
-        setFormData((prev) => ({ ...prev, paczkomat: event.detail.name })); // Kod paczkomatu, np. "KRA02APP"
-        toast.success(`Wybrano paczkomat: ${event.detail.name}`);
-      }
-    };
-
-    document.addEventListener("onpointselect", handlePointSelect);
-    return () =>
-      document.removeEventListener("onpointselect", handlePointSelect);
-  }, []);
-
-  // Inicjalizuj widget po załadowaniu skryptu
-  const initGeowidget = () => {
-    if (geowidgetRef.current && INPOST_TOKEN !== "YOUR_INPOST_TOKEN_HERE") {
-      // Utwórz custom tag
-      geowidgetRef.current.innerHTML = `
-        <inpost-geowidget 
-          id="geowidget" 
-          onpoint="onpointselect" 
-          token="${INPOST_TOKEN}" 
-          language="pl" 
-          config="parcelcollect"
-          ${
-            formData.postalCode
-              ? `postal_code="${formData.postalCode.replace("-", "")}"`
-              : ""
-          }
-        ></inpost-geowidget>
-      `;
-    } else if (INPOST_TOKEN === "YOUR_INPOST_TOKEN_HERE") {
-      toast.error("Dodaj swój token InPost w kodzie, aby widget działał!");
-    }
-  };
-
-  // Ponowne inicjalizowanie po zmianie kodu pocztowego
-  useEffect(() => {
-    if (geowidgetRef.current) {
-      initGeowidget();
-    }
-  }, [formData.postalCode]);
-
-  // Pobierz adresy użytkownika
-  useEffect(() => {
-    const fetchAddresses = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch("/api/addresses");
-        const data = await response.json();
-        if (response.ok) {
-          setAddresses(data.addresses || []);
-        } else {
-          toast.error(data.error || "Błąd podczas pobierania adresów");
-        }
-      } catch (error) {
-        console.error("Błąd podczas pobierania adresów:", error);
-        toast.error("Błąd serwera");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchAddresses();
   }, []);
 
+  const fetchAddresses = async () => {
+    try {
+      const response = await fetch("/api/addresses");
+      if (!response.ok) throw new Error("Błąd pobierania adresów");
+      const data = await response.json();
+      setAddresses(data.addresses);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.paczkomat) {
-      toast.error("Wybierz paczkomat na mapie!");
-      return;
-    }
+    setError("");
     setLoading(true);
 
     try {
-      const url = isEditing
-        ? `/api/addresses/${editingAddressId}`
-        : "/api/addresses";
-      const method = isEditing ? "PUT" : "POST";
+      const url = editingId ? `/api/addresses/${editingId}` : "/api/addresses";
+      const method = editingId ? "PUT" : "POST";
+
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
-      const data = await response.json();
 
-      if (response.ok) {
-        if (isEditing) {
-          setAddresses(
-            addresses.map((addr) =>
-              addr.id === editingAddressId ? { ...addr, ...formData } : addr
-            )
-          );
-          toast.success("Adres zaktualizowany");
-        } else {
-          setAddresses([...addresses, { id: data.id, ...formData }]);
-          toast.success("Adres dodany");
-        }
-        setFormData({
-          street: "",
-          city: "",
-          postalCode: "",
-          phone: "",
-          paczkomat: "",
-        });
-        setIsEditing(false);
-        setEditingAddressId(null);
-      } else {
-        toast.error(data.error || "Błąd podczas zapisywania adresu");
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Błąd podczas zapisywania adresu");
       }
-    } catch (error) {
-      console.error("Błąd podczas zapisywania adresu:", error);
-      toast.error("Błąd serwera");
+
+      setFormData({
+        street: "",
+        city: "",
+        postalCode: "",
+        phone: "",
+        paczkomat: "",
+        isPrimary: false,
+      });
+      setEditingId(null);
+      await fetchAddresses();
+    } catch (err) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -171,148 +85,181 @@ export default function AddressForm() {
       city: address.city,
       postalCode: address.postalCode,
       phone: address.phone,
-      paczkomat: address.paczkomat,
+      paczkomat: address.paczkomat || "",
+      isPrimary: address.isPrimary || false,
     });
-    setIsEditing(true);
-    setEditingAddressId(address.id);
+    setEditingId(address.id);
   };
 
-  const handleDelete = async (id) => {
-    setLoading(true);
+  const handleDelete = (id) => {
+    setAddressToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!addressToDelete) return;
+
     try {
-      const response = await fetch(`/api/addresses/${id}`, {
+      const response = await fetch(`/api/addresses/${addressToDelete}`, {
         method: "DELETE",
       });
-      const data = await response.json();
-      if (response.ok) {
-        setAddresses(addresses.filter((addr) => addr.id !== id));
-        toast.success("Adres usunięty");
-      } else {
-        toast.error(data.error || "Błąd podczas usuwania adresu");
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Błąd podczas usuwania adresu");
       }
-    } catch (error) {
-      console.error("Błąd podczas usuwania adresu:", error);
-      toast.error("Błąd serwera");
+
+      await fetchAddresses();
+    } catch (err) {
+      setError(err.message);
     } finally {
-      setLoading(false);
+      setShowDeleteModal(false);
+      setAddressToDelete(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setAddressToDelete(null);
+  };
+
+  const handleSetPrimary = async (id) => {
+    try {
+      const response = await fetch(`/api/addresses/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(
+          data.error || "Błąd podczas ustawiania głównego adresu"
+        );
+      }
+
+      await fetchAddresses();
+    } catch (err) {
+      setError(err.message);
     }
   };
 
   return (
     <div>
       <h1 className="text-3xl mb-4">Adresy</h1>
-      <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+      {error && <p className="text-red-600 mb-4">{error}</p>}
+
+      {/* Formularz dodawania/edytowania adresu */}
+      <form onSubmit={handleSubmit} className="space-y-4 mb-8">
         <div>
-          <label htmlFor="street" className="block text-gray-700 font-medium">
-            Ulica i numer
-          </label>
+          <label className="block text-gray-700 font-medium">Ulica i numer</label>
           <input
             type="text"
-            id="street"
             name="street"
             value={formData.street}
             onChange={handleInputChange}
-            className="border p-2 rounded-md w-full"
+            className="w-full border border-gray-300 rounded-md p-2"
             required
           />
         </div>
         <div>
-          <label htmlFor="city" className="block text-gray-700 font-medium">
-            Miasto
-          </label>
+          <label className="block text-gray-700 font-medium">Miasto</label>
           <input
             type="text"
-            id="city"
             name="city"
             value={formData.city}
             onChange={handleInputChange}
-            className="border p-2 rounded-md w-full"
-            required
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="postalCode"
-            className="block text-gray-700 font-medium"
-          >
-            Kod pocztowy
-          </label>
-          <input
-            type="text"
-            id="postalCode"
-            name="postalCode"
-            value={formData.postalCode}
-            onChange={handleInputChange}
-            className="border p-2 rounded-md w-full"
-            placeholder="np. 30-001"
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="phone" className="block text-gray-700 font-medium">
-            Telefon
-          </label>
-          <input
-            type="tel"
-            id="phone"
-            name="phone"
-            value={formData.phone}
-            onChange={handleInputChange}
-            className="border p-2 rounded-md w-full"
+            className="w-full border border-gray-300 rounded-md p-2"
             required
           />
         </div>
         <div>
           <label className="block text-gray-700 font-medium">
-            Paczkomat InPost (wybierz na mapie)
+            Kod pocztowy
           </label>
-          <div
-            ref={geowidgetRef}
-            className="border rounded-md p-4 h-96 w-full bg-gray-100 flex items-center justify-center"
-            dangerouslySetInnerHTML={{ __html: "" }} // Dynamicznie wstawiany tag
+          <input
+            type="text"
+            name="postalCode"
+            value={formData.postalCode}
+            onChange={handleInputChange}
+            className="w-full border border-gray-300 rounded-md p-2"
+            required
           />
-          {formData.paczkomat && (
-            <p className="text-sm text-green-600 mt-2">
-              Wybrany paczkomat: {formData.paczkomat}
-            </p>
-          )}
-          {!INPOST_TOKEN || INPOST_TOKEN === "YOUR_INPOST_TOKEN_HERE" ? (
-            <p className="text-sm text-red-500 mt-1">
-              Dodaj token InPost, aby mapa działała!
-            </p>
-          ) : null}
+        </div>
+        <div>
+          <label className="block text-gray-700 font-medium">Telefon</label>
+          <input
+            type="text"
+            name="phone"
+            value={formData.phone}
+            onChange={handleInputChange}
+            className="w-full border border-gray-300 rounded-md p-2"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-gray-700 font-medium">
+            Paczkomat (opcjonalne)
+          </label>
+          <input
+            type="text"
+            name="paczkomat"
+            value={formData.paczkomat}
+            onChange={handleInputChange}
+            className="w-full border border-gray-300 rounded-md p-2"
+          />
+        </div>
+        <div>
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              name="isPrimary"
+              checked={formData.isPrimary}
+              onChange={handleInputChange}
+              className="h-4 w-4 text-red-600"
+            />
+            <span className="text-gray-700 font-medium">
+              Ustaw jako główny adres
+            </span>
+          </label>
         </div>
         <button
           type="submit"
-          disabled={loading || !formData.paczkomat}
-          className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 disabled:opacity-50"
+          disabled={loading}
+          className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:bg-gray-400"
         >
           {loading
             ? "Zapisywanie..."
-            : isEditing
+            : editingId
             ? "Zaktualizuj adres"
             : "Dodaj adres"}
         </button>
       </form>
 
-      {/* Lista zapisanych adresów */}
-      {loading ? (
-        <p>Ładowanie...</p>
-      ) : addresses.length === 0 ? (
-        <p className="text-gray-700">Brak zapisanych adresów.</p>
-      ) : (
+      {/* Lista adresów */}
+      {addresses.length > 0 ? (
         <div className="space-y-4">
+          <h2 className="text-xl font-medium">Zapisane adresy</h2>
           {addresses.map((address) => (
             <div
               key={address.id}
-              className="border p-4 rounded-md flex justify-between items-center"
+              className={`border border-gray-200 rounded-md p-4 flex justify-between items-center ${
+                address.isPrimary ? "bg-green-50" : ""
+              }`}
             >
               <div>
+                <p className="font-medium">
+                  {address.street}
+                  {address.isPrimary && (
+                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Główny
+                    </span>
+                  )}
+                </p>
                 <p>
-                  {address.street}, {address.postalCode} {address.city}
+                  {address.city}, {address.postalCode}
                 </p>
                 <p>Telefon: {address.phone}</p>
-                <p>Paczkomat: {address.paczkomat}</p>
+                {address.paczkomat && <p>Paczkomat: {address.paczkomat}</p>}
               </div>
               <div className="space-x-2">
                 <button
@@ -327,9 +274,48 @@ export default function AddressForm() {
                 >
                   Usuń
                 </button>
+                {!address.isPrimary && (
+                  <button
+                    onClick={() => handleSetPrimary(address.id)}
+                    className="text-green-600 hover:underline"
+                  >
+                    Ustaw jako główny
+                  </button>
+                )}
               </div>
             </div>
           ))}
+        </div>
+      ) : (
+        <p className="text-gray-700">Brak zapisanych adresów.</p>
+      )}
+
+      {/* Modal potwierdzający usunięcie */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-gray-600/80 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-medium text-gray-900">
+              Potwierdź usunięcie
+            </h3>
+            <p className="mt-2 text-gray-600">
+              Czy na pewno chcesz usunąć ten adres? Tej operacji nie można
+              cofnąć.
+            </p>
+            <div className="mt-4 flex justify-end space-x-3">
+              <button
+                onClick={cancelDelete}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+              >
+                Anuluj
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700"
+              >
+                Usuń
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

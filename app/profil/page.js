@@ -3,7 +3,7 @@ import { signIn, signOut } from "next-auth/react";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import AddressForm from "./AddressForm"; // Import nowego komponentu
+import AddressForm from "./AddressForm";
 
 export default function Profil() {
   const { data: session, status } = useSession();
