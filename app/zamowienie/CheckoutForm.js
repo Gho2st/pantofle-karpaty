@@ -2,8 +2,9 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useCart } from "@/app/context/cartContext";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
+import InpostGeowidget from "../components/InpostGeowidget";
 
 export default function CheckoutForm() {
   const { data: session } = useSession();
@@ -351,7 +352,12 @@ export default function CheckoutForm() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Wybierz Paczkomat *
                 </label>
-
+                <InpostGeowidget
+                  config="parcelCollect"
+                  language="pl"
+                  onPointSelect={handlePointSelect}
+                  initialPosition={{ lat: 52.2297, lng: 21.0122 }}
+                />
                 {formData.parcelLocker && (
                   <p className="text-sm text-gray-500 mt-1">
                     Wybrano: {formData.parcelLocker}
