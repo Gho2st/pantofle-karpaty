@@ -1,4 +1,4 @@
-import CollectionTitle from "../CollectionTitle";
+import Collection from "./Collection";
 
 export default function About() {
   return (
@@ -41,28 +41,7 @@ export default function About() {
           pytania.
         </p>
       </div>
-      {/* oferta */}
-
-      <div className="grid grid-cols-3 gap-10 mt-16">
-        <CollectionTitle
-          src={"/pantofle/pantofle.jpg"}
-          alt="Pantofle Damskie"
-          label="Pantofle Damskie"
-          href="/kobiety"
-        />
-        <CollectionTitle
-          src={"/pantofle/pantofle.jpg"}
-          alt="Pantofle Damskie"
-          label="Pantofle Damskie"
-          href="/kobiety"
-        />
-        <CollectionTitle
-          src={"/pantofle/pantofle.jpg"}
-          alt="Pantofle Damskie"
-          label="Pantofle Damskie"
-          href="/kobiety"
-        />
-      </div>
+      <Collection />
     </section>
   );
 }

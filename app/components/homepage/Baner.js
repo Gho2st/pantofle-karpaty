@@ -16,22 +16,19 @@ export default function Baner() {
           <div className="flex flex-col gap-8 lg:gap-12">
             {/* 1. DUŻY BANER */}
             <div className="bg-gray-100 p-10 md:p-16">
-              <h1 className="uppercase text-primary text-4xl sm:text-5xl font-extrabold leading-snug mb-4">
+              <h1 className="uppercase text-primary text-4xl sm:text-5xl 2xl:text-6xl font-extrabold leading-snug mb-4">
                 Polski producent obuwia ze skóry
               </h1>
-              <p className="text-gray-700 text-lg">
+              <p className="text-gray-700 text-lg 2xl:text-2xl">
                 Naturalne materiały, solidne wykonanie, ponadczasowy styl.
               </p>
-              <button className="mt-8 bg-blue-200 text-black font-semibold py-3 px-8 w-fit rounded-lg hover:opacity-90 transition">
-                Odkryj kolekcję
-              </button>
             </div>
 
             {/* 2. DWA MAŁE ZDJĘCIA (Dolna część: 1/2 i 1/2 horyzontalnie) */}
             <div className="grid grid-cols-2 gap-4 h-64 md:h-80">
               <div className={imageContainerClasses}>
                 <Image
-                  src={"/pantofle/pantofle.jpg"}
+                  src={"/baner/1.jpg"}
                   alt="Pantofle damskie"
                   fill
                   sizes="(max-width: 1024px) 50vw, 25vw"
@@ -41,7 +38,7 @@ export default function Baner() {
 
               <div className={imageContainerClasses}>
                 <Image
-                  src={"/pantofle/pantofle.jpg"}
+                  src={"/baner/2.jpg"}
                   alt="Pantofle męskie"
                   fill
                   sizes="(max-width: 1024px) 50vw, 25vw"
@@ -58,7 +55,7 @@ export default function Baner() {
             {/* Lewe zdjęcie (zajmuje 1/2 szerokości i całą dostępną wysokość) */}
             <div className={imageContainerClasses}>
               <Image
-                src={"/pantofle/pantofle.jpg"}
+                src={"/baner/3.jpg"}
                 alt="Pantofle dziecięce"
                 fill
                 sizes="(max-width: 1024px) 50vw, 25vw"
@@ -69,7 +66,7 @@ export default function Baner() {
             {/* Prawe zdjęcie (zajmuje 1/2 szerokości i całą dostępną wysokość) */}
             <div className={imageContainerClasses}>
               <Image
-                src={"/pantofle/pantofle.jpg"}
+                src={"/baner/4.jpg"}
                 alt="Pantofle skórzane"
                 fill
                 sizes="(max-width: 1024px) 50vw, 25vw"

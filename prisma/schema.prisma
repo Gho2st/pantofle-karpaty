@@ -73,10 +73,16 @@ model Cart {
   product     Product   @relation("ProductCart", fields: [productId], references: [id])
   user        User      @relation("UserCart", fields: [userId], references: [id])
 }
+enum OrderStatus {
+  PENDING   // Oczekuje na płatność
+  PAID      // Opłacone
+  SHIPPED   // Wysłane
+  CANCELLED // Anulowane
+}
 
 model Order {
-  id          Int        @id @default(autoincrement())
-  userId      Int?       // Opcjonalne dla zamówień gości
+  id          Int       @id @default(autoincrement())
+  userId      Int?      // Opcjonalne dla zamówień gości
   email       String
   firstName   String
   lastName    String
@@ -84,21 +90,27 @@ model Order {
   city        String
   postalCode  String
   phone       String
-  paczkomat   String?    // Opcjonalny kod paczkomatu
+  paczkomat   String?   // Opcjonalny kod paczkomatu
   totalAmount Float
-  isGuest     Boolean    @default(false)
+  isGuest     Boolean   @default(false)
   items       OrderItem[] @relation("OrderItems")
-  user        User?      @relation("UserOrders", fields: [userId], references: [id])
-  createdAt   DateTime   @default(now())
+  user        User?     @relation("UserOrders", fields: [userId], references: [id])
+  deliveryMethod String // np. "paczkomat" lub "kurier"
+  paymentMethod  String // np. "p24" lub "transfer"
+  deliveryCost   Float  // Koszt samej dostawy
+  createdAt   DateTime  @default(now())
+  status      OrderStatus @default(PENDING) // Domyślnie każde zamówienie jest oczekujące
+  paymentId   String?     @unique // Tutaj zapiszemy ID transakcji zwrócone przez Przelewy24 (ich 'orderId')
 }
 
 model OrderItem {
   id         Int     @id @default(autoincrement())
   orderId    Int
   productId  Int
+  name      String // Nazwa produktu w momencie zakupu
   size       String
   quantity   Int
-  price      Float
+  price      Float // <--- Cena w momencie zakupu
   order      Order   @relation("OrderItems", fields: [orderId], references: [id])
   product    Product @relation("ProductOrderItems", fields: [productId], references: [id])
 }

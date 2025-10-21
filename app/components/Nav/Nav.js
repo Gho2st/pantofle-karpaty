@@ -3,43 +3,24 @@ import Image from "next/image";
 import { ShoppingCart, User } from "lucide-react";
 import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useCart } from "@/app/context/cartContext";
+import { useCategories } from "@/app/context/categoriesContext"; // <-- IMPORT KONTEKSTU KATEGORII
 
 export default function Nav() {
   const { data: session } = useSession();
-  const { cartItems, fetchCart } = useCart(); // Zmiana z cartCount na cartItems
-  const [categories, setCategories] = useState([]);
+  const { cartItems, fetchCart } = useCart(); // fetchCart może tu zostać, jeśli jest potrzebny
+  const { categories, isLoading } = useCategories(); // <-- POBIERANIE DANYCH Z KONTEKSTU
   const [animateCart, setAnimateCart] = useState(false);
 
   // Oblicz liczbę elementów w koszyku
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  // Pobierz kategorie
-  const fetchCategories = useCallback(async () => {
-    try {
-      const response = await fetch("/api/categories?parentId=null");
-      const data = await response.json();
-      if (data.categories) {
-        setCategories(data.categories);
-      }
-    } catch (error) {
-      console.error("Błąd podczas pobierania kategorii:", error);
-    }
-  }, []);
-
+  // Pobierz koszyk przy montowaniu (jeśli to nadal potrzebne)
+  // Logika dla kategorii została przeniesiona do CategoriesProvider
   useEffect(() => {
-    fetchCategories(); // Pobierz kategorie przy montowaniu
-    fetchCart(); // Pobierz koszyk przy montowaniu (dla zalogowanych lub z localStorage)
-
-    // Nasłuchuj na zdarzenie categoriesUpdated
-    const handleCategoriesUpdate = () => fetchCategories();
-    window.addEventListener("categoriesUpdated", handleCategoriesUpdate);
-
-    return () => {
-      window.removeEventListener("categoriesUpdated", handleCategoriesUpdate);
-    };
-  }, [fetchCategories, fetchCart]);
+    fetchCart();
+  }, [fetchCart]);
 
   // Animacja przy zmianie liczby elementów w koszyku
   useEffect(() => {
@@ -77,50 +58,54 @@ export default function Nav() {
               <Link href="/">Strona Główna</Link>
             </li>
 
-            {/* Dynamiczne Kategorie */}
-            {categories.map((category) => (
-              <li key={category.id} className="group relative">
-                <Link
-                  href={`/kategoria/${category.slug || category.name}`}
-                  className={`flex items-center ${baseMenuItemClasses}`}
-                >
-                  {category.name}
+            {/* Dynamiczne Kategorie (z kontekstu) */}
+            {isLoading ? (
+              <li className={baseMenuItemClasses}>Ładowanie...</li>
+            ) : (
+              categories.map((category) => (
+                <li key={category.id} className="group relative">
+                  <Link
+                    href={`/kategoria/${category.slug || category.name}`}
+                    className={`flex items-center ${baseMenuItemClasses}`}
+                  >
+                    {category.name}
+                    {category.subcategories.length > 0 && (
+                      <svg
+                        className="w-4 h-4 ml-1"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 9l-7 7-7-7"
+                        ></path>
+                      </svg>
+                    )}
+                  </Link>
                   {category.subcategories.length > 0 && (
-                    <svg
-                      className="w-4 h-4 ml-1"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M19 9l-7 7-7-7"
-                      ></path>
-                    </svg>
-                  )}
-                </Link>
-                {category.subcategories.length > 0 && (
-                  <div className="absolute left-0 pt-2 z-10 opacity-0 group-hover:opacity-100 invisible group-hover:visible transition duration-300">
-                    <div className="w-48 bg-white border border-gray-200 rounded-md shadow-lg">
-                      {category.subcategories.map((subcategory) => (
-                        <Link
-                          key={subcategory.id}
-                          href={`/kategoria/${category.slug}/${
-                            subcategory.slug || subcategory.id
-                          }`}
-                          className="block capitalize px-4 py-2 text-gray-800 hover:bg-gray-100 font-medium"
-                        >
-                          {subcategory.name}
-                        </Link>
-                      ))}
+                    <div className="absolute left-0 pt-2 z-10 opacity-0 group-hover:opacity-100 invisible group-hover:visible transition duration-300">
+                      <div className="w-48 bg-white border border-gray-200 rounded-md shadow-lg">
+                        {category.subcategories.map((subcategory) => (
+                          <Link
+                            key={subcategory.id}
+                            href={`/kategoria/${category.slug}/${
+                              subcategory.slug || subcategory.id
+                            }`}
+                            className="block capitalize px-4 py-2 text-gray-800 hover:bg-gray-100 font-medium"
+                          >
+                            {subcategory.name}
+                          </Link>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </li>
-            ))}
+                  )}
+                </li>
+              ))
+            )}
 
             {/* Kontakt */}
             <li className={baseMenuItemClasses}>

@@ -1,437 +1,170 @@
 "use client";
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useCart } from "@/app/context/cartContext";
 import { useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
-import InpostMap from "../components/InpostGeowidget";
-import InPostGeowidget from "../components/InpostGeowidget";
+import CartSummary from "./CartSummary";
+import ShippingDetailsForm from "./ShippingDetailsForm";
+import PaymentMethodSelector from "./PaymentMethodSelector";
+import { ToastContainer } from "react-toastify";
 
-export default function CheckoutForm() {
+const splitName = (fullName = "") => {
+  const parts = (fullName || "").split(" ");
+  const firstName = parts[0] || "";
+  const lastName = parts.slice(1).join(" ") || "";
+  return { firstName, lastName };
+};
+
+export default function CheckoutForm({ primaryAddress, userName }) {
+  const INPOST_TOKEN = process.env.NEXT_PUBLIC_INPOST_SANDBOX_TOKEN;
   const { data: session } = useSession();
-  const { cartItems, fetchCart, clearCart } = useCart();
+  const { cartItems, clearCart } = useCart();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [isCompanyPurchase, setIsCompanyPurchase] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("p24");
-  const [orderId, setOrderId] = useState(null);
+  const { firstName, lastName } = splitName(userName);
+
   const [formData, setFormData] = useState({
     email: session?.user.email || "",
-    firstName: "",
-    lastName: "",
-    street: "",
-    city: "",
-    postalCode: "",
-    phone: "",
+    firstName: firstName || "",
+    lastName: lastName || "",
+    street: primaryAddress?.street || "",
+    city: primaryAddress?.city || "",
+    postalCode: primaryAddress?.postalCode || "",
+    phone: primaryAddress?.phone || "",
     companyName: "",
     nip: "",
-    parcelLocker: "",
+    parcelLocker: primaryAddress?.paczkomat || "",
+    parcelLockerDetails: null,
     courierInstructions: "",
   });
+
   const [deliveryMethod, setDeliveryMethod] = useState(
     searchParams.get("deliveryMethod") || "paczkomat"
   );
 
   useEffect(() => {
-    fetchCart(); // Pobierz koszyk przy montowaniu
-  }, [fetchCart]);
-
-  useEffect(() => {
-    // Aktualizuj email, jeśli session się zmieni
-    if (session?.user.email) {
+    if (session?.user.email && !formData.email) {
       setFormData((prev) => ({ ...prev, email: session.user.email }));
     }
-  }, [session]);
+  }, [session, formData.email]);
 
-  const calculateSubtotal = () => {
+  const calculateSubtotal = useCallback(() => {
     return cartItems
       .reduce((sum, item) => sum + (item.product.price || 0) * item.quantity, 0)
       .toFixed(2);
-  };
+  }, [cartItems]);
 
-  const calculateDeliveryCost = () => {
+  const calculateDeliveryCost = useCallback(() => {
     const subtotal = parseFloat(calculateSubtotal());
-    if (subtotal >= 200) return 0; // Darmowa dostawa powyżej 200 PLN
+    if (subtotal >= 200) return 0;
     return deliveryMethod === "paczkomat" ? 13.99 : 15.99;
-  };
+  }, [cartItems, deliveryMethod, calculateSubtotal]);
 
-  const calculateTotal = () => {
+  const calculateTotal = useCallback(() => {
     const subtotal = parseFloat(calculateSubtotal());
     const deliveryCost = calculateDeliveryCost();
     return (subtotal + deliveryCost).toFixed(2);
-  };
+  }, [calculateSubtotal, calculateDeliveryCost]);
 
   const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleCompanyPurchaseToggle = () => {
-    setIsCompanyPurchase(!isCompanyPurchase);
+    setIsCompanyPurchase((prev) => !prev);
   };
 
   const handlePaymentMethodChange = (e) => {
     setPaymentMethod(e.target.value);
   };
 
-  const handlePayment = async (e) => {
+  const handlePointSelection = useCallback((point) => {
+    if (point && point.name) {
+      setFormData((prev) => ({
+        ...prev,
+        parcelLocker: point.name,
+        parcelLockerDetails: point.fullData,
+      }));
+      toast.success(`Wybrano paczkomat: ${point.name}`);
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        parcelLocker: "",
+        parcelLockerDetails: null,
+      }));
+      toast.warn("Nie wybrano paczkomatu.");
+    }
+  }, []);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
+    const total = calculateTotal();
+    const deliveryCost = calculateDeliveryCost();
+
     try {
-      const orderResponse = await fetch("/api/orders", {
+      const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: session ? session.user.id : null,
-          totalAmount: calculateTotal(),
-          items: cartItems.map((item) => ({
-            productId: item.productId,
-            size: item.size,
-            quantity: item.quantity,
-          })),
-          shippingDetails: {
-            email: formData.email,
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            street: formData.street,
-            city: formData.city,
-            postalCode: formData.postalCode,
-            phone: formData.phone,
-            ...(isCompanyPurchase && {
-              companyName: formData.companyName,
-              nip: formData.nip,
-            }),
-            ...(deliveryMethod === "paczkomat" && {
-              parcelLocker: formData.parcelLocker,
-            }),
-            ...(deliveryMethod === "kurier" && {
-              courierInstructions: formData.courierInstructions,
-            }),
-          },
+          cartItems,
+          formData,
+          total,
+          deliveryCost,
           paymentMethod,
           deliveryMethod,
-          deliveryCost: calculateDeliveryCost(),
         }),
       });
 
-      const orderData = await orderResponse.json();
-      if (!orderResponse.ok)
-        throw new Error(orderData.error || "Błąd podczas tworzenia zamówienia");
-
-      setOrderId(orderData.id);
-
-      if (paymentMethod === "p24") {
-        const p24Response = await fetch("/api/p24/create", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderId: orderData.id,
-            amount: parseFloat(calculateTotal()) * 100,
-            email: formData.email,
-            name: isCompanyPurchase
-              ? formData.companyName
-              : `${formData.firstName} ${formData.lastName}`,
-            address: `${formData.street}, ${formData.postalCode} ${formData.city}`,
-            phone: formData.phone,
-            ...(isCompanyPurchase && { nip: formData.nip }),
-          }),
-        });
-
-        const p24Data = await p24Response.json();
-        if (!p24Response.ok)
-          throw new Error(
-            p24Data.error || "Błąd podczas tworzenia transakcji P24"
-          );
-
-        const p24Url = p24Data.redirectUrl;
-        window.location.href = p24Url;
-      } else {
-        toast.success(
-          "Zamówienie zostało złożone! Sprawdź poniższe instrukcje przelewu."
-        );
-      }
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Błąd serwera");
 
       clearCart();
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+      }
     } catch (error) {
-      console.error("Błąd płatności:", error);
-      toast.error("Błąd podczas przetwarzania zamówienia: " + error.message);
-    } finally {
+      toast.error(error.message || "Wystąpił błąd. Spróbuj ponownie.");
       setLoading(false);
     }
   };
 
-  const handlePointSelection = (point) => {
-    console.log("Wybrano punkt:", point);
-    alert(`Wybrano Paczkomat: ${point.name} (${point.location_description})`);
-    // Tutaj możesz zapisać wybrany punkt w stanie React lub Redux
-  };
-
   return (
-    <>
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Podsumowanie koszyka</h2>
-        {cartItems.length === 0 ? (
-          <p className="text-gray-600">Twój koszyk jest pusty.</p>
-        ) : (
-          <>
-            {cartItems.map((item) => (
-              <div key={item.id} className="flex justify-between mb-2">
-                <span>
-                  {item.product.name} (Rozm. {item.size}, Ilość: {item.quantity}
-                  )
-                </span>
-                <span>
-                  {((item.product.price || 0) * item.quantity).toFixed(2)} PLN
-                </span>
-              </div>
-            ))}
-            <div className="border-t pt-2 mt-4">
-              <div className="flex justify-between">
-                <span>Suma produktów:</span>
-                <span>{calculateSubtotal()} PLN</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Koszt dostawy ({deliveryMethod}):</span>
-                <span>{calculateDeliveryCost().toFixed(2)} PLN</span>
-              </div>
-              <div className="flex justify-between font-bold">
-                <span>Razem:</span>
-                <span>{calculateTotal()} PLN</span>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
+    <div className="container mx-auto py-8">
+      <CartSummary
+        cartItems={cartItems}
+        deliveryMethod={deliveryMethod}
+        calculateSubtotal={calculateSubtotal}
+        calculateDeliveryCost={calculateDeliveryCost}
+        calculateTotal={calculateTotal}
+      />
       {cartItems.length > 0 && (
         <form
-          onSubmit={handlePayment}
           className="bg-white rounded-lg shadow-md p-6 mb-6"
+          onSubmit={handleSubmit}
         >
-          <h2 className="text-xl font-semibold mb-4">Dane dostawy</h2>
-
-          <div className="mb-4">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={isCompanyPurchase}
-                onChange={handleCompanyPurchaseToggle}
-                className="mr-2"
-              />
-              Zakup na firmę (faktura VAT)
-            </label>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {isCompanyPurchase && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nazwa firmy *
-                  </label>
-                  <input
-                    type="text"
-                    name="companyName"
-                    value={formData.companyName}
-                    onChange={handleInputChange}
-                    className="border p-2 rounded-md w-full"
-                    required={isCompanyPurchase}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    NIP *
-                  </label>
-                  <input
-                    type="text"
-                    name="nip"
-                    value={formData.nip}
-                    onChange={handleInputChange}
-                    className="border p-2 rounded-md w-full"
-                    required={isCompanyPurchase}
-                  />
-                </div>
-              </>
-            )}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Imię{!isCompanyPurchase && " *"}
-              </label>
-              <input
-                type="text"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleInputChange}
-                className="border p-2 rounded-md w-full"
-                required={!isCompanyPurchase}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nazwisko{!isCompanyPurchase && " *"}
-              </label>
-              <input
-                type="text"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleInputChange}
-                className="border p-2 rounded-md w-full"
-                required={!isCompanyPurchase}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email *
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                className="border p-2 rounded-md w-full"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Telefon *
-              </label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleInputChange}
-                className="border p-2 rounded-md w-full"
-                required
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Ulica i numer *
-              </label>
-              <input
-                type="text"
-                name="street"
-                value={formData.street}
-                onChange={handleInputChange}
-                className="border p-2 rounded-md w-full"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Kod pocztowy *
-              </label>
-              <input
-                type="text"
-                name="postalCode"
-                value={formData.postalCode}
-                onChange={handleInputChange}
-                className="border p-2 rounded-md w-full"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Miasto *
-              </label>
-              <input
-                type="text"
-                name="city"
-                value={formData.city}
-                onChange={handleInputChange}
-                className="border p-2 rounded-md w-full"
-                required
-              />
-            </div>
-            {deliveryMethod === "paczkomat" && (
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Wybierz Paczkomat *
-                </label>
-                <InPostGeowidget
-                  token={process.env.NEXT_PUBLIC_INPOST_SANDBOX_TOKEN} // Zmień na swój token
-                  language="pl"
-                  config="parcelCollect"
-                  onPointSelect={handlePointSelection}
-                />
-              </div>
-            )}
-            {deliveryMethod === "kurier" && (
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Dodatkowe informacje dla kuriera
-                </label>
-                <textarea
-                  name="courierInstructions"
-                  value={formData.courierInstructions}
-                  onChange={handleInputChange}
-                  className="border p-2 rounded-md w-full"
-                  rows="3"
-                />
-              </div>
-            )}
-          </div>
+          <ShippingDetailsForm
+            formData={formData}
+            handleInputChange={handleInputChange}
+            isCompanyPurchase={isCompanyPurchase}
+            handleCompanyPurchaseToggle={handleCompanyPurchaseToggle}
+            deliveryMethod={deliveryMethod}
+            INPOST_TOKEN={INPOST_TOKEN}
+            handlePointSelection={handlePointSelection}
+            parcelLockerDetails={formData.parcelLockerDetails}
+          />
 
           <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-2">Metoda płatności</h3>
-            <div className="flex flex-col gap-2">
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="p24"
-                  checked={paymentMethod === "p24"}
-                  onChange={handlePaymentMethodChange}
-                  className="mr-2"
-                />
-                Przelewy24
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="traditional"
-                  checked={paymentMethod === "traditional"}
-                  onChange={handlePaymentMethodChange}
-                  className="mr-2"
-                />
-                Przelew tradycyjny
-              </label>
-            </div>
+            <PaymentMethodSelector
+              paymentMethod={paymentMethod}
+              handlePaymentMethodChange={handlePaymentMethodChange}
+            />
           </div>
-
-          {paymentMethod === "traditional" && orderId && (
-            <div className="mt-4 p-4 bg-gray-100 rounded-md">
-              <h3 className="text-lg font-semibold mb-2">
-                Instrukcje przelewu tradycyjnego
-              </h3>
-              <p>
-                Proszę dokonać przelewu na poniższe dane w ciągu 7 dni
-                roboczych:
-              </p>
-              <ul className="list-disc ml-5 mt-2">
-                <li>
-                  <strong>Nazwa odbiorcy:</strong> Twoja Firma Sp. z o.o.
-                </li>
-                <li>
-                  <strong>Numer konta:</strong> PL12 3456 7890 1234 5678 9012
-                  3456
-                </li>
-                <li>
-                  <strong>Kwota:</strong> {calculateTotal()} PLN
-                </li>
-                <li>
-                  <strong>Tytuł przelewu:</strong> Zamówienie #{orderId}
-                </li>
-              </ul>
-              <p className="mt-2">
-                Po zaksięgowaniu płatności Twoje zamówienie zostanie
-                zrealizowane. Faktura VAT (jeśli wybrano) zostanie przesłana na
-                podany adres email.
-              </p>
-            </div>
-          )}
 
           <button
             type="submit"
@@ -444,12 +177,11 @@ export default function CheckoutForm() {
           >
             {loading
               ? "Przetwarzanie..."
-              : paymentMethod === "p24"
-              ? `Zapłać ${calculateTotal()} PLN przez Przelewy24`
-              : `Złóż zamówienie (${calculateTotal()} PLN)`}
+              : `Złóż zamówienie i zapłać (${calculateTotal()} PLN)`}
           </button>
         </form>
       )}
-    </>
+      <ToastContainer position="bottom-right" autoClose={3000} />
+    </div>
   );
 }

@@ -2,13 +2,11 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
 import { useCart } from "@/app/context/cartContext";
 import { ToastContainer } from "react-toastify";
 import { CheckCircle, AlertCircle } from "lucide-react";
 
 export default function Checkout() {
-  const { data: session } = useSession();
   const { cartItems, loading, fetchCart, updateQuantity, removeFromCart } =
     useCart();
   const [deliveryMethod, setDeliveryMethod] = useState("paczkomat"); // Domyślna metoda dostawy

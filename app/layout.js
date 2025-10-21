@@ -6,6 +6,7 @@ import Footer from "./components/Footer/Footer";
 import AuthProvider from "./providers";
 import { CartProvider } from "./context/cartContext";
 import { AdminProvider } from "./context/adminContext";
+import { CategoriesProvider } from "./context/categoriesContext";
 
 // Konfiguracja czcionki Josefin Sans
 const josefinSans = Josefin_Sans({
@@ -26,12 +27,14 @@ export default function RootLayout({ children }) {
       >
         <AuthProvider>
           <CartProvider>
-            <AdminProvider>
-              <FreeDelivery />
-              <Nav />
-              <main className="flex-grow">{children}</main>
-              <Footer />
-            </AdminProvider>
+            <CategoriesProvider>
+              <AdminProvider>
+                <FreeDelivery />
+                <Nav />
+                <main className="flex-grow">{children}</main>
+                <Footer />
+              </AdminProvider>
+            </CategoriesProvider>
           </CartProvider>
         </AuthProvider>
       </body>
