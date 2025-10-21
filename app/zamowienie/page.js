@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import CheckoutForm from "./CheckoutForm";
-import Link from "next/link";
 
 export default function CheckoutPage() {
   return (
@@ -13,9 +12,6 @@ export default function CheckoutPage() {
       >
         <CheckoutForm />
       </Suspense>
-      <Link href="/koszyk" className="text-blue-500 hover:underline">
-        ← Wróć do koszyka
-      </Link>
     </div>
   );
 }

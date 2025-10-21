@@ -1,61 +1,111 @@
-import { useState } from "react";
-import InpostGeowidget from "@majlxrd/inpost-geowidget-next";
+import React, { useEffect, useState } from "react";
 
-export default function InpostMap() {
-  const INPOST_TOKEN = process.env.NEXT_PUBLIC_INPOST_TOKEN;
-
+function InpostMap() {
   const [selectedPoint, setSelectedPoint] = useState(null);
+  const [isWidgetLoaded, setIsWidgetLoaded] = useState(false);
 
-  const handlePointSelect = (point) => {
-    console.log("Parcel locker selected:", point);
-    setSelectedPoint(point);
-  };
+  //   const inpostToken = process.env.NEXT_PUBLIC_INPOST_SANDBOX_TOKEN;
+  const inpostToken = process.env.NEXT_PUBLIC_INPOST_TOKEN;
 
-  const handleApiReady = (api) => {
-    console.log("GeoWidget API is ready:", api);
-    // You can now use the API, for example: api.openMap();
+  // Load CSS and JS for InPost GeoWidget
+  useEffect(() => {
+    if (document.querySelector('script[src*="inpost-geowidget.js"]')) {
+      setIsWidgetLoaded(true);
+      return;
+    }
+
+    const css = document.createElement("link");
+    css.rel = "stylesheet";
+    css.href = "https://geowidget.inpost.pl/inpost-geowidget.css";
+    document.head.appendChild(css);
+
+    const js = document.createElement("script");
+    js.defer = true;
+    js.src = "https://geowidget.inpost.pl/inpost-geowidget.js";
+    js.onload = () => setIsWidgetLoaded(true);
+    document.body.appendChild(js);
+
+    return () => {
+      document.head.removeChild(css);
+      document.body.removeChild(js);
+    };
+  }, []);
+
+  // Set token programmatically
+  useEffect(() => {
+    if (isWidgetLoaded && inpostToken) {
+      const widget = document.querySelector("inpost-geowidget");
+      if (widget) {
+        widget.setAttribute("token", inpostToken);
+      }
+    }
+  }, [isWidgetLoaded, inpostToken]);
+
+  // Define global callback for onPoint
+  useEffect(() => {
+    window.onPoint = (point) => {
+      setSelectedPoint(point);
+      console.log("Wybrany paczkomat:", point);
+    };
+
+    return () => {
+      delete window.onPoint;
+    };
+  }, []);
+
+  // Confirm selection handler
+  const handleConfirmSelection = () => {
+    if (selectedPoint) {
+      alert(
+        `Wybrano paczkomat: ${selectedPoint.name} (${selectedPoint.address_details.street} ${selectedPoint.address_details.building_number}, ${selectedPoint.address_details.city})`
+      );
+    } else {
+      alert("Proszę wybrać paczkomat!");
+    }
   };
 
   return (
-    <main style={{ padding: "2rem", textAlign: "center" }}>
-      <h1>Select an InPost Parcel Locker</h1>
-
-      {/* The container MUST have a defined width and height for the widget to be visible. */}
-      <div
-        style={{
-          width: "800px",
-          height: "500px",
-          margin: "2rem auto",
-          border: "1px solid #ccc",
-        }}
-      >
-        <InpostGeowidget
-          token={INPOST_TOKEN}
-          sandbox={true} // Use true for testing, false for production
-          onPointSelect={handlePointSelect}
-          onApiReady={handleApiReady}
-          language="pl"
-        />
+    <div className="flex flex-col items-center">
+      <div className="h-[500px] w-full">
+        {isWidgetLoaded ? (
+          <inpost-geowidget
+            onPoint="onPoint"
+            language="pl"
+            config="parcelCollect"
+          />
+        ) : (
+          <div>Loading InPost GeoWidget...</div>
+        )}
       </div>
 
       {selectedPoint && (
-        <div
-          style={{
-            marginTop: "1rem",
-            padding: "1rem",
-            backgroundColor: "#f0f0f0",
-          }}
-        >
-          <h3>Selected Point Details:</h3>
+        <div className="mt-4 p-4 border rounded-lg shadow-md w-full max-w-md">
+          <h2 className="text-lg font-bold">Wybrany paczkomat:</h2>
           <p>
-            <strong>Name:</strong> {selectedPoint.name}
+            <strong>Nazwa:</strong> {selectedPoint.name}
           </p>
           <p>
-            <strong>Address:</strong>{" "}
-            {`${selectedPoint.address_details.street}, ${selectedPoint.address_details.city}`}
+            <strong>Adres:</strong> {selectedPoint.address_details.street}{" "}
+            {selectedPoint.address_details.building_number},{" "}
+            {selectedPoint.address_details.city}
           </p>
+          <p>
+            <strong>Typ:</strong> {selectedPoint.type}
+          </p>
+          <p>
+            <strong>Godziny otwarcia:</strong>{" "}
+            {selectedPoint.opening_hours || "Brak danych"}
+          </p>
+          <button
+            className="mt-4 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+            onClick={handleConfirmSelection}
+          >
+            Potwierdź wybór
+          </button>
         </div>
       )}
-    </main>
+    </div>
   );
 }
+
+export default InpostMap;

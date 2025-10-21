@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useCart } from "@/app/context/cartContext";
 import { useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
-import InpostGeowidget from "../components/InpostGeowidget";
+import InpostMap from "../components/InpostGeowidget";
+import InPostGeowidget from "../components/InpostGeowidget";
 
 export default function CheckoutForm() {
   const { data: session } = useSession();
@@ -62,16 +63,6 @@ export default function CheckoutForm() {
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handlePointSelect = (point) => {
-    const code = point.code || point.name;
-    if (code && !/^[A-Z]{3}\d{3}$/.test(code)) {
-      toast.error("Nieprawidłowy kod paczkomatu (np. WAW123)");
-      return;
-    }
-    setFormData({ ...formData, parcelLocker: code });
-    toast.success(`Wybrano: ${point.name}`);
   };
 
   const handleCompanyPurchaseToggle = () => {
@@ -167,6 +158,12 @@ export default function CheckoutForm() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePointSelection = (point) => {
+    console.log("Wybrano punkt:", point);
+    alert(`Wybrano Paczkomat: ${point.name} (${point.location_description})`);
+    // Tutaj możesz zapisać wybrany punkt w stanie React lub Redux
   };
 
   return (
@@ -352,26 +349,12 @@ export default function CheckoutForm() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Wybierz Paczkomat *
                 </label>
-                <InpostGeowidget
-                  config="parcelCollect"
+                <InPostGeowidget
+                  token={process.env.NEXT_PUBLIC_INPOST_SANDBOX_TOKEN} // Zmień na swój token
                   language="pl"
-                  onPointSelect={handlePointSelect}
-                  initialPosition={{ lat: 52.2297, lng: 21.0122 }}
+                  config="parcelCollect"
+                  onPointSelect={handlePointSelection}
                 />
-                {formData.parcelLocker && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    Wybrano: {formData.parcelLocker}
-                  </p>
-                )}
-                <p className="text-sm text-gray-500 mt-1">
-                  <a
-                    href="https://inpost.pl/znajdz-paczkomat"
-                    target="_blank"
-                    className="text-blue-500 hover:underline"
-                  >
-                    Znajdź paczkomat
-                  </a>
-                </p>
               </div>
             )}
             {deliveryMethod === "kurier" && (
