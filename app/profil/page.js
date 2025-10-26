@@ -4,6 +4,8 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AddressForm from "./AddressForm";
+import Orders from "./Orders";
+import Name from "./Name";
 
 export default function Profil() {
   const { data: session, status } = useSession();
@@ -91,37 +93,15 @@ export default function Profil() {
         <div className="w-full md:w-3/4 bg-white border border-gray-200 rounded-md p-6 shadow-sm">
           {activeTab === "orders" && (
             <div>
-              <h1 className="text-3xl mb-4">Zamówienia</h1>
+              <h1 className="text-3xl mb-4">Twoje zamówienia</h1>
               <p className="text-gray-700">
-                Tutaj znajdziesz listę swoich zamówień. (Wkrótce dostępne!)
+                Tutaj znajdziesz listę swoich zamówień.
               </p>
-              {/* TODO: Dodaj logikę pobierania i wyświetlania zamówień */}
+              <Orders />
             </div>
           )}
 
-          {activeTab === "personal" && (
-            <div>
-              <h1 className="text-3xl mb-4">Dane osobowe</h1>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-gray-700 font-medium">
-                    Imię
-                  </label>
-                  <p className="text-lg">
-                    {session.user.name || "Brak danych"}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-gray-700 font-medium">
-                    Email
-                  </label>
-                  <p className="text-lg">
-                    {session.user.email || "Brak danych"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+          {activeTab === "personal" && <Name />}
 
           {activeTab === "address" && <AddressForm />}
         </div>

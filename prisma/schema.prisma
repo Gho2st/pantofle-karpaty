@@ -101,6 +101,9 @@ model Order {
   createdAt   DateTime  @default(now())
   status      OrderStatus @default(PENDING) // Domyślnie każde zamówienie jest oczekujące
   paymentId   String?     @unique // Tutaj zapiszemy ID transakcji zwrócone przez Przelewy24 (ich 'orderId')
+  p24_token     String?  // Do przechowywania tokena P24
+  companyName String?
+  nip String?
 }
 
 model OrderItem {

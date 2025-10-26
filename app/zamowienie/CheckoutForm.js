@@ -45,12 +45,6 @@ export default function CheckoutForm({ primaryAddress, userName }) {
     searchParams.get("deliveryMethod") || "paczkomat"
   );
 
-  useEffect(() => {
-    if (session?.user.email && !formData.email) {
-      setFormData((prev) => ({ ...prev, email: session.user.email }));
-    }
-  }, [session, formData.email]);
-
   const calculateSubtotal = useCallback(() => {
     return cartItems
       .reduce((sum, item) => sum + (item.product.price || 0) * item.quantity, 0)
@@ -157,6 +151,7 @@ export default function CheckoutForm({ primaryAddress, userName }) {
             INPOST_TOKEN={INPOST_TOKEN}
             handlePointSelection={handlePointSelection}
             parcelLockerDetails={formData.parcelLockerDetails}
+            session={session} // Przekazanie sesji do ShippingDetailsForm
           />
 
           <div className="mt-6">

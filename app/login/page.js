@@ -10,7 +10,7 @@ export default async function SignInPage() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
       <div className="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full text-center">
         <h1 className="text-3xl font-bold mb-6 text-gray-800">
-          Zaloguj się do Karpaty
+          Zaloguj się do Pantofle Karpaty
         </h1>
 
         {/* Renderujemy komponent klienta z listą dostawców */}

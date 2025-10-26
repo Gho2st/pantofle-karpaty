@@ -1,0 +1,365 @@
+"use client";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
+export default function Orders() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [orders, setOrders] = useState([]);
+  const [filteredOrders, setFilteredOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState("all");
+
+  // Fetch orders for admin
+  useEffect(() => {
+    if (status === "authenticated" && session?.user?.role === "ADMIN") {
+      const fetchOrders = async () => {
+        try {
+          setLoading(true);
+          const response = await fetch("/api/orders");
+          if (!response.ok) {
+            throw new Error("Nie udało się pobrać zamówień");
+          }
+          const data = await response.json();
+          setOrders(data.orders);
+          setFilteredOrders(data.orders);
+        } catch (err) {
+          setError(err.message);
+          toast.error(err.message, {
+            position: "top-right",
+            autoClose: 3000,
+          });
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchOrders();
+    }
+  }, [status, session]);
+
+  // Filter orders by payment method
+  useEffect(() => {
+    if (paymentMethodFilter === "all") {
+      setFilteredOrders(orders);
+    } else {
+      setFilteredOrders(
+        orders.filter((order) => order.paymentMethod === paymentMethodFilter)
+      );
+    }
+  }, [paymentMethodFilter, orders]);
+
+  // Handle status change
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      const response = await fetch(`/api/orders/${orderId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!response.ok) {
+        throw new Error("Nie udało się zaktualizować statusu");
+      }
+      const updatedOrder = await response.json();
+      setOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          order.id === orderId ? updatedOrder.order : order
+        )
+      );
+      setFilteredOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          order.id === orderId ? updatedOrder.order : order
+        )
+      );
+      const statusText = {
+        PENDING: "Oczekujące",
+        PAID: "Opłacone",
+        SHIPPED: "Wysłane",
+        CANCELLED: "Anulowane",
+      };
+      toast.success(
+        `Status zamówienia #${orderId} zmieniony na ${statusText[newStatus]}`,
+        {
+          position: "top-right",
+          autoClose: 3000,
+        }
+      );
+    } catch (err) {
+      setError(err.message);
+      toast.error(err.message, {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    }
+  };
+
+  // Handle order cancellation with confirmation
+  const handleCancelOrder = async (orderId) => {
+    if (confirm("Czy na pewno chcesz anulować to zamówienie?")) {
+      try {
+        const response = await fetch(`/api/orders/${orderId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: "CANCELLED" }),
+        });
+        if (!response.ok) {
+          throw new Error("Nie udało się anulować zamówienia");
+        }
+        const updatedOrder = await response.json();
+        setOrders((prevOrders) =>
+          prevOrders.map((order) =>
+            order.id === orderId ? updatedOrder.order : order
+          )
+        );
+        setFilteredOrders((prevOrders) =>
+          prevOrders.map((order) =>
+            order.id === orderId ? updatedOrder.order : order
+          )
+        );
+        toast.success(`Zamówienie #${orderId} zostało anulowane`, {
+          position: "top-right",
+          autoClose: 3000,
+        });
+      } catch (err) {
+        setError(err.message);
+        toast.error(err.message, {
+          position: "top-right",
+          autoClose: 3000,
+        });
+      }
+    }
+  };
+
+  // Map status to colors and Polish translations
+  const getStatusInfo = (status) => {
+    switch (status) {
+      case "PENDING":
+        return {
+          text: "Oczekujące",
+          styles: "bg-yellow-100 text-yellow-800 border-yellow-300",
+        };
+      case "PAID":
+        return {
+          text: "Opłacone",
+          styles: "bg-green-100 text-green-800 border-green-300",
+        };
+      case "SHIPPED":
+        return {
+          text: "Wysłane",
+          styles: "bg-blue-100 text-blue-800 border-blue-300",
+        };
+      case "CANCELLED":
+        return {
+          text: "Anulowane",
+          styles: "bg-red-100 text-red-800 border-red-300",
+        };
+      default:
+        return {
+          text: status || "Nieznany",
+          styles: "bg-gray-100 text-gray-800 border-gray-300",
+        };
+    }
+  };
+
+  // Map payment method to Polish translations
+  const getPaymentMethodText = (method) => {
+    switch (method) {
+      case "traditional":
+        return "Przelew tradycyjny";
+      case "p24":
+        return "Przelewy24";
+      default:
+        return method || "Nieznana";
+    }
+  };
+
+  if (status === "loading" || loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated" || session?.user?.role !== "ADMIN") {
+    router.push("/");
+    return null;
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+        <p className="text-red-600 text-center font-medium text-lg">{error}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <ToastContainer position="bottom-right" autoClose={3000} />
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">
+          Zarządzanie zamówieniami
+        </h1>
+        <div className="mb-6">
+          <label
+            htmlFor="payment-method-filter"
+            className="block text-gray-700 font-medium mb-2"
+          >
+            Filtruj według metody płatności:
+          </label>
+          <select
+            id="payment-method-filter"
+            value={paymentMethodFilter}
+            onChange={(e) => setPaymentMethodFilter(e.target.value)}
+            className="w-full sm:w-1/4 border rounded-lg p-2 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors bg-white"
+          >
+            <option value="all">Wszystkie</option>
+            <option value="traditional">Przelew tradycyjny</option>
+            <option value="p24">Przelewy24</option>
+          </select>
+        </div>
+        {filteredOrders.length === 0 ? (
+          <p className="text-gray-600 text-center text-lg">
+            Brak zamówień dla wybranej metody płatności
+          </p>
+        ) : (
+          <div className="grid gap-6">
+            {filteredOrders.map((order) => {
+              const { text: statusText, styles: statusStyles } = getStatusInfo(
+                order.status
+              );
+              return (
+                <div
+                  key={order.id}
+                  className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
+                >
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      Zamówienie #{order.id}
+                    </h2>
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${statusStyles}`}
+                    >
+                      {statusText}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+                    <div>
+                      <p>
+                        <span className="font-medium">Email:</span>{" "}
+                        {order.email}
+                      </p>
+                      <p>
+                        <span className="font-medium">Imię i nazwisko:</span>{" "}
+                        {order.firstName} {order.lastName}
+                      </p>
+                      <p>
+                        <span className="font-medium">Adres:</span>{" "}
+                        {order.street}, {order.city}, {order.postalCode}
+                      </p>
+                      <p>
+                        <span className="font-medium">Telefon:</span>{" "}
+                        {order.phone}
+                      </p>
+                    </div>
+                    <div>
+                      <p>
+                        <span className="font-medium">Metoda dostawy:</span>{" "}
+                        {order.deliveryMethod}
+                      </p>
+                      <p>
+                        <span className="font-medium">Metoda płatności:</span>{" "}
+                        {getPaymentMethodText(order.paymentMethod)}
+                      </p>
+                      <p>
+                        <span className="font-medium">Koszt dostawy:</span>{" "}
+                        {order.deliveryCost} zł
+                      </p>
+                      <p>
+                        <span className="font-medium">Całkowita kwota:</span>{" "}
+                        {order.totalAmount} zł
+                      </p>
+                      <p>
+                        <span className="font-medium">Data utworzenia:</span>{" "}
+                        {new Date(order.createdAt).toLocaleString("pl-PL")}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-6">
+                    <label
+                      htmlFor={`status-${order.id}`}
+                      className="block text-gray-700 font-medium mb-2"
+                    >
+                      Zmień status:
+                    </label>
+                    <select
+                      id={`status-${order.id}`}
+                      value={order.status}
+                      onChange={(e) =>
+                        handleStatusChange(order.id, e.target.value)
+                      }
+                      className={`w-full md:w-1/2 border rounded-lg p-2 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors ${
+                        order.status === "CANCELLED"
+                          ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                          : "bg-white"
+                      }`}
+                      disabled={order.status === "CANCELLED"}
+                    >
+                      <option value="PENDING">Oczekujące</option>
+                      <option value="PAID">Opłacone</option>
+                      <option value="SHIPPED">Wysłane</option>
+                    </select>
+                  </div>
+                  {order.status !== "CANCELLED" && (
+                    <button
+                      onClick={() => handleCancelOrder(order.id)}
+                      className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200"
+                    >
+                      Anuluj zamówienie
+                    </button>
+                  )}
+                  <div className="mt-6">
+                    <h3 className="text-lg font-medium text-gray-900">
+                      Pozycje zamówienia
+                    </h3>
+                    {order.items &&
+                    Array.isArray(order.items) &&
+                    order.items.length > 0 ? (
+                      <ul className="mt-2 divide-y divide-gray-200">
+                        {order.items.map((item) => (
+                          <li
+                            key={item.id}
+                            className="py-2 text-gray-700 flex justify-between"
+                          >
+                            <span>
+                              {item.name} ({item.size})
+                            </span>
+                            <span>
+                              {item.quantity} szt. x {item.price} zł
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-gray-600 mt-2">
+                        Brak pozycji zamówienia
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -16,10 +16,10 @@ export default function Baner() {
           <div className="flex flex-col gap-8 lg:gap-12">
             {/* 1. DUŻY BANER */}
             <div className="bg-gray-100 p-10 md:p-16">
-              <h1 className="uppercase text-primary text-4xl sm:text-5xl 2xl:text-6xl font-extrabold leading-snug mb-4">
+              <h1 className="uppercase text-primary text-4xl sm:text-4xl 2xl:text-6xl font-extrabold leading-snug mb-4">
                 Polski producent obuwia ze skóry
               </h1>
-              <p className="text-gray-700 text-lg 2xl:text-2xl">
+              <p className="text-gray-700 text-lg xl:text-xl 2xl:text-2xl">
                 Naturalne materiały, solidne wykonanie, ponadczasowy styl.
               </p>
             </div>

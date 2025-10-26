@@ -57,6 +57,15 @@ export default function Nav() {
             <li className={baseMenuItemClasses}>
               <Link href="/">Strona Główna</Link>
             </li>
+            {/* <li className={baseMenuItemClasses}>
+              <Link href="/kategoria/dla-kobiet">Dla Kobiet</Link>
+            </li>
+            <li className={baseMenuItemClasses}>
+              <Link href="/kategoria/dla-mezczyzn">Dla Mezczyzn</Link>
+            </li>
+            <li className={baseMenuItemClasses}>
+              <Link href="/kategoria/dla-dzieci">Dla Dzieci</Link>
+            </li>{" "} */}
 
             {/* Dynamiczne Kategorie (z kontekstu) */}
             {isLoading ? (

@@ -3,36 +3,33 @@ import { useSession } from "next-auth/react";
 import { useState } from "react";
 import Category from "./Category";
 import { ToastContainer } from "react-toastify";
+import Users from "./Users";
+import Orders from "./Orders";
 import "react-toastify/dist/ReactToastify.css";
 
 export default function Admin() {
   const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeView, setActiveView] = useState("categories"); // Domyślny widok
+
+  // Funkcja do renderowania aktywnego widoku
+  const renderActiveView = () => {
+    switch (activeView) {
+      case "categories":
+        return <Category />;
+      case "users":
+        return <Users />;
+      case "orders":
+        return <Orders />;
+      default:
+        return <Category />;
+    }
+  };
 
   if (status === "loading") {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="flex items-center space-x-2">
-          <svg
-            className="w-6 h-6 animate-spin text-blue-500"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            ></circle>
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8z"
-            ></path>
-          </svg>
           <span className="text-lg font-medium text-gray-600">
             Ładowanie...
           </span>
@@ -64,28 +61,37 @@ export default function Admin() {
           <nav className="mt-6">
             <ul>
               <li>
-                <a
-                  href="#"
+                <button
+                  onClick={() => {
+                    setActiveView("orders");
+                    setSidebarOpen(false); // Zamknij sidebar na mobilce po kliknięciu
+                  }}
+                  className="block py-2 px-4 text-gray-700 hover:bg-gray-200 rounded"
+                >
+                  Zamówienia
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    setActiveView("users");
+                    setSidebarOpen(false); // Zamknij sidebar na mobilce po kliknięciu
+                  }}
+                  className="block py-2 px-4 text-gray-700 hover:bg-gray-200 rounded"
+                >
+                  Uzytkownicy
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    setActiveView("categories");
+                    setSidebarOpen(false); // Zamknij sidebar na mobilce po kliknięciu
+                  }}
                   className="block py-2 px-4 text-gray-700 hover:bg-gray-200 rounded"
                 >
                   Kategorie
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="block py-2 px-4 text-gray-700 hover:bg-gray-200 rounded"
-                >
-                  Użytkownicy
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="block py-2 px-4 text-gray-700 hover:bg-gray-200 rounded"
-                >
-                  Ustawienia
-                </a>
+                </button>
               </li>
             </ul>
           </nav>
@@ -95,35 +101,12 @@ export default function Admin() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         <header className="bg-white shadow p-4 flex justify-between items-center">
-          <div className="flex items-center">
-            <button
-              className="md:hidden text-gray-600 focus:outline-none"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-            >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4 6h16M4 12h16m-7 6h7"
-                ></path>
-              </svg>
-            </button>
-          </div>
           <div className="text-gray-600">
             Admin: {session?.user?.name || "Admin"}
           </div>
         </header>
 
-        <main className="flex-1 p-6 overflow-y-auto">
-          <Category />
-        </main>
+        <div className="my-10 px-[6%]">{renderActiveView()}</div>
       </div>
 
       <ToastContainer position="bottom-right" autoClose={3000} />

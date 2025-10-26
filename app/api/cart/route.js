@@ -44,26 +44,6 @@ export async function POST(request) {
       );
     }
 
-    const product = await prisma.product.findUnique({
-      where: { id: parseInt(productId) },
-      select: { sizes: true },
-    });
-
-    if (!product) {
-      return NextResponse.json(
-        { error: "Produkt nie znaleziony" },
-        { status: 404 }
-      );
-    }
-
-    const sizeData = product.sizes.find((s) => s.size === size);
-    if (!sizeData || sizeData.stock < quantity) {
-      return NextResponse.json(
-        { error: `Niewystarczający stan magazynowy dla rozmiaru ${size}` },
-        { status: 400 }
-      );
-    }
-
     let cartItem;
     if (session) {
       cartItem = await prisma.cart.findFirst({
@@ -125,25 +105,12 @@ export async function PUT(request) {
     if (session) {
       const cartItem = await prisma.cart.findUnique({
         where: { id: parseInt(cartItemId) },
-        include: { product: { select: { sizes: true } } },
       });
 
       if (!cartItem || cartItem.userId !== session.user.id) {
         return NextResponse.json(
           { error: "Pozycja w koszyku nie znaleziona" },
           { status: 404 }
-        );
-      }
-
-      const sizeData = cartItem.product.sizes.find(
-        (s) => s.size === cartItem.size
-      );
-      if (!sizeData || sizeData.stock < quantity) {
-        return NextResponse.json(
-          {
-            error: `Niewystarczający stan magazynowy dla rozmiaru ${cartItem.size}`,
-          },
-          { status: 400 }
         );
       }
 
@@ -180,7 +147,6 @@ export async function DELETE(request) {
     const { cartItemId, clearAll } = await request.json();
 
     if (clearAll && session) {
-      // Wyczyść cały koszyk dla zalogowanego użytkownika
       await prisma.cart.deleteMany({
         where: { userId: session.user.id },
       });

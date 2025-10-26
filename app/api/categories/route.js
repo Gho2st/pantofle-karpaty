@@ -2,9 +2,6 @@ import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET(request) {
-  console.log("Prisma:", prisma); // Sprawdź, czy prisma istnieje
-  console.log("Prisma.category:", prisma.category); // Sprawdź, czy model category istniejed
-
   const { searchParams } = new URL(request.url);
   const parentId = searchParams.get("parentId")
     ? parseInt(searchParams.get("parentId"))

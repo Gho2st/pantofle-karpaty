@@ -1,9 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 
 export default function AddressForm() {
-  const { data: session } = useSession();
   const [addresses, setAddresses] = useState([]);
   const [formData, setFormData] = useState({
     street: "",
@@ -151,7 +149,9 @@ export default function AddressForm() {
       {/* Formularz dodawania/edytowania adresu */}
       <form onSubmit={handleSubmit} className="space-y-4 mb-8">
         <div>
-          <label className="block text-gray-700 font-medium">Ulica i numer</label>
+          <label className="block text-gray-700 font-medium">
+            Ulica i numer
+          </label>
           <input
             type="text"
             name="street"

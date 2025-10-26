@@ -15,6 +15,8 @@ export const CartProvider = ({ children }) => {
   const { data: session } = useSession();
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [availabilityErrors, setAvailabilityErrors] = useState([]);
+  const [availableQuantities, setAvailableQuantities] = useState({});
 
   const fetchCart = useCallback(async () => {
     setLoading(true);
@@ -22,34 +24,155 @@ export const CartProvider = ({ children }) => {
       const response = await fetch("/api/cart");
       const data = await response.json();
       if (response.ok && data.cart && data.cart.length > 0) {
-        setCartItems(data.cart);
+        const consolidatedCart = consolidateCartItems(data.cart);
+        setCartItems(consolidatedCart);
       } else {
         const localCart = JSON.parse(localStorage.getItem("cart") || "[]");
-        const enrichedCart = localCart.map((item) => ({
-          ...item,
-          id: item.id || Date.now(),
-        }));
+        const enrichedCart = consolidateCartItems(
+          localCart.map((item) => ({
+            ...item,
+            id: item.id || Date.now(),
+          }))
+        );
         setCartItems(enrichedCart);
       }
     } catch (error) {
       console.error("Błąd podczas pobierania koszyka:", error);
-      toast.error("Błąd podczas pobierania koszyka");
+      toast.error("Błąd podczas pobierania koszyka", {
+        position: "bottom-right",
+        autoClose: 3000,
+      });
     } finally {
       setLoading(false);
     }
   }, []);
 
+  const consolidateCartItems = (items) => {
+    const consolidated = [];
+    items.forEach((item) => {
+      const existingItem = consolidated.find(
+        (i) => i.productId === item.productId && i.size === item.size
+      );
+      if (existingItem) {
+        existingItem.quantity += item.quantity;
+      } else {
+        consolidated.push({ ...item });
+      }
+    });
+    return consolidated;
+  };
+
+  const checkAvailability = useCallback(
+    async (items = cartItems) => {
+      try {
+        const consolidatedCart = consolidateCartItems(items);
+        console.log("Sprawdzanie dostępności dla:", consolidatedCart); // Debugowanie
+        if (consolidatedCart.length === 0) {
+          setAvailabilityErrors([]);
+          setAvailableQuantities({});
+          return true;
+        }
+
+        const response = await fetch("/api/check-stock", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cartItems: consolidatedCart }),
+        });
+        const data = await response.json();
+        console.log("Odpowiedź z /api/check-stock:", data); // Debugowanie
+        if (response.ok) {
+          const unavailableItems = data.availability.filter(
+            (item) => !item.available
+          );
+          setAvailabilityErrors(unavailableItems);
+          const quantities = {};
+          data.availability.forEach((item) => {
+            quantities[`${item.productId}-${item.size}`] =
+              item.availableQuantity || 0;
+          });
+          setAvailableQuantities(quantities);
+          return unavailableItems.length === 0;
+        } else {
+          setAvailabilityErrors([
+            { message: data.error || "Błąd podczas sprawdzania dostępności" },
+          ]);
+          return false;
+        }
+      } catch (error) {
+        console.error("Błąd podczas sprawdzania dostępności:", error);
+        setAvailabilityErrors([
+          { message: "Błąd serwera podczas sprawdzania dostępności" },
+        ]);
+        return false;
+      }
+    },
+    [cartItems]
+  );
+
   const addToCart = async (productId, size, quantity, product) => {
     try {
-      const response = await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, size, quantity }),
-      });
-      const data = await response.json();
-      if (response.ok) {
+      const tempCart = consolidateCartItems([
+        ...cartItems,
+        { productId, size, quantity, product },
+      ]);
+      const isAvailable = await checkAvailability(tempCart);
+      if (!isAvailable) {
+        const errorItem = tempCart.find(
+          (item) => item.productId === productId && item.size === size
+        );
+        if (errorItem) {
+          const maxQuantity = availableQuantities[`${productId}-${size}`] || 0;
+          setAvailabilityErrors([
+            ...availabilityErrors.filter(
+              (e) => !(e.productId === productId && e.size === size)
+            ),
+            {
+              productId,
+              size,
+              message: `Nie można dodać produktu ${product.name} (rozmiar: ${size}) - maksymalna dostępna ilość: ${maxQuantity}`,
+              product: { name: product.name },
+            },
+          ]);
+        }
+        return;
+      }
+
+      const existingItem = cartItems.find(
+        (item) => item.productId === productId && item.size === size
+      );
+
+      if (existingItem && !session) {
+        const updatedCart = cartItems.map((item) =>
+          item.productId === productId && item.size === size
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        );
+        setCartItems(updatedCart);
+        localStorage.setItem("cart", JSON.stringify(updatedCart));
+        toast.success("Ilość produktu zaktualizowana w koszyku", {
+          position: "bottom-right",
+          autoClose: 3000,
+        });
+        await checkAvailability();
+        return;
+      }
+
+      if (session) {
+        const response = await fetch("/api/cart", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId, size, quantity }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          toast.error(data.error || "Błąd podczas dodawania do koszyka", {
+            position: "bottom-right",
+            autoClose: 3000,
+          });
+          return;
+        }
         const newItem = {
-          id: data.cartItem.id || Date.now(),
+          id: data.cartItem.id,
           productId,
           size,
           quantity,
@@ -60,62 +183,156 @@ export const CartProvider = ({ children }) => {
             images: product.images || ["/placeholder.png"],
           },
         };
-        const updatedCart = [...cartItems, newItem];
+        const updatedCart = consolidateCartItems([...cartItems, newItem]);
         setCartItems(updatedCart);
         localStorage.setItem("cart", JSON.stringify(updatedCart));
-        toast.success("Produkt dodany do koszyka");
+        toast.success("Produkt dodany do koszyka", {
+          position: "bottom-right",
+          autoClose: 3000,
+        });
       } else {
-        toast.error(data.error || "Błąd podczas dodawania do koszyka");
+        const newItem = {
+          id: Date.now(),
+          productId,
+          size,
+          quantity,
+          product: {
+            id: productId,
+            name: product.name || "Produkt",
+            price: product.price || 0,
+            images: product.images || ["/placeholder.png"],
+          },
+        };
+        const updatedCart = consolidateCartItems([...cartItems, newItem]);
+        setCartItems(updatedCart);
+        localStorage.setItem("cart", JSON.stringify(updatedCart));
+        toast.success("Produkt dodany do koszyka", {
+          position: "bottom-right",
+          autoClose: 3000,
+        });
       }
+      await checkAvailability();
     } catch (error) {
       console.error("Błąd podczas dodawania do koszyka:", error);
-      toast.error("Błąd serwera");
+      toast.error("Błąd serwera", {
+        position: "bottom-right",
+        autoClose: 3000,
+      });
     }
   };
 
-  const updateQuantity = async (cartItemId, quantity) => {
+  const updateQuantity = async (cartItemId, newQuantity) => {
     try {
-      const response = await fetch("/api/cart", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cartItemId, quantity }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        const updatedCart = cartItems.map((item) =>
-          item.id === cartItemId ? { ...item, quantity } : item
-        );
-        setCartItems(updatedCart);
-        localStorage.setItem("cart", JSON.stringify(updatedCart));
-        toast.success("Ilość zaktualizowana");
-      } else {
-        toast.error(data.error || "Błąd podczas aktualizacji koszyka");
+      const item = cartItems.find((item) => item.id === cartItemId);
+      if (!item) return;
+
+      const currentQuantity = item.quantity;
+      const maxQuantity =
+        availableQuantities[`${item.productId}-${item.size}`] || Infinity;
+
+      // Blokuj zwiększanie ilości powyżej stanu magazynowego
+      if (newQuantity > maxQuantity && newQuantity > currentQuantity) {
+        setAvailabilityErrors([
+          ...availabilityErrors.filter(
+            (e) => !(e.productId === item.productId && e.size === item.size)
+          ),
+          {
+            productId: item.productId,
+            size: item.size,
+            message: `Nie można zwiększyć ilości produktu ${item.product.name} (rozmiar: ${item.size}). Maksymalna dostępna ilość: ${maxQuantity}`,
+            product: { name: item.product.name },
+          },
+        ]);
+        return;
       }
+
+      const updatedCart = cartItems.map((item) =>
+        item.id === cartItemId ? { ...item, quantity: newQuantity } : item
+      );
+      const isAvailable = await checkAvailability(updatedCart);
+      if (!isAvailable && newQuantity > currentQuantity) {
+        setAvailabilityErrors([
+          ...availabilityErrors.filter(
+            (e) => !(e.productId === item.productId && e.size === item.size)
+          ),
+          {
+            productId: item.productId,
+            size: item.size,
+            message: `Nie można zwiększyć ilości produktu ${item.product.name} (rozmiar: ${item.size}). Maksymalna dostępna ilość: ${maxQuantity}`,
+            product: { name: item.product.name },
+          },
+        ]);
+        return;
+      }
+
+      if (session) {
+        const response = await fetch("/api/cart", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cartItemId, quantity: newQuantity }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          toast.error(data.error || "Błąd podczas aktualizacji koszyka", {
+            position: "bottom-right",
+            autoClose: 3000,
+          });
+          return;
+        }
+      }
+
+      setCartItems(updatedCart);
+      localStorage.setItem("cart", JSON.stringify(updatedCart));
+      toast.success("Ilość zaktualizowana", {
+        position: "bottom-right",
+        autoClose: 3000,
+      });
+      await checkAvailability();
     } catch (error) {
       console.error("Błąd podczas aktualizacji koszyka:", error);
-      toast.error("Błąd serwera");
+      toast.error("Błąd serwera", {
+        position: "bottom-right",
+        autoClose: 3000,
+      });
     }
   };
 
   const removeFromCart = async (cartItemId) => {
     try {
-      const response = await fetch("/api/cart", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cartItemId }),
+      if (session) {
+        const response = await fetch("/api/cart", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cartItemId }),
+        });
+        if (!response.ok) {
+          const data = await response.json();
+          toast.error(data.error || "Błąd podczas usuwania z koszyka", {
+            position: "bottom-right",
+            autoClose: 3000,
+          });
+          return;
+        }
+      }
+      const updatedCart = cartItems.filter((item) => item.id !== cartItemId);
+      setCartItems(updatedCart);
+      localStorage.setItem("cart", JSON.stringify(updatedCart));
+      toast.success("Produkt usunięty z koszyka", {
+        position: "bottom-right",
+        autoClose: 3000,
       });
-      if (response.ok) {
-        const updatedCart = cartItems.filter((item) => item.id !== cartItemId);
-        setCartItems(updatedCart);
-        localStorage.setItem("cart", JSON.stringify(updatedCart));
-        toast.success("Produkt usunięty z koszyka");
+      if (updatedCart.length > 0) {
+        await checkAvailability();
       } else {
-        const data = await response.json();
-        toast.error(data.error || "Błąd podczas usuwania z koszyka");
+        setAvailabilityErrors([]);
+        setAvailableQuantities({});
       }
     } catch (error) {
       console.error("Błąd podczas usuwania z koszyka:", error);
-      toast.error("Błąd serwera");
+      toast.error("Błąd serwera", {
+        position: "bottom-right",
+        autoClose: 3000,
+      });
     }
   };
 
@@ -129,41 +346,65 @@ export const CartProvider = ({ children }) => {
         });
       }
       setCartItems([]);
+      setAvailabilityErrors([]);
+      setAvailableQuantities({});
       localStorage.removeItem("cart");
-      toast.success("Koszyk wyczyszczony");
+      toast.success("Koszyk wyczyszczony", {
+        position: "bottom-right",
+        autoClose: 3000,
+      });
     } catch (error) {
       console.error("Błąd podczas czyszczenia koszyka:", error);
-      toast.error("Błąd podczas czyszczenia koszyka");
+      toast.error("Błąd podczas czyszczenia koszyka", {
+        position: "bottom-right",
+        autoClose: 3000,
+      });
     }
   };
 
-  // Synchronizacja koszyka po zalogowaniu
   useEffect(() => {
     if (session) {
       const localCart = JSON.parse(localStorage.getItem("cart") || "[]");
       if (localCart.length > 0) {
-        // Przenieś produkty z localStorage do bazy danych
-        localCart.forEach(async (item) => {
+        const consolidatedCart = consolidateCartItems(localCart);
+        consolidatedCart.forEach(async (item) => {
           try {
-            const response = await fetch("/api/cart", {
+            const response = await fetch("/api/check-stock", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                productId: item.productId,
-                size: item.size,
-                quantity: item.quantity,
+                cartItems: [
+                  {
+                    productId: item.productId,
+                    size: item.size,
+                    quantity: item.quantity,
+                  },
+                ],
               }),
             });
             const data = await response.json();
-            if (!response.ok) {
-              toast.error(data.error || "Błąd podczas synchronizacji koszyka");
+            if (
+              response.ok &&
+              data.availability.every((item) => item.available)
+            ) {
+              await fetch("/api/cart", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  productId: item.productId,
+                  size: item.size,
+                  quantity: item.quantity,
+                }),
+              });
             }
           } catch (error) {
             console.error("Błąd podczas synchronizacji koszyka:", error);
-            toast.error("Błąd podczas synchronizacji koszyka");
+            toast.error("Błąd podczas synchronizacji koszyka", {
+              position: "bottom-right",
+              autoClose: 3000,
+            });
           }
         });
-        // Wyczyść localStorage i odśwież koszyk z bazy
         localStorage.removeItem("cart");
         fetchCart();
       }
@@ -180,6 +421,10 @@ export const CartProvider = ({ children }) => {
         updateQuantity,
         removeFromCart,
         clearCart,
+        checkAvailability,
+        availabilityErrors,
+        setAvailabilityErrors,
+        availableQuantities,
       }}
     >
       {children}

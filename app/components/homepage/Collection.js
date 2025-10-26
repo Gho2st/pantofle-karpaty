@@ -9,7 +9,7 @@ export default function Collection() {
   const displayedCategories = categories.slice(0, 3);
   return (
     <>
-      <div className="grid grid-cols-3 gap-10 mt-16">
+      <div className="grid md:grid-cols-3 gap-10 mt-16">
         {isLoading ? (
           // prosty stan ładowania by uniknąc pustego miejsca
           <>

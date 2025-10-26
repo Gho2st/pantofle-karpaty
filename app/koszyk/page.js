@@ -3,46 +3,81 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/app/context/cartContext";
-import { ToastContainer } from "react-toastify";
+import { ToastContainer, toast } from "react-toastify";
 import { CheckCircle, AlertCircle } from "lucide-react";
 
 export default function Checkout() {
-  const { cartItems, loading, fetchCart, updateQuantity, removeFromCart } =
-    useCart();
-  const [deliveryMethod, setDeliveryMethod] = useState("paczkomat"); // Domyślna metoda dostawy
+  const {
+    cartItems,
+    loading,
+    fetchCart,
+    updateQuantity,
+    removeFromCart,
+    checkAvailability,
+    availabilityErrors,
+    setAvailabilityErrors,
+    availableQuantities,
+  } = useCart();
+  const [deliveryMethod, setDeliveryMethod] = useState("paczkomat");
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+  const [isAvailable, setIsAvailable] = useState(true);
 
   useEffect(() => {
-    fetchCart(); // Pobierz koszyk (z bazy lub localStorage)
-  }, [fetchCart]);
+    console.log("Aktualne błędy dostępności:", availabilityErrors); // Debugowanie
+    if (cartItems.length > 0) {
+      const verifyStock = async () => {
+        setIsCheckingAvailability(true);
+        const available = await checkAvailability();
+        setIsAvailable(available);
+        setIsCheckingAvailability(false);
+      };
+      verifyStock();
+    } else {
+      setIsAvailable(true);
+      setAvailabilityErrors([]);
+    }
+  }, [cartItems, checkAvailability, setAvailabilityErrors]);
 
-  // Oblicz sumę produktów w koszyku
+  const handleFinalizeOrder = async (e) => {
+    e.preventDefault();
+    if (!isAvailable) {
+      toast.error(
+        "Nie można sfinalizować zamówienia: niektóre produkty są niedostępne",
+        {
+          position: "bottom-right",
+          autoClose: 3000,
+        }
+      );
+      return;
+    }
+    window.location.href = `/zamowienie?deliveryMethod=${deliveryMethod}&deliveryCost=${calculateDeliveryCost().toFixed(
+      2
+    )}`;
+  };
+
   const calculateSubtotal = () => {
     return cartItems
       .reduce((sum, item) => sum + item.product.price * item.quantity, 0)
       .toFixed(2);
   };
 
-  // Oblicz koszt dostawy
   const calculateDeliveryCost = () => {
     const subtotal = parseFloat(calculateSubtotal());
-    if (subtotal >= 200) return 0; // Darmowa dostawa powyżej 200 PLN
+    if (subtotal >= 200) return 0;
     return deliveryMethod === "paczkomat" ? 13.99 : 15.99;
   };
 
-  // Oblicz całkowitą sumę (produkty + dostawa)
   const calculateTotal = () => {
     const subtotal = parseFloat(calculateSubtotal());
     const deliveryCost = calculateDeliveryCost();
     return (subtotal + deliveryCost).toFixed(2);
   };
 
-  // Oblicz brakującą kwotę do darmowej dostawy
   const calculateRemainingForFreeDelivery = () => {
     const subtotal = parseFloat(calculateSubtotal());
     return subtotal < 200 ? (200 - subtotal).toFixed(2) : 0;
   };
 
-  // Oblicz oszczędność dzięki darmowej dostawie
   const calculateSavings = () => {
     const subtotal = parseFloat(calculateSubtotal());
     if (subtotal >= 200) {
@@ -67,11 +102,41 @@ export default function Checkout() {
         <p className="text-gray-600">Twój koszyk jest pusty.</p>
       ) : (
         <div className="space-y-6">
+          {/* Sekcja błędów dostępności */}
+          {availabilityErrors.length > 0 && (
+            <div className="p-4 bg-red-100 rounded-lg shadow-md flex items-start space-x-2">
+              <AlertCircle className="w-6 h-6 text-red-700" />
+              <div>
+                <h2 className="text-lg font-semibold text-red-800 mb-2">
+                  Problemy z dostępnością produktów
+                </h2>
+                <ul className="list-disc list-inside text-red-700">
+                  {availabilityErrors.map((error, index) => (
+                    <li key={index} className="mb-1">
+                      {error.productId && error.size
+                        ? `Produkt ${
+                            error.product?.name || error.productId
+                          }, rozmiar ${error.size}: ${error.message}`
+                        : error.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
           {/* Lista produktów */}
           {cartItems.map((item) => (
             <div
               key={item.id}
-              className="flex items-center gap-6 p-4 bg-white rounded-lg shadow-md"
+              className={`flex items-center gap-6 p-4 bg-white rounded-lg shadow-md ${
+                availabilityErrors.some(
+                  (e) =>
+                    String(e.productId) === String(item.productId) &&
+                    e.size === item.size
+                )
+                  ? "border-2 border-red-500"
+                  : ""
+              }`}
             >
               <div className="w-24 h-24">
                 <Image
@@ -93,12 +158,43 @@ export default function Checkout() {
                   <input
                     type="number"
                     min="1"
-                    value={item.quantity}
-                    onChange={(e) =>
-                      updateQuantity(item.id, parseInt(e.target.value))
+                    max={
+                      availableQuantities[`${item.productId}-${item.size}`] ||
+                      100
                     }
-                    className="border border-gray-300 rounded-md p-1 w-16"
+                    value={item.quantity}
+                    onChange={(e) => {
+                      const newQuantity = parseInt(e.target.value);
+                      if (!isNaN(newQuantity)) {
+                        updateQuantity(item.id, newQuantity);
+                      }
+                    }}
+                    className={`border rounded-md p-1 w-16 ${
+                      availabilityErrors.some(
+                        (e) =>
+                          String(e.productId) === String(item.productId) &&
+                          e.size === item.size
+                      )
+                        ? "border-2 border-red-500"
+                        : "border-gray-300"
+                    }`}
+                    title={
+                      availableQuantities[`${item.productId}-${item.size}`]
+                        ? `Maksymalna ilość: ${
+                            availableQuantities[
+                              `${item.productId}-${item.size}`
+                            ]
+                          }`
+                        : ""
+                    }
                   />
+                  {availableQuantities[`${item.productId}-${item.size}`] >=
+                    0 && (
+                    <p className="text-gray-600 text-sm">
+                      Maks. dostępna ilość:{" "}
+                      {availableQuantities[`${item.productId}-${item.size}`]}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex flex-col items-end">
@@ -151,7 +247,6 @@ export default function Checkout() {
                 </span>
               </label>
             </div>
-            {/* Informacja o darmowej dostawie lub brakującej kwocie */}
             {parseFloat(calculateSubtotal()) >= 200 ? (
               <div className="mt-4 p-3 bg-green-200 rounded-md flex items-center space-x-2 transition-opacity duration-300 opacity-100">
                 <CheckCircle className="w-6 h-6 text-green-700" />
@@ -187,18 +282,19 @@ export default function Checkout() {
               <p className="text-xl font-bold">
                 Całkowita suma: {calculateTotal()} PLN
               </p>
-              <Link
-                href={{
-                  pathname: "/zamowienie",
-                  query: {
-                    deliveryMethod,
-                    deliveryCost: calculateDeliveryCost().toFixed(2),
-                  },
-                }}
-                className="mt-4 block bg-red-600 text-white px-6 py-2 rounded-md hover:bg-red-700 text-center"
+              <button
+                onClick={handleFinalizeOrder}
+                disabled={isCheckingAvailability || !isAvailable}
+                className={`mt-4 block bg-red-600 text-white px-6 py-2 rounded-md hover:bg-red-700 text-center ${
+                  isCheckingAvailability || !isAvailable
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                }`}
               >
-                Przejdź do finalizacji zamówienia
-              </Link>
+                {isCheckingAvailability
+                  ? "Sprawdzanie dostępności..."
+                  : "Przejdź do finalizacji zamówienia"}
+              </button>
             </div>
           </div>
         </div>
