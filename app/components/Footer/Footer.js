@@ -99,7 +99,7 @@ export default function Footer() {
         </ul>
 
         {/* Prawa strona: Info o prawach autorskich */}
-        <p className="text-xs opacity-70 hidden sm:block">
+        <p className="text-base opacity-70 hidden sm:block">
           &copy; {new Date().getFullYear()} Karpaty. Wszelkie prawa zastrzeżone.
         </p>
       </div>
