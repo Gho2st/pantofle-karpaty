@@ -16,7 +16,7 @@ const josefinSans = Josefin_Sans({
 
 export const metadata = {
   title: "Pantofle Karpaty",
-  description: "dasdas",
+  description: "sklep",
 };
 
 export default function RootLayout({ children }) {
