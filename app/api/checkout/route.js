@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2023-10-16",
+});
 
 const validateNip = (nip) => {
   if (!nip) return false;
@@ -9,9 +14,58 @@ const validateNip = (nip) => {
   return /^\d{10}$/.test(nipClean);
 };
 
-async function handleP24Payment(order, formData, total) {
-  const redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/zamowienie/${order.id}?status=success`;
-  return redirectUrl;
+async function handleStripePayment(order, formData, total, cartItems) {
+  // Walidacja kluczy
+  if (!process.env.STRIPE_SECRET_KEY || !process.env.NEXT_PUBLIC_BASE_URL) {
+    throw new Error(
+      "Brak konfiguracji Stripe lub NEXT_PUBLIC_BASE_URL w zmiennych środowiskowych"
+    );
+  }
+
+  // Tworzenie sesji Stripe Checkout
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["blik", "p24"],
+    mode: "payment",
+    currency: "pln",
+    customer_email: formData.email,
+    metadata: {
+      orderId: order.id.toString(),
+    },
+    success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/zamowienie/${order.id}?status=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/zamowienie/${order.id}?status=error`,
+    line_items: cartItems.map((item) => ({
+      price_data: {
+        currency: "pln",
+        product_data: {
+          name: item.product.name,
+          description: `Rozmiar: ${item.size}`,
+        },
+        unit_amount: Math.round(item.product.price * 100), // Cena w groszach
+      },
+      quantity: item.quantity,
+    })),
+    shipping_options: [
+      {
+        shipping_rate_data: {
+          type: "fixed_amount",
+          fixed_amount: {
+            amount: Math.round(order.deliveryCost * 100),
+            currency: "pln",
+          },
+          display_name:
+            order.deliveryMethod === "paczkomat" ? "Paczkomat" : "Kurier",
+        },
+      },
+    ],
+  });
+
+  // Zapisz ID sesji w bazie
+  await prisma.order.update({
+    where: { id: order.id },
+    data: { paymentId: session.id, status: "PENDING" },
+  });
+
+  return session.url; // Zwracamy session.url zamiast sessionId
 }
 
 export async function POST(req) {
@@ -27,7 +81,7 @@ export async function POST(req) {
       deliveryMethod,
     } = body;
 
-    // Walidacja NIP, jeśli podano
+    // Walidacja NIP
     if (formData.companyName || formData.nip) {
       if (!formData.companyName || !formData.nip) {
         throw new Error("Nazwa firmy i NIP są wymagane dla zakupu na firmę");
@@ -53,7 +107,7 @@ export async function POST(req) {
     const { createdOrder } = await prisma.$transaction(async (tx) => {
       const order = await tx.order.create({
         data: {
-          userId: userId,
+          user: userId ? { connect: { id: userId } } : undefined,
           isGuest: isGuest,
           totalAmount: parseFloat(total),
           email: formData.email,
@@ -65,6 +119,7 @@ export async function POST(req) {
           phone: formData.phone,
           paczkomat: formData.parcelLocker || null,
           paymentMethod: paymentMethod,
+          status: "PENDING",
           deliveryMethod: deliveryMethod,
           deliveryCost: parseFloat(deliveryCost),
           companyName: formData.companyName || null,
@@ -118,15 +173,18 @@ export async function POST(req) {
       return { createdOrder: order };
     });
 
-    let redirectUrl;
-
-    if (paymentMethod === "p24") {
-      redirectUrl = await handleP24Payment(createdOrder, formData, total);
+    if (paymentMethod === "stripe") {
+      const redirectUrl = await handleStripePayment(
+        createdOrder,
+        formData,
+        total,
+        cartItems
+      );
+      return NextResponse.json({ redirectUrl }); // Zwracamy session.url
     } else {
-      redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/zamowienie/${createdOrder.id}`;
+      const redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/zamowienie/${createdOrder.id}`;
+      return NextResponse.json({ redirectUrl });
     }
-
-    return NextResponse.json({ redirectUrl: redirectUrl });
   } catch (error) {
     console.error("Błąd w /api/checkout:", error);
     if (
@@ -134,7 +192,8 @@ export async function POST(req) {
       (error.message.includes("Niewystarczający stan") ||
         error.message.includes("Nie można znaleźć") ||
         error.message.includes("NIP") ||
-        error.message.includes("Nazwa firmy"))
+        error.message.includes("Nazwa firmy") ||
+        error.message.includes("Brak konfiguracji Stripe"))
     ) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }

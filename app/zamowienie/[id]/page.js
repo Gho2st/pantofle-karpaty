@@ -1,45 +1,14 @@
 import { notFound } from "next/navigation";
-import { CheckCircle, Clock } from "lucide-react";
 import prisma from "@/app/lib/prisma";
+import Stripe from "stripe";
+import StripeStatus from "./StripeStatus";
 import TraditionalPaymentInstructions from "../TraditionalPaymentInstructions";
 
-/**
- * Komponent pomocniczy dla statusu P24
- */
-function P24Status({ order, status }) {
-  if (status === "success") {
-    return (
-      <div className="bg-green-100 p-6 rounded-lg mt-6 text-center">
-        <div className="flex justify-center items-center mb-4">
-          <CheckCircle className="w-8 h-8 text-green-600 mr-2" />
-          <h2 className="text-xl font-semibold text-green-700">
-            Płatność udana!
-          </h2>
-        </div>
-        <p className="text-gray-700">
-          Twoja płatność została pomyślnie zaksięgowana. Twoje zamówienie (nr{" "}
-          {order.id}) jest już w trakcie realizacji.
-        </p>
-      </div>
-    );
-  }
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2023-10-16",
+});
 
-  // Obsługa innych statusów, np. błędu
-  return (
-    <div className="bg-red-100 p-6 rounded-lg mt-6 text-center">
-      <h2 className="text-xl font-semibold text-red-700">Płatność nieudana</h2>
-      <p className="text-gray-700">
-        Wystąpił błąd podczas przetwarzania płatności. Prosimy o kontakt.
-      </p>
-    </div>
-  );
-}
-
-/**
- * Główna funkcja pobierająca dane na serwerze
- */
 async function getOrder(id) {
-  // Sprawdzamy, czy ID jest liczbą
   const orderId = parseInt(id, 10);
   if (isNaN(orderId)) {
     notFound();
@@ -47,25 +16,50 @@ async function getOrder(id) {
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: {
-      items: true, // Dołączamy pozycje zamówienia
-    },
+    include: { items: true },
   });
 
   if (!order) {
-    notFound(); // Wyświetli stronę 404, jeśli nie ma takiego zamówienia
+    notFound();
   }
   return order;
 }
 
-/**
- * Komponent Strony (Server Component)
- */
 export default async function OrderConfirmationPage({ params, searchParams }) {
-  const order = await getOrder(params.id);
+  const param = await params;
+  // 2. Pobieramy zamówienie PIERWSZY RAZ
+  let order = await getOrder(param.id);
 
-  // Pobieramy status płatności z URL (np. ...?status=success)
-  const paymentStatus = searchParams.status;
+  // 3. Await searchParams to resolve the promise
+  const resolvedSearchParams = await searchParams;
+  const sessionId = resolvedSearchParams.session_id;
+
+  // 4. Weryfikacja sesji Stripe (jeśli jest to powrót ze Stripe)
+  if (
+    sessionId &&
+    order.paymentId === sessionId &&
+    order.status === "PENDING"
+  ) {
+    try {
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      if (session.payment_status === "paid") {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { status: "PAID" },
+        });
+      } else if (session.status === "expired") {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { status: "EXPIRED" },
+        });
+      }
+    } catch (error) {
+      console.error("Błąd weryfikacji sesji Stripe:", error);
+    }
+
+    // 5. Pobierz zamówienie PONOWNIE po aktualizacji
+    order = await getOrder(params.id);
+  }
 
   return (
     <div className="max-w-3xl mx-auto my-12 p-8 bg-white shadow-lg rounded-lg">
@@ -76,14 +70,14 @@ export default async function OrderConfirmationPage({ params, searchParams }) {
         Otrzymaliśmy Twoje zamówienie o numerze <strong>#{order.id}</strong>.
         Potwierdzenie wysłaliśmy na Twój adres email ({order.email}).
       </p>
-      {/* 1. Dynamiczna sekcja Płatności */}
+
       {order.paymentMethod === "traditional" && (
         <TraditionalPaymentInstructions order={order} />
       )}
-      {order.paymentMethod === "p24" && (
-        <P24Status order={order} status={paymentStatus} />
+      {order.paymentMethod === "stripe" && (
+        <StripeStatus order={order} /> // Używamy zaimportowanego komponentu
       )}
-      {/* 2. Podsumowanie zamówienia */}
+
       <div className="mt-10">
         <h2 className="text-2xl font-semibold mb-4 border-b pb-2">
           Podsumowanie zamówienia
@@ -107,23 +101,19 @@ export default async function OrderConfirmationPage({ params, searchParams }) {
             </div>
           ))}
         </div>
-
         <div className="border-t pt-4 mt-4 space-y-2">
           <div className="flex justify-between">
             <span className="text-gray-600">
               Dostawa ({order.deliveryMethod})
             </span>
-            {/* Odczytujemy wartość `deliveryCost` zapisaną w bazie */}
             <span>{order.deliveryCost.toFixed(2)} PLN</span>
           </div>
           <div className="flex justify-between text-xl font-bold">
             <span>Łącznie</span>
-            {/* Odczytujemy wartość `totalAmount` zapisaną w bazie */}
             <span>{order.totalAmount.toFixed(2)} PLN</span>
           </div>
         </div>
       </div>
-      {/* 3. Dane dostawy */}
       <div className="mt-10">
         <h2 className="text-2xl font-semibold mb-4 border-b pb-2">
           Adres dostawy

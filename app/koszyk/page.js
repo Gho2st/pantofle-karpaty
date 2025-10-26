@@ -6,10 +6,18 @@ import { useCart } from "@/app/context/cartContext";
 import { ToastContainer, toast } from "react-toastify";
 import { CheckCircle, AlertCircle } from "lucide-react";
 
+// 1. Komponent ładowania
+const LoadingOverlay = ({ text }) => (
+  <div className="absolute inset-0 bg-white bg-opacity-80 flex flex-col items-center justify-center z-50 rounded-lg">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
+    <span className="mt-4 text-lg text-gray-700 font-medium">{text}</span>
+  </div>
+);
+
 export default function Checkout() {
   const {
     cartItems,
-    loading,
+    loading, // To jest loading z useCart() do pobierania koszyka
     fetchCart,
     updateQuantity,
     removeFromCart,
@@ -18,12 +26,15 @@ export default function Checkout() {
     setAvailabilityErrors,
     availableQuantities,
   } = useCart();
+
   const [deliveryMethod, setDeliveryMethod] = useState("paczkomat");
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const [isAvailable, setIsAvailable] = useState(true);
 
+  // 2. Nowy stan do obsługi przekierowania
+  const [isRedirecting, setIsRedirecting] = useState(false);
+
   useEffect(() => {
-    console.log("Aktualne błędy dostępności:", availabilityErrors); // Debugowanie
     if (cartItems.length > 0) {
       const verifyStock = async () => {
         setIsCheckingAvailability(true);
@@ -50,6 +61,10 @@ export default function Checkout() {
       );
       return;
     }
+
+    // 3. Ustaw stan ładowania PRZED przekierowaniem
+    setIsRedirecting(true);
+
     window.location.href = `/zamowienie?deliveryMethod=${deliveryMethod}&deliveryCost=${calculateDeliveryCost().toFixed(
       2
     )}`;
@@ -86,6 +101,7 @@ export default function Checkout() {
     return 0;
   };
 
+  // Ten stan 'loading' z useCart() jest do pierwszego ładowania koszyka
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto my-24 px-4">
@@ -96,7 +112,11 @@ export default function Checkout() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto my-24 px-4">
+    // 4. Dodaj 'relative' do głównego kontenera
+    <div className="max-w-7xl mx-auto my-24 px-4 relative">
+      {/* 5. Dodaj warunkowo nakładkę ładowania */}
+      {isRedirecting && <LoadingOverlay text="Przechodzenie do kasy..." />}
+
       <h1 className="text-3xl font-bold mb-6">Koszyk</h1>
       {cartItems.length === 0 ? (
         <p className="text-gray-600">Twój koszyk jest pusty.</p>
@@ -124,6 +144,7 @@ export default function Checkout() {
               </div>
             </div>
           )}
+
           {/* Lista produktów */}
           {cartItems.map((item) => (
             <div
@@ -138,6 +159,7 @@ export default function Checkout() {
                   : ""
               }`}
             >
+              {/* ... zawartość mapowania itemu (Image, nazwa, ilość itd.) ... */}
               <div className="w-24 h-24">
                 <Image
                   src={item.product.images?.[0] || "/placeholder.png"}
@@ -210,6 +232,7 @@ export default function Checkout() {
               </div>
             </div>
           ))}
+
           {/* Sekcja wyboru metody dostawy */}
           <div className="p-4 bg-white rounded-lg shadow-md">
             <h2 className="text-xl font-semibold mb-4">Metoda dostawy</h2>
@@ -265,6 +288,7 @@ export default function Checkout() {
               </div>
             )}
           </div>
+
           {/* Podsumowanie */}
           <div className="flex justify-end">
             <div className="p-4 bg-gray-100 rounded-md">
@@ -284,14 +308,19 @@ export default function Checkout() {
               </p>
               <button
                 onClick={handleFinalizeOrder}
-                disabled={isCheckingAvailability || !isAvailable}
+                // 6. Zaktualizuj 'disabled' i tekst przycisku
+                disabled={
+                  isCheckingAvailability || !isAvailable || isRedirecting
+                }
                 className={`mt-4 block bg-red-600 text-white px-6 py-2 rounded-md hover:bg-red-700 text-center ${
-                  isCheckingAvailability || !isAvailable
+                  isCheckingAvailability || !isAvailable || isRedirecting
                     ? "opacity-50 cursor-not-allowed"
                     : ""
                 }`}
               >
-                {isCheckingAvailability
+                {isRedirecting
+                  ? "Przechodzenie..."
+                  : isCheckingAvailability
                   ? "Sprawdzanie dostępności..."
                   : "Przejdź do finalizacji zamówienia"}
               </button>

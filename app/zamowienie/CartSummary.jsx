@@ -1,5 +1,12 @@
-// app/components/CartSummary.jsx
 import React from "react";
+
+// Prosty komponent spinnera (możesz go dostosować lub podmienić)
+const LoadingSpinner = () => (
+  <div className="flex justify-center items-center py-6">
+    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+    <span className="ml-3 text-gray-700">Przetwarzanie płatności...</span>
+  </div>
+);
 
 export default function CartSummary({
   cartItems,
@@ -7,11 +14,18 @@ export default function CartSummary({
   calculateSubtotal,
   calculateDeliveryCost,
   calculateTotal,
+  isProcessing, // <-- Nowy prop
 }) {
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
       <h2 className="text-xl font-semibold mb-4">Podsumowanie koszyka</h2>
-      {cartItems.length === 0 ? (
+
+      {/* Najpierw sprawdzamy stan przetwarzania. 
+        Dopiero jeśli NIE jest przetwarzany, sprawdzamy czy jest pusty.
+      */}
+      {isProcessing ? (
+        <LoadingSpinner />
+      ) : cartItems.length === 0 ? (
         <p className="text-gray-600">Twój koszyk jest pusty.</p>
       ) : (
         <>

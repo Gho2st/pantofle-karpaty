@@ -13,12 +13,12 @@ export default function PaymentMethodSelector({
           <input
             type="radio"
             name="paymentMethod"
-            value="p24"
-            checked={paymentMethod === "p24"}
+            value="stripe"
+            checked={paymentMethod === "stripe"}
             onChange={handlePaymentMethodChange}
             className="mr-2"
           />
-          Przelewy24
+          Stripe
         </label>
         <label className="flex items-center">
           <input

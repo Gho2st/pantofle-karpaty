@@ -96,12 +96,11 @@ model Order {
   items       OrderItem[] @relation("OrderItems")
   user        User?     @relation("UserOrders", fields: [userId], references: [id])
   deliveryMethod String // np. "paczkomat" lub "kurier"
-  paymentMethod  String // np. "p24" lub "transfer"
+  paymentMethod  String // np. "stripe" lub "transfer"
   deliveryCost   Float  // Koszt samej dostawy
   createdAt   DateTime  @default(now())
   status      OrderStatus @default(PENDING) // Domyślnie każde zamówienie jest oczekujące
   paymentId   String?     @unique // Tutaj zapiszemy ID transakcji zwrócone przez Przelewy24 (ich 'orderId')
-  p24_token     String?  // Do przechowywania tokena P24
   companyName String?
   nip String?
 }

@@ -9,6 +9,16 @@ import ShippingDetailsForm from "./ShippingDetailsForm";
 import PaymentMethodSelector from "./PaymentMethodSelector";
 import { ToastContainer } from "react-toastify";
 
+// --- Komponenty ładowania ---
+// Loader dla całej strony (ukrywa mignięcie pustego koszyka)
+const PageLoader = ({ text }) => (
+  <div className="container mx-auto py-20 flex flex-col items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+    <span className="mt-4 text-lg text-gray-700">{text}</span>
+  </div>
+);
+// ---
+
 const splitName = (fullName = "") => {
   const parts = (fullName || "").split(" ");
   const firstName = parts[0] || "";
@@ -18,12 +28,20 @@ const splitName = (fullName = "") => {
 
 export default function CheckoutForm({ primaryAddress, userName }) {
   const INPOST_TOKEN = process.env.NEXT_PUBLIC_INPOST_SANDBOX_TOKEN;
-  const { data: session } = useSession();
-  const { cartItems, clearCart } = useCart();
+
+  // 1. Pobierz status sesji
+  const { data: session, status: sessionStatus } = useSession();
+
+  // 2. Zmień nazwę 'loading' z useCart na 'isCartLoading'
+  const { cartItems, clearCart, loading: isCartLoading } = useCart();
+
   const searchParams = useSearchParams();
-  const [loading, setLoading] = useState(false);
+
+  // 3. Zmień nazwę 'loading' na 'isStripeProcessing'
+  const [isStripeProcessing, setIsStripeProcessing] = useState(false);
+
   const [isCompanyPurchase, setIsCompanyPurchase] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("p24");
+  const [paymentMethod, setPaymentMethod] = useState("stripe");
   const { firstName, lastName } = splitName(userName);
 
   const [formData, setFormData] = useState({
@@ -44,6 +62,13 @@ export default function CheckoutForm({ primaryAddress, userName }) {
   const [deliveryMethod, setDeliveryMethod] = useState(
     searchParams.get("deliveryMethod") || "paczkomat"
   );
+
+  // Aktualizuj email w formData, gdy sesja się załaduje
+  useEffect(() => {
+    if (session?.user?.email && !formData.email) {
+      setFormData((prev) => ({ ...prev, email: session.user.email }));
+    }
+  }, [session, formData.email]);
 
   const calculateSubtotal = useCallback(() => {
     return cartItems
@@ -96,7 +121,8 @@ export default function CheckoutForm({ primaryAddress, userName }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    // 4. Użyj 'isStripeProcessing'
+    setIsStripeProcessing(true);
 
     const total = calculateTotal();
     const deliveryCost = calculateDeliveryCost();
@@ -119,15 +145,26 @@ export default function CheckoutForm({ primaryAddress, userName }) {
       if (!response.ok) throw new Error(data.error || "Błąd serwera");
 
       clearCart();
-      if (data.redirectUrl) {
+
+      if (paymentMethod === "stripe" && data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+      } else {
         window.location.href = data.redirectUrl;
       }
     } catch (error) {
       toast.error(error.message || "Wystąpił błąd. Spróbuj ponownie.");
-      setLoading(false);
+      // 5. Użyj 'isStripeProcessing'
+      setIsStripeProcessing(false);
     }
   };
 
+  // 6. GŁÓWNA BLOKADA RENDEROWANIA
+  // Czekaj, aż załaduje się koszyk ORAZ sesja użytkownika
+  if (isCartLoading || sessionStatus === "loading") {
+    return <PageLoader text="Ładowanie danych zamówienia..." />;
+  }
+
+  // Renderuj stronę dopiero, gdy dane są gotowe
   return (
     <div className="container mx-auto py-8">
       <CartSummary
@@ -136,6 +173,8 @@ export default function CheckoutForm({ primaryAddress, userName }) {
         calculateSubtotal={calculateSubtotal}
         calculateDeliveryCost={calculateDeliveryCost}
         calculateTotal={calculateTotal}
+        // 7. Przekaż stan przetwarzania Stripe do CartSummary
+        isProcessing={isStripeProcessing}
       />
       {cartItems.length > 0 && (
         <form
@@ -151,26 +190,25 @@ export default function CheckoutForm({ primaryAddress, userName }) {
             INPOST_TOKEN={INPOST_TOKEN}
             handlePointSelection={handlePointSelection}
             parcelLockerDetails={formData.parcelLockerDetails}
-            session={session} // Przekazanie sesji do ShippingDetailsForm
+            session={session}
           />
-
           <div className="mt-6">
             <PaymentMethodSelector
               paymentMethod={paymentMethod}
               handlePaymentMethodChange={handlePaymentMethodChange}
             />
           </div>
-
           <button
             type="submit"
             disabled={
-              loading ||
+              // 8. Użyj 'isStripeProcessing'
+              isStripeProcessing ||
               cartItems.length === 0 ||
               (deliveryMethod === "paczkomat" && !formData.parcelLocker)
             }
             className="mt-6 w-full bg-red-600 text-white py-3 rounded-md hover:bg-red-700 disabled:opacity-50"
           >
-            {loading
+            {isStripeProcessing // 9. Użyj 'isStripeProcessing'
               ? "Przetwarzanie..."
               : `Złóż zamówienie i zapłać (${calculateTotal()} PLN)`}
           </button>
