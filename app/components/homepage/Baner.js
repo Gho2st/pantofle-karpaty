@@ -3,16 +3,13 @@ import Image from "next/image";
 export default function Baner() {
   // Klasy dla standardowego kontenera obrazu
   const imageContainerClasses =
-    "relative h-full w-full shadow-lg overflow-hidden rounded-lg min-h-[250px] lg:min-h-0";
+    "relative h-full w-full shadow-lg overflow-hidden lg:rounded-lg min-h-[250px] lg:min-h-0";
   const imageClasses = "object-cover";
 
   return (
     <>
-      <div className="px-[9%] py-24">
-        {/* GŁÓWNY GRID: Dzieli sekcję na dwie równe kolumny (50%/50%) i używa items-stretch, 
-           aby lewa i prawa kolumna miały tę samą wysokość. */}
+      <div className="lg:px-[9%]  lg:py-24">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-stretch">
-          {/* LEWA KOLUMNA (Baner + 2 Małe ZDJĘCIA) - Definiuje wysokość całej sekcji */}
           <div className="flex flex-col gap-8 lg:gap-12">
             {/* 1. DUŻY BANER */}
             <div className="bg-gray-100 p-10 md:p-16">

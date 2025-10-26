@@ -63,7 +63,10 @@ export default function Orders() {
         body: JSON.stringify({ status: newStatus }),
       });
       if (!response.ok) {
-        throw new Error("Nie udało się zaktualizować statusu");
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error || "Nie udało się zaktualizować statusu"
+        );
       }
       const updatedOrder = await response.json();
       setOrders((prevOrders) =>
@@ -110,7 +113,10 @@ export default function Orders() {
           body: JSON.stringify({ status: "CANCELLED" }),
         });
         if (!response.ok) {
-          throw new Error("Nie udało się anulować zamówienia");
+          const errorData = await response.json();
+          throw new Error(
+            errorData.error || "Nie udało się anulować zamówienia"
+          );
         }
         const updatedOrder = await response.json();
         setOrders((prevOrders) =>
@@ -269,6 +275,17 @@ export default function Orders() {
                         <span className="font-medium">Telefon:</span>{" "}
                         {order.phone}
                       </p>
+                      {order.companyName && (
+                        <p>
+                          <span className="font-medium">Nazwa firmy:</span>{" "}
+                          {order.companyName}
+                        </p>
+                      )}
+                      {order.nip && (
+                        <p>
+                          <span className="font-medium">NIP:</span> {order.nip}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <p>
@@ -281,16 +298,22 @@ export default function Orders() {
                       </p>
                       <p>
                         <span className="font-medium">Koszt dostawy:</span>{" "}
-                        {order.deliveryCost} zł
+                        {order.deliveryCost.toFixed(2)} zł
                       </p>
                       <p>
                         <span className="font-medium">Całkowita kwota:</span>{" "}
-                        {order.totalAmount} zł
+                        {order.totalAmount.toFixed(2)} zł
                       </p>
                       <p>
                         <span className="font-medium">Data utworzenia:</span>{" "}
                         {new Date(order.createdAt).toLocaleString("pl-PL")}
                       </p>
+                      {order.paczkomat && (
+                        <p>
+                          <span className="font-medium">Paczkomat:</span>{" "}
+                          {order.paczkomat}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="mt-6">
@@ -316,6 +339,7 @@ export default function Orders() {
                       <option value="PENDING">Oczekujące</option>
                       <option value="PAID">Opłacone</option>
                       <option value="SHIPPED">Wysłane</option>
+                      <option value="CANCELLED">Anulowane</option>
                     </select>
                   </div>
                   {order.status !== "CANCELLED" && (
@@ -343,7 +367,7 @@ export default function Orders() {
                               {item.name} ({item.size})
                             </span>
                             <span>
-                              {item.quantity} szt. x {item.price} zł
+                              {item.quantity} szt. x {item.price.toFixed(2)} zł
                             </span>
                           </li>
                         ))}

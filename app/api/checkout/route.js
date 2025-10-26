@@ -14,17 +14,43 @@ const validateNip = (nip) => {
   return /^\d{10}$/.test(nipClean);
 };
 
-async function handleStripePayment(order, formData, total, cartItems) {
-  // Walidacja kluczy
+async function handleStripePayment(order, formData, cartItems) {
+  // Validate environment variables
   if (!process.env.STRIPE_SECRET_KEY || !process.env.NEXT_PUBLIC_BASE_URL) {
     throw new Error(
       "Brak konfiguracji Stripe lub NEXT_PUBLIC_BASE_URL w zmiennych środowiskowych"
     );
   }
 
-  // Tworzenie sesji Stripe Checkout
+  // Validate cartItems
+  if (!Array.isArray(cartItems)) {
+    console.error("cartItems is not an array:", cartItems);
+    throw new Error("Pozycje koszyka muszą być tablicą");
+  }
+
+  if (cartItems.length === 0) {
+    throw new Error("Koszyk jest pusty");
+  }
+
+  // Validate item structure
+  for (const item of cartItems) {
+    if (
+      !item.productId ||
+      !item.product ||
+      !item.product.name ||
+      !item.product.price ||
+      !item.quantity ||
+      !item.size
+    ) {
+      throw new Error(
+        `Nieprawidłowe dane pozycji koszyka dla produktu ID: ${item.productId}`
+      );
+    }
+  }
+
+  // Create Stripe Checkout session
   const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["blik", "p24"],
+    payment_method_types: ["card", "blik", "p24"],
     mode: "payment",
     currency: "pln",
     customer_email: formData.email,
@@ -59,13 +85,13 @@ async function handleStripePayment(order, formData, total, cartItems) {
     ],
   });
 
-  // Zapisz ID sesji w bazie
+  // Update order with Stripe session ID
   await prisma.order.update({
     where: { id: order.id },
     data: { paymentId: session.id, status: "PENDING" },
   });
 
-  return session.url; // Zwracamy session.url zamiast sessionId
+  return session.url; // Return session URL for redirection
 }
 
 export async function POST(req) {
@@ -81,19 +107,58 @@ export async function POST(req) {
       deliveryMethod,
     } = body;
 
-    // Walidacja NIP
+    // Validate request body
+    if (!Array.isArray(cartItems)) {
+      console.error("Invalid cartItems received:", cartItems);
+      return NextResponse.json(
+        { error: "Pozycje koszyka muszą być tablicą" },
+        { status: 400 }
+      );
+    }
+
+    if (cartItems.length === 0) {
+      return NextResponse.json({ error: "Koszyk jest pusty" }, { status: 400 });
+    }
+
+    // Validate required form fields
+    if (
+      !formData.email ||
+      !formData.firstName ||
+      !formData.lastName ||
+      !formData.street ||
+      !formData.city ||
+      !formData.postalCode ||
+      !formData.phone ||
+      !deliveryMethod ||
+      !paymentMethod ||
+      !deliveryCost ||
+      !total
+    ) {
+      return NextResponse.json(
+        { error: "Brak wymaganych danych zamówienia" },
+        { status: 400 }
+      );
+    }
+
+    // Validate NIP if companyName or nip is provided
     if (formData.companyName || formData.nip) {
       if (!formData.companyName || !formData.nip) {
-        throw new Error("Nazwa firmy i NIP są wymagane dla zakupu na firmę");
+        return NextResponse.json(
+          { error: "Nazwa firmy i NIP są wymagane dla zakupu na firmę" },
+          { status: 400 }
+        );
       }
       if (!validateNip(formData.nip)) {
-        throw new Error("NIP musi składać się z dokładnie 10 cyfr");
+        return NextResponse.json(
+          { error: "NIP musi składać się z dokładnie 10 cyfr" },
+          { status: 400 }
+        );
       }
     }
 
+    // Determine user ID and guest status
     let userId = null;
     let isGuest = true;
-
     if (session && session.user && session.user.email) {
       const user = await prisma.user.findUnique({
         where: { email: session.user.email },
@@ -104,6 +169,7 @@ export async function POST(req) {
       }
     }
 
+    // Create order in transaction
     const { createdOrder } = await prisma.$transaction(async (tx) => {
       const order = await tx.order.create({
         data: {
@@ -136,6 +202,7 @@ export async function POST(req) {
         },
       });
 
+      // Update product stock
       for (const item of cartItems) {
         const product = await tx.product.findUnique({
           where: { id: item.productId },
@@ -173,14 +240,14 @@ export async function POST(req) {
       return { createdOrder: order };
     });
 
+    // Handle payment method
     if (paymentMethod === "stripe") {
       const redirectUrl = await handleStripePayment(
         createdOrder,
         formData,
-        total,
-        cartItems
+        cartItems // Fixed: Pass cartItems instead of total
       );
-      return NextResponse.json({ redirectUrl }); // Zwracamy session.url
+      return NextResponse.json({ redirectUrl });
     } else {
       const redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/zamowienie/${createdOrder.id}`;
       return NextResponse.json({ redirectUrl });
@@ -193,7 +260,9 @@ export async function POST(req) {
         error.message.includes("Nie można znaleźć") ||
         error.message.includes("NIP") ||
         error.message.includes("Nazwa firmy") ||
-        error.message.includes("Brak konfiguracji Stripe"))
+        error.message.includes("Brak konfiguracji Stripe") ||
+        error.message.includes("Pozycje koszyka") ||
+        error.message.includes("Koszyk jest pusty"))
     ) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }

@@ -82,6 +82,7 @@ const authOptions = {
       console.log("🔍 Callback redirect: url=", url, "baseUrl=", baseUrl);
       // 🔹 Zawsze przekieruj na stronę główną po udanym logowaniu
       console.log("ℹ️ Przekierowanie na stronę główną:", baseUrl);
+      url = "https://appointable-roxanna-thirstily.ngrok-free.dev";
       return baseUrl; // Zwraca np. http://localhost:3000/
     },
   },

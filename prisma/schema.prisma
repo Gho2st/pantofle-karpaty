@@ -78,6 +78,7 @@ enum OrderStatus {
   PAID      // Opłacone
   SHIPPED   // Wysłane
   CANCELLED // Anulowane
+  EXPIRED   // Wygasłe
 }
 
 model Order {

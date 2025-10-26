@@ -1,5 +1,6 @@
 "use client";
 import Image from "next/image";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { toast } from "react-toastify";
@@ -11,6 +12,7 @@ export default function ProductDetails({ product }) {
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
+  const [showCartLink, setShowCartLink] = useState(false); // Nowy stan dla linku
 
   const handleAddToCart = async (e) => {
     e.preventDefault();
@@ -23,7 +25,9 @@ export default function ProductDetails({ product }) {
     try {
       await addToCart(product.id, selectedSize, quantity, product);
       setIsAdded(true);
-      setTimeout(() => setIsAdded(false), 2000);
+      setShowCartLink(true); // Pokazujemy link po dodaniu
+      setTimeout(() => setIsAdded(false), 2000); // Komunikat „Dodano!” znika po 2 sekundach
+      // Opcjonalnie: setTimeout(() => setShowCartLink(false), 5000); // Link znika po 5 sekundach
     } catch (error) {
       console.error("Błąd podczas dodawania do koszyka:", error);
       toast.error("Błąd serwera");
@@ -109,6 +113,16 @@ export default function ProductDetails({ product }) {
           >
             {isAdded ? "Dodano!" : "Dodaj do koszyka"}
           </button>
+
+          {/* Link do koszyka jako przycisk */}
+          {showCartLink && (
+            <Link
+              href="/koszyk"
+              className="mt-4 inline-block px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 ml-4"
+            >
+              Przejdź do koszyka
+            </Link>
+          )}
         </form>
 
         <p className="mt-10">{product.description2}</p>

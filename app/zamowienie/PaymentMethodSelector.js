@@ -18,7 +18,7 @@ export default function PaymentMethodSelector({
             onChange={handlePaymentMethodChange}
             className="mr-2"
           />
-          Stripe
+          stripe
         </label>
         <label className="flex items-center">
           <input
