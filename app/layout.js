@@ -15,8 +15,9 @@ const josefinSans = Josefin_Sans({
 });
 
 export const metadata = {
-  title: "Pantofle Karpaty",
-  description: "sklep",
+  title: "Pantofle Karpaty - Kapcie Skórzane i Wełniane | Producent",
+  description:
+    "Sklep Pantofle Karpaty - producent tradycyjnych kapci domowych. Znajdź ciepłe i wygodne pantofle regionalne, bambosze i laczki z naturalnej skóry i wełny.",
 };
 
 export default function RootLayout({ children }) {
