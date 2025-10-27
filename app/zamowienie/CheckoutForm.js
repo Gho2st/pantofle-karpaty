@@ -27,7 +27,8 @@ const splitName = (fullName = "") => {
 };
 
 export default function CheckoutForm({ primaryAddress, userName }) {
-  const INPOST_TOKEN = process.env.NEXT_PUBLIC_INPOST_SANDBOX_TOKEN;
+  // const INPOST_TOKEN = process.env.NEXT_PUBLIC_INPOST_SANDBOX_TOKEN;
+  const INPOST_TOKEN = process.env.NEXT_PUBLIC_INPOST_TOKEN;
 
   // 1. Pobierz status sesji
   const { data: session, status: sessionStatus } = useSession();

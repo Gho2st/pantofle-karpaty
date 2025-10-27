@@ -107,7 +107,7 @@ export default function ShippingDetailsForm({
   deliveryMethod,
   INPOST_TOKEN,
   handlePointSelection,
-  session, // Dodane prop session
+  session,
 }) {
   return (
     <>
