@@ -376,10 +376,16 @@ export function AdminProvider({ children }) {
   );
 
   useEffect(() => {
-    if (status === "authenticated" && session?.user?.role === "ADMIN") {
+    // Sprawdzamy, czy użytkownik jest adminem ORAZ czy kategorie nie zostały jeszcze pobrane
+    if (
+      status === "authenticated" &&
+      session?.user?.role === "ADMIN" &&
+      categories.length === 0 // <-- TA LINIA TO POPRAWKA
+    ) {
+      console.log("Inicjalne pobieranie kategorii dla admina...");
       fetchCategories();
     }
-  }, [status, session, fetchCategories]);
+  }, [status, session, fetchCategories, categories.length]); // <-- Dodaj 'categories.length' do tablicy zależności
 
   return (
     <AdminContext.Provider

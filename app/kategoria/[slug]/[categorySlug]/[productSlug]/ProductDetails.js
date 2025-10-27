@@ -1,10 +1,21 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-// import { useSession } from "next-auth/react";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react"; // Usunięto useRef i useEffect
 import { toast } from "react-toastify";
 import { useCart } from "@/app/context/cartContext";
+
+// Importy Swipera
+import { Swiper, SwiperSlide } from "swiper/react";
+// Usunięto 'Thumbs'
+import { Zoom, Navigation, Pagination } from "swiper/modules";
+
+// Importy stylów Swipera
+import "swiper/css";
+import "swiper/css/zoom";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
+// Usunięto "swiper/css/thumbs";
 
 export default function ProductDetails({ product }) {
   const { addToCart } = useCart();
@@ -13,74 +24,12 @@ export default function ProductDetails({ product }) {
   const [isAdded, setIsAdded] = useState(false);
   const [showCartLink, setShowCartLink] = useState(false);
 
+  // Usunięto stan 'thumbsSwiper'
+
   const images = product.images || [];
 
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [isZoomed, setIsZoomed] = useState(false);
-  const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
-
-  const mobileCarouselRef = useRef(null);
-  const mobileSlideRefs = useRef([]);
-  const mobileThumbRefs = useRef([]);
-  const desktopThumbRefs = useRef([]);
-  const scrollTimer = useRef(null);
-
-  const mainDesktopImage =
-    images.length > 0 ? images[activeIndex] : "/placeholder.png";
-
-  // Ustaw początkowy activeIndex na 0, jeśli są obrazy
-  useEffect(() => {
-    if (images.length > 0 && activeIndex === -1) {
-      setActiveIndex(0);
-    }
-  }, [images, activeIndex]);
-
-  const handleMouseMove = (e) => {
-    if (!isZoomed) return;
-    const { left, top, width, height } =
-      e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - left) / width) * 100;
-    const y = ((e.clientY - top) / height) * 100;
-    setZoomPosition({ x, y });
-  };
-
-  const handleThumbnailClick = (index) => {
-    setActiveIndex(index);
-    if (mobileSlideRefs.current[index]) {
-      mobileSlideRefs.current[index].scrollIntoView({
-        behavior: "smooth",
-        inline: "center",
-        block: "nearest",
-      });
-    }
-  };
-
-  const handleMobileScroll = () => {
-    if (scrollTimer.current) {
-      clearTimeout(scrollTimer.current);
-    }
-
-    scrollTimer.current = setTimeout(() => {
-      if (mobileCarouselRef.current) {
-        const { scrollLeft, clientWidth } = mobileCarouselRef.current;
-        if (clientWidth === 0) return;
-
-        const newIndex = Math.round(scrollLeft / clientWidth);
-        if (newIndex !== activeIndex) {
-          setActiveIndex(newIndex);
-          if (mobileThumbRefs.current[newIndex]) {
-            mobileThumbRefs.current[newIndex].scrollIntoView({
-              behavior: "smooth",
-              inline: "center",
-              block: "nearest",
-            });
-          }
-        }
-      }
-    }, 150);
-  };
-
   const handleAddToCart = async (e) => {
+    // ... (bez zmian)
     e.preventDefault();
     if (!selectedSize) {
       toast.error("Wybierz rozmiar");
@@ -102,146 +51,64 @@ export default function ProductDetails({ product }) {
 
   return (
     <div className="max-w-7xl mx-auto my-12 md:my-24 px-4 flex flex-col md:flex-row gap-8 md:gap-16">
-      {/* === SEKCJA GALERII === */}
-
-      {/* --- 1. GALERIA DESKTOP (Ukryta na mobile) --- */}
-      <div className="w-full md:w-1/3 hidden md:flex gap-4">
-        {/* Kolumna miniaturek (Desktop) */}
-        {images.length > 0 && ( // Zmieniono z > 1 na > 0, aby zawsze wyświetlać jeśli jest zdjęcie
-          <div className="flex flex-col gap-4 overflow-y-auto max-h-[600px] pr-2 scrollbar-hide">
-            {" "}
-            {/* scrollbar-hide, jeśli używasz niestandardowego scrollbara */}
-            {images.map((image, index) => (
-              <div
-                key={`desktop-thumb-${index}`}
-                ref={(el) => (desktopThumbRefs.current[index] = el)}
-                className="relative flex-shrink-0 w-20 h-24 rounded-md overflow-hidden cursor-pointer"
-                onClick={() => handleThumbnailClick(index)}
-              >
-                <Image
-                  src={image}
-                  fill
-                  sizes="5vw"
-                  style={{ objectFit: "cover" }} // Miniaturki zawsze 'cover'
-                  alt={`${product.name} - miniaturka ${index + 1}`}
-                  className={`transition-all duration-200 ${
-                    activeIndex === index
-                      ? "ring-2 ring-red-600 ring-inset"
-                      : "ring-1 ring-gray-200 hover:ring-gray-400"
-                  }`}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Główne zdjęcie (Desktop) */}
-        <div className="flex-1 min-w-0">
-          {" "}
-          {/* min-w-0 jest ważne dla flex-1 w niektórych kontekstach */}
-          <div
-            className="relative w-full aspect-[4/5] rounded-md overflow-hidden cursor-zoom-in bg-gray-100" // Tło dla jednolitości
-            onMouseEnter={() => setIsZoomed(true)}
-            onMouseLeave={() => setIsZoomed(false)}
-            onMouseMove={handleMouseMove}
-          >
-            <Image
-              src={mainDesktopImage}
-              fill
-              sizes="33vw"
-              style={{
-                objectFit: "cover", // *** ZMIANA: object-fit na 'cover' ***
-                transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
-              }}
-              alt={`${product.name} - zdjęcie główne`}
-              className={`transition-transform duration-100 ease-linear ${
-                isZoomed ? "scale-150 md:scale-200" : "scale-100"
-              }`}
-              priority
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* --- 2. KARUZELA MOBILNA (Ukryta na desktopie) --- */}
-      <div className="w-full md:hidden flex flex-col gap-4">
-        {/* Kontener karuzeli (Scroll Snap) */}
-        <div
-          ref={mobileCarouselRef}
-          onScroll={handleMobileScroll}
-          className="flex overflow-x-auto scroll-snap-x mandatory w-full" // snap-mandatory zamiast scroll-snap-type-x-mandatory
+      {/* === NOWA SEKCJA GALERII (tylko główna karuzela) === */}
+      {/* Szerokość ustawiona na md:w-1/3, tak jak w oryginale */}
+      <div className="w-full md:w-1/3">
+        <Swiper
+          // Usunięto moduł 'Thumbs' i prop 'thumbs'
+          modules={[Zoom, Navigation, Pagination]}
+          spaceBetween={10}
+          slidesPerView={1}
+          navigation={true} // Strzałki
+          pagination={{ clickable: true }} // Kropki
+          zoom={true} // Zoom
+          className="w-full product-gallery-swiper"
         >
-          {images.map((image, index) => (
-            <div
-              key={`mobile-slide-${index}`}
-              ref={(el) => (mobileSlideRefs.current[index] = el)}
-              className="w-full flex-shrink-0 snap-center"
-            >
-              <div className="relative w-full aspect-[4/5] bg-gray-100 rounded-md overflow-hidden">
-                <Image
-                  src={image}
-                  fill
-                  sizes="90vw"
-                  className="px-1"
-                  style={{ objectFit: "cover" }} // *
-                  alt={`${product.name} - zdjęcie ${index + 1}`}
-                  priority={index === 0}
-                />
-              </div>
-            </div>
-          ))}
-          {/* Fallback dla braku zdjęć, jeśli images.length === 0 */}
-          {images.length === 0 && (
-            <div className="w-full flex-shrink-0 snap-center">
-              <div className="relative w-full aspect-[4/5] bg-gray-100 rounded-md overflow-hidden">
-                <Image
-                  src="/placeholder.png"
-                  fill
-                  style={{ objectFit: "contain" }} // Placeholder może być 'contain'
-                  alt="Brak zdjęcia"
-                  priority
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Miniaturki (Mobile) */}
-        {images.length > 0 && ( // Zmieniono z > 1 na > 0
-          <div className="flex flex-row gap-2 overflow-x-auto p-2 scroll-snap-x snap-start">
-            {images.map((image, index) => (
-              <div
-                key={`mobile-thumb-${index}`}
-                ref={(el) => (mobileThumbRefs.current[index] = el)}
-                className="relative flex-shrink-0 w-16 h-20 rounded-md overflow-hidden cursor-pointer"
-                onClick={() => handleThumbnailClick(index)}
+          {images.length > 0 ? (
+            images.map((image, index) => (
+              <SwiperSlide
+                key={`main-${index}`}
+                className="relative aspect-[4/5] bg-gray-100 rounded-md overflow-hidden"
               >
-                <Image
-                  src={image}
-                  fill
-                  sizes="10vw"
-                  style={{ objectFit: "cover" }}
-                  alt={`Miniaturka ${index + 1}`}
-                  className={`transition-all duration-200 ${
-                    activeIndex === index
-                      ? "ring-2 ring-red-600 ring-inset"
-                      : "ring-1 ring-gray-200"
-                  }`}
-                />
-              </div>
-            ))}
-          </div>
-        )}
+                <div className="swiper-zoom-container">
+                  {" "}
+                  {/* Wymagane dla zoomu */}
+                  <Image
+                    src={image}
+                    fill
+                    sizes="(max-width: 768px) 90vw, 33vw" // Dostosowano sizes
+                    style={{ objectFit: "cover" }}
+                    alt={`${product.name} - zdjęcie ${index + 1}`}
+                    priority={index === 0}
+                  />
+                </div>
+              </SwiperSlide>
+            ))
+          ) : (
+            // Fallback, jeśli nie ma zdjęć
+            <SwiperSlide className="relative aspect-[4/5] bg-gray-100 rounded-md overflow-hidden">
+              <Image
+                src="/placeholder.png"
+                fill
+                style={{ objectFit: "contain" }}
+                alt="Brak zdjęcia"
+                priority
+              />
+            </SwiperSlide>
+          )}
+        </Swiper>
       </div>
-      {/* === KONIEC SEKCJI GALERII === */}
+      {/* === KONIEC NOWEJ SEKCJI GALERII === */}
 
       {/* --- SEKCJA SZCZEGÓŁÓW --- */}
+      {/* Szerokość ustawiona na md:w-2/3, tak jak w oryginale */}
       <div className="w-full md:w-2/3">
         <h1 className="text-3xl md:text-4xl uppercase mb-6">{product.name}</h1>
         <span className="font-light text-2xl">{product.price} PLN</span>
         <p className="mt-6 md:mt-10 text-gray-700">{product.description}</p>
 
         <form onSubmit={handleAddToCart} className="mt-6">
+          {/* ... (reszta formularza - bez zmian) ... */}
           <div className="mb-4">
             <label htmlFor="size" className="block text-lg font-medium mb-2">
               Wybierz rozmiar:

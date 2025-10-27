@@ -11,3 +11,62 @@
     @apply text-[#ca001a];
   }
 }
+/* Nadajemy kontekst dla naszej galerii */
+.product-gallery-swiper {
+  position: relative;
+}
+
+/* 1. Główny styl przycisków (strzałek) */
+.product-gallery-swiper .swiper-button-next,
+.product-gallery-swiper .swiper-button-prev {
+  /* Ustawiamy rozmiar i okrągły kształt */
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  padding: 3px;
+
+  /* Półprzezroczyste tło w stylu Zalando */
+  background-color: rgba(255, 255, 255, 0.9);
+
+  /* Cień dla lepszej czytelności na jasnych zdjęciach */
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+
+  /* Kolor ikony wewnątrz */
+  color: #111827; /* Ciemnoszary, zamiast niebieskiego */
+
+  /* Pozycjonowanie wewnątrz */
+  top: 50%;
+  transform: translateY(-50%);
+  transition: background-color 0.2s ease;
+}
+
+/* 2. Pozycja - lekko odsunięte od krawędzi */
+.product-gallery-swiper .swiper-button-next {
+  right: 16px;
+}
+.product-gallery-swiper .swiper-button-prev {
+  left: 16px;
+}
+
+.product-gallery-swiper .swiper-pagination-bullet-active {
+  color: red;
+  background-color: blue !important;
+}
+
+/* 3. Efekt :hover */
+.product-gallery-swiper .swiper-button-next:hover,
+.product-gallery-swiper .swiper-button-prev:hover {
+  background-color: rgba(255, 255, 255, 1); /* Pełna biel */
+}
+
+/* 6. Opcjonalnie: Styl paginacji na mobile (dopasowany) */
+.product-gallery-swiper .swiper-pagination-bullet {
+  background-color: #a1a1aa; /* Neutralna szarość */
+  opacity: 0.7;
+}
+.product-gallery-swiper .swiper-pagination-bullet-active {
+  background-color: #111827; /* Ciemny */
+  opacity: 1;
+}
+
+
