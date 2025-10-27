@@ -1,6 +1,8 @@
+// CategoryList.js
 "use client";
 import Products from "./Products";
 import { useAdmin } from "../context/adminContext";
+import CategoryItemForm from "./CategoryItemForm"; // Import nowego komponentu
 
 export default function CategoryList() {
   const {
@@ -27,9 +29,6 @@ export default function CategoryList() {
     return selectedCategory.name;
   };
 
-  console.log("Kategorie:", categories);
-  console.log("Wybrana kategoria:", selectedCategory);
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -45,135 +44,17 @@ export default function CategoryList() {
                 : ""
             }`}
           >
-            <div className="flex justify-between items-center">
+            {/* Poprawiony wrapper dla responsywności */}
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
               {editingCategory?.id === category.id ? (
-                <div className="flex-1 space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nazwa kategorii
-                    </label>
-                    <input
-                      type="text"
-                      value={editingCategory?.name || ""}
-                      onChange={(e) =>
-                        setEditingCategory({
-                          ...editingCategory,
-                          name: e.target.value,
-                        })
-                      }
-                      placeholder="Nazwa kategorii"
-                      className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Slug (opcjonalny)
-                    </label>
-                    <input
-                      type="text"
-                      value={editingCategory?.slug || ""}
-                      onChange={(e) =>
-                        setEditingCategory({
-                          ...editingCategory,
-                          slug: e.target.value,
-                        })
-                      }
-                      placeholder="np. nowa-kategoria"
-                      className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Obraz kategorii (opcjonalny)
-                    </label>
-                    {editingCategory?.image &&
-                      !editingCategory?.imageToRemove && (
-                        <div className="mb-2">
-                          <p className="text-gray-600">Aktualne zdjęcie:</p>
-                          <a
-                            href={editingCategory.image}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-500 hover:underline"
-                          >
-                            Zobacz zdjęcie
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setEditingCategory({
-                                ...editingCategory,
-                                imageToRemove: editingCategory.image,
-                                image: null,
-                              })
-                            }
-                            className="ml-2 text-red-500 hover:text-red-700"
-                          >
-                            Usuń zdjęcie
-                          </button>
-                        </div>
-                      )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) =>
-                        setEditingCategory({
-                          ...editingCategory,
-                          newImage: e.target.files[0],
-                        })
-                      }
-                      className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                    />
-                    {editingCategory?.newImage && (
-                      <p className="text-gray-600 mt-1">
-                        Wybrano: {editingCategory.newImage.name}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setEditingCategory({
-                              ...editingCategory,
-                              newImage: null,
-                            })
-                          }
-                          className="ml-2 text-red-500 hover:text-red-700"
-                        >
-                          Usuń
-                        </button>
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Opis kategorii (opcjonalny)
-                    </label>
-                    <textarea
-                      value={editingCategory?.description || ""}
-                      onChange={(e) =>
-                        setEditingCategory({
-                          ...editingCategory,
-                          description: e.target.value,
-                        })
-                      }
-                      placeholder="Opis kategorii"
-                      className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                      rows="4"
-                    />
-                  </div>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => handleEditCategory(category)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200"
-                    >
-                      Zapisz
-                    </button>
-                    <button
-                      onClick={() => setEditingCategory(null)}
-                      className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-200"
-                    >
-                      Anuluj
-                    </button>
-                  </div>
-                </div>
+                // Użycie nowego komponentu
+                <CategoryItemForm
+                  editingCategory={editingCategory}
+                  setEditingCategory={setEditingCategory}
+                  onSave={() => handleEditCategory(category)}
+                  onCancel={() => setEditingCategory(null)}
+                  itemType="kategorii"
+                />
               ) : (
                 <>
                   <div className="flex-1 flex items-center gap-4">
@@ -206,7 +87,8 @@ export default function CategoryList() {
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-3">
+                  {/* Poprawiony wrapper przycisków dla responsywności */}
+                  <div className="flex flex-row gap-3 self-end sm:self-center">
                     <button
                       onClick={() =>
                         setEditingCategory({
@@ -238,11 +120,13 @@ export default function CategoryList() {
                 </>
               )}
             </div>
+
+            {/* Sekcja podkategorii */}
             {(selectedCategory?.id === category.id ||
               category.subcategories?.some(
                 (sub) => sub.id === selectedCategory?.id
               )) && (
-              <div className="ml-6 mt-6">
+              <div className="ml-0 sm:ml-6 mt-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-3">
                   Podkategorie
                 </h3>
@@ -260,138 +144,17 @@ export default function CategoryList() {
                             : ""
                         }`}
                       >
-                        <div className="flex justify-between items-center">
+                        {/* Poprawiony wrapper dla responsywności */}
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                           {editingCategory?.id === sub.id ? (
-                            <div className="flex-1 space-y-3">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  Nazwa podkategorii
-                                </label>
-                                <input
-                                  type="text"
-                                  value={editingCategory?.name || ""}
-                                  onChange={(e) =>
-                                    setEditingCategory({
-                                      ...editingCategory,
-                                      name: e.target.value,
-                                    })
-                                  }
-                                  placeholder="Nazwa podkategorii"
-                                  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  Slug (opcjonalny)
-                                </label>
-                                <input
-                                  type="text"
-                                  value={editingCategory?.slug || ""}
-                                  onChange={(e) =>
-                                    setEditingCategory({
-                                      ...editingCategory,
-                                      slug: e.target.value,
-                                    })
-                                  }
-                                  placeholder="np. nowa-podkategoria"
-                                  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  Obraz podkategorii (opcjonalny)
-                                </label>
-                                {editingCategory?.image &&
-                                  !editingCategory?.imageToRemove && (
-                                    <div className="mb-2">
-                                      <p className="text-gray-600">
-                                        Aktualne zdjęcie:
-                                      </p>
-                                      <a
-                                        href={editingCategory.image}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-blue-500 hover:underline"
-                                      >
-                                        Zobacz zdjęcie
-                                      </a>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setEditingCategory({
-                                            ...editingCategory,
-                                            imageToRemove:
-                                              editingCategory.image,
-                                            image: null,
-                                          })
-                                        }
-                                        className="ml-2 text-red-500 hover:text-red-700"
-                                      >
-                                        Usuń zdjęcie
-                                      </button>
-                                    </div>
-                                  )}
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e) =>
-                                    setEditingCategory({
-                                      ...editingCategory,
-                                      newImage: e.target.files[0],
-                                    })
-                                  }
-                                  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                                />
-                                {editingCategory?.newImage && (
-                                  <p className="text-gray-600 mt-1">
-                                    Wybrano: {editingCategory.newImage.name}
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setEditingCategory({
-                                          ...editingCategory,
-                                          newImage: null,
-                                        })
-                                      }
-                                      className="ml-2 text-red-500 hover:text-red-700"
-                                    >
-                                      Usuń
-                                    </button>
-                                  </p>
-                                )}
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  Opis podkategorii (opcjonalny)
-                                </label>
-                                <textarea
-                                  value={editingCategory?.description || ""}
-                                  onChange={(e) =>
-                                    setEditingCategory({
-                                      ...editingCategory,
-                                      description: e.target.value,
-                                    })
-                                  }
-                                  placeholder="Opis podkategorii"
-                                  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                                  rows="4"
-                                />
-                              </div>
-                              <div className="flex gap-3">
-                                <button
-                                  onClick={() => handleEditCategory(sub)}
-                                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200"
-                                >
-                                  Zapisz
-                                </button>
-                                <button
-                                  onClick={() => setEditingCategory(null)}
-                                  className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-200"
-                                >
-                                  Anuluj
-                                </button>
-                              </div>
-                            </div>
+                            // Użycie nowego komponentu
+                            <CategoryItemForm
+                              editingCategory={editingCategory}
+                              setEditingCategory={setEditingCategory}
+                              onSave={() => handleEditCategory(sub)}
+                              onCancel={() => setEditingCategory(null)}
+                              itemType="podkategorii"
+                            />
                           ) : (
                             <>
                               <div className="flex-1 flex items-center gap-4">
@@ -424,7 +187,8 @@ export default function CategoryList() {
                                   )}
                                 </div>
                               </div>
-                              <div className="flex gap-3">
+                              {/* Poprawiony wrapper przycisków dla responsywności */}
+                              <div className="flex flex-row gap-3 self-end sm:self-center">
                                 <button
                                   onClick={() =>
                                     setEditingCategory({
@@ -462,6 +226,8 @@ export default function CategoryList() {
                 )}
               </div>
             )}
+
+            {/* Sekcja produktów (logika bez zmian) */}
             {selectedCategory?.id === category.id ||
             category.subcategories?.some(
               (sub) => sub.id === selectedCategory?.id

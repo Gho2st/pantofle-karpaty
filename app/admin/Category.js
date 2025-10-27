@@ -1,5 +1,4 @@
 "use client";
-import { useEffect } from "react";
 import CategoryList from "./CategoryList";
 import CategoryForm from "./CategoryForm";
 import DeleteModal from "./DeleteModal";
@@ -7,10 +6,6 @@ import { useAdmin } from "../context/adminContext";
 
 export default function Category() {
   const { isLoading, error, selectedCategory } = useAdmin();
-
-  useEffect(() => {
-    console.log("Zaktualizowano selectedCategory:", selectedCategory);
-  }, [selectedCategory]);
 
   if (isLoading) {
     return (

@@ -23,27 +23,25 @@ async function uploadFileToS3(fileBuffer, fileName, contentType) {
   const uniqueFileName = `${uuidv4()}-${fileName}`;
   const params = {
     Bucket: BUCKET_NAME,
-    Key: `products/${uniqueFileName}`, // Store in 'products/' folder
+    Key: `products/${uniqueFileName}`,
     Body: fileBuffer,
     ContentType: contentType || "application/octet-stream",
-    // Removed ACL: "public-read" to avoid AccessControlListNotSupported error
   };
 
-  console.log(`Uploading file to S3: ${uniqueFileName}`);
+  console.log(`Przesyłanie pliku do S3: ${uniqueFileName}`);
   const command = new PutObjectCommand(params);
   await s3Client.send(command);
-  console.log(`Successfully uploaded file: ${uniqueFileName}`);
-
+  console.log(`Pomyślnie przesłano plik: ${uniqueFileName}`);
   return `https://${BUCKET_NAME}.s3.eu-central-1.amazonaws.com/products/${uniqueFileName}`;
 }
 
 async function deleteFileFromS3(imageUrl) {
-  console.log(`Attempting to delete image from S3: ${imageUrl}`);
+  console.log(`Próba usunięcia obrazu z S3: ${imageUrl}`);
   const key = imageUrl.split(
     `https://${BUCKET_NAME}.s3.eu-central-1.amazonaws.com/`
   )[1];
   if (!key) {
-    throw new Error(`Invalid S3 URL: ${imageUrl}`);
+    throw new Error(`Nieprawidłowy URL S3: ${imageUrl}`);
   }
 
   const params = {
@@ -51,14 +49,14 @@ async function deleteFileFromS3(imageUrl) {
     Key: key,
   };
 
-  console.log(`S3 Delete params:`, params);
+  console.log(`Parametry usuwania S3:`, params);
   const command = new DeleteObjectCommand(params);
   await s3Client.send(command);
-  console.log(`Successfully deleted image: ${imageUrl}`);
+  console.log(`Pomyślnie usunięto obraz: ${imageUrl}`);
 }
 
 function validateSizes(sizes) {
-  if (!sizes) return true; // sizes jest opcjonalne
+  if (!sizes) return true;
   if (!Array.isArray(sizes)) {
     throw new Error("Pole sizes musi być tablicą");
   }
@@ -75,63 +73,62 @@ function generateSlug(name) {
   return name
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9\s-]/g, "") // Usuń znaki specjalne
-    .replace(/\s+/g, "-") // Zamień spacje na myślniki
-    .replace(/-+/g, "-"); // Usuń wielokrotne myślniki
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
 }
 
 export async function PUT(request, { params }) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({
-      error: "Nieautoryzowany dostęp",
-      status: 401,
-    });
+    return NextResponse.json(
+      { error: "Nieautoryzowany dostęp" },
+      { status: 401 }
+    );
   }
 
   try {
-    const { id } = await params;
+    const { id } = params;
     const productId = parseInt(id);
     if (isNaN(productId)) {
-      return NextResponse.json({
-        error: "ID produktu musi być liczbą",
-        status: 400,
-      });
+      return NextResponse.json(
+        { error: "ID produktu musi być liczbą" },
+        { status: 400 }
+      );
     }
 
-    // Parse FormData
     const formData = await request.formData();
     const name = formData.get("name");
-    const slug = formData.get("slug") || generateSlug(name); // Pobierz slug lub wygeneruj z name
+    const slug = formData.get("slug") || generateSlug(name);
     const price = formData.get("price");
     const description = formData.get("description") || null;
     const description2 = formData.get("description2") || null;
     const additionalInfo = formData.get("additionalInfo") || null;
-    const sizes = formData.get("sizes")
-      ? JSON.parse(formData.get("sizes"))
-      : null;
+    let sizes = formData.get("sizes");
     const categoryId = formData.get("categoryId");
-    const imagesToRemove = formData.get("imagesToRemove")
-      ? JSON.parse(formData.get("imagesToRemove"))
-      : [];
+    let imagesToRemove = formData.get("imagesToRemove");
     const imagesToAdd = formData.getAll("imagesToAdd");
 
-    // Sprawdź, czy produkt istnieje
-    const product = await prisma.product.findUnique({
-      where: { id: productId },
-      select: { images: true, sizes: true, categoryId: true },
+    console.log("Otrzymane dane FormData:", {
+      productId,
+      name,
+      slug,
+      price,
+      description,
+      description2,
+      additionalInfo,
+      sizes,
+      categoryId,
+      imagesToRemove,
+      imagesToAdd: imagesToAdd.map((f) => f.name),
     });
-    if (!product) {
-      return NextResponse.json(
-        { error: "Produkt nie został znaleziony" },
-        { status: 404 }
-      );
-    }
 
-    // Walidacja podstawowych pól
     if (!name || !price) {
       return NextResponse.json(
-        { error: "Nazwa i cena produktu są wymagane" },
+        {
+          error: "Nazwa i cena produktu są wymagane",
+          missingFields: { name: !name, price: !price },
+        },
         { status: 400 }
       );
     }
@@ -156,19 +153,43 @@ export async function PUT(request, { params }) {
       }
     }
 
+    try {
+      sizes = sizes ? JSON.parse(sizes) : null;
+    } catch (e) {
+      return NextResponse.json(
+        { error: "Nieprawidłowy format rozmiarów" },
+        { status: 400 }
+      );
+    }
     validateSizes(sizes);
 
-    // Obsługa zdjęć
-    let updatedImages = product.images || [];
+    try {
+      imagesToRemove = imagesToRemove ? JSON.parse(imagesToRemove) : [];
+    } catch (e) {
+      return NextResponse.json(
+        { error: "Nieprawidłowy format imagesToRemove" },
+        { status: 400 }
+      );
+    }
 
-    // Usuwanie zdjęć z S3 i bazy danych
-    if (imagesToRemove && imagesToRemove.length > 0) {
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { images: true, sizes: true, categoryId: true },
+    });
+    if (!product) {
+      return NextResponse.json(
+        { error: "Produkt nie został znaleziony" },
+        { status: 404 }
+      );
+    }
+
+    let updatedImages = product.images || [];
+    if (imagesToRemove.length > 0) {
       for (const imageUrl of imagesToRemove) {
         try {
           await deleteFileFromS3(imageUrl);
         } catch (err) {
-          console.error(`Nie udało się usunąć obrazu ${imageUrl} z S3:`, err);
-          // Kontynuuj, nawet jeśli usunięcie z S3 się nie powiedzie (np. obraz już nie istnieje)
+          console.error(`Nie udało się usunąć obrazu ${imageUrl}:`, err);
         }
       }
       updatedImages = updatedImages.filter(
@@ -176,15 +197,14 @@ export async function PUT(request, { params }) {
       );
     }
 
-    // Dodawanie nowych zdjęć do S3
     if (imagesToAdd && imagesToAdd.length > 0) {
       const newImageUrls = [];
       for (const file of imagesToAdd) {
         if (!(file instanceof File) || !file.type.startsWith("image/")) {
-          continue; // Skip non-image files
+          console.warn(`Pomijanie pliku niebędącego obrazem: ${file.name}`);
+          continue;
         }
         if (file.size > 5 * 1024 * 1024) {
-          // 5MB limit
           throw new Error(`Plik ${file.name} przekracza limit 5MB`);
         }
         const buffer = Buffer.from(await file.arrayBuffer());
@@ -194,12 +214,11 @@ export async function PUT(request, { params }) {
       updatedImages = [...updatedImages, ...newImageUrls];
     }
 
-    // Aktualizacja produktu w bazie danych
     const updatedProduct = await prisma.product.update({
       where: { id: productId },
       data: {
         name,
-        slug, // Zapisz slug (wygenerowany lub podany)
+        slug,
         price: parsedPrice,
         description,
         description2,
@@ -210,12 +229,14 @@ export async function PUT(request, { params }) {
       },
     });
 
+    console.log("Zaktualizowany produkt:", updatedProduct);
+
     return NextResponse.json({
       message: "Produkt zaktualizowany pomyślnie",
       product: updatedProduct,
     });
   } catch (error) {
-    console.error("Błąd podczas aktualizacji produktu:", error);
+    console.error("Błąd podczas aktualizacji produktu:", error.stack);
     return NextResponse.json(
       { error: error.message || "Błąd serwera podczas aktualizacji produktu" },
       { status: 500 }

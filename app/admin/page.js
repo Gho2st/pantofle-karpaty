@@ -1,3 +1,4 @@
+// Admin.js
 "use client";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
@@ -6,6 +7,7 @@ import { ToastContainer } from "react-toastify";
 import Users from "./Users";
 import Orders from "./Orders";
 import "react-toastify/dist/ReactToastify.css";
+import { Menu, X } from "lucide-react"; // Import ikon
 
 export default function Admin() {
   const { data: session, status } = useSession();
@@ -50,6 +52,14 @@ export default function Admin() {
 
   return (
     <div className="flex min-h-screen bg-gray-100">
+      {/* Overlay dla mobilnego sidebara */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 z-10 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        ></div>
+      )}
+
       {/* Sidebar */}
       <div
         className={`${
@@ -57,7 +67,16 @@ export default function Admin() {
         } fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 z-20`}
       >
         <div className="p-6">
-          <h2 className="text-2xl font-bold text-gray-800">Panel Admina</h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold text-gray-800">Panel Admina</h2>
+            {/* Przycisk zamykania na mobile */}
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="md:hidden text-gray-600 hover:text-gray-800"
+            >
+              <X size={24} />
+            </button>
+          </div>
           <nav className="mt-6">
             <ul>
               <li>
@@ -101,12 +120,20 @@ export default function Admin() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         <header className="bg-white shadow p-4 flex justify-between items-center">
-          <div className="text-gray-600">
+          {/* Przycisk otwierania (Hamburger) na mobile */}
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="md:hidden text-gray-700 p-2 rounded-md hover:bg-gray-100"
+          >
+            <Menu size={24} />
+          </button>
+          <div className="text-gray-600 ml-auto">
             Admin: {session?.user?.name || "Admin"}
           </div>
         </header>
 
-        <div className="my-10 px-[6%]">{renderActiveView()}</div>
+        {/* Poprawiony padding dla responsywności */}
+        <div className="my-10 px-4 sm:px-6 lg:px-8">{renderActiveView()}</div>
       </div>
 
       <ToastContainer position="bottom-right" autoClose={3000} />

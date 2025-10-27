@@ -1,89 +1,57 @@
+// CategoryForm.js
 "use client";
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useAdmin } from "../context/adminContext";
-
-// Funkcja do generowania sluga z nazwy kategorii
-const generateSlug = (name) => {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/ą/g, "a")
-    .replace(/ć/g, "c")
-    .replace(/ę/g, "e")
-    .replace(/ł/g, "l")
-    .replace(/ń/g, "n")
-    .replace(/ó/g, "o")
-    .replace(/ś/g, "s")
-    .replace(/ź/g, "z")
-    .replace(/ż/g, "z")
-    .replace(/[^a-z0-9\s-]/g, "") // Usuwa znaki specjalne
-    .replace(/\s+/g, "-") // Zamienia spacje na myślniki
-    .replace(/-+/g, "-"); // Usuwa wielokrotne myślniki
-};
+import { generateSlug } from "../utils/slugify"; // Import funkcji z nowego pliku
 
 export default function CategoryForm() {
-  const {
-    selectedCategory,
-    newCategoryName,
-    setNewCategoryName,
-    newCategoryDescription,
-    setNewCategoryDescription,
-    editingCategory,
-    setEditingCategory,
-    handleAddCategory,
-    handleEditCategory,
-  } = useAdmin();
-  const [isAdding, setIsAdding] = useState(false);
-  const [newCategorySlug, setNewCategorySlug] = useState("");
-  const [newCategoryImage, setNewCategoryImage] = useState(null);
+  const { selectedCategory, handleAddCategory } = useAdmin();
 
-  // Automatyczne generowanie sluga przy zmianie nazwy kategorii
+  // Lokalny stan dla formularza dodawania
+  const [isAdding, setIsAdding] = useState(false);
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [description, setDescription] = useState("");
+  const [image, setImage] = useState(null);
+
+  // Automatyczne generowanie sluga
   useEffect(() => {
-    if (newCategoryName) {
-      const generatedSlug = generateSlug(newCategoryName);
-      setNewCategorySlug(generatedSlug);
+    if (name) {
+      setSlug(generateSlug(name));
     } else {
-      setNewCategorySlug("");
+      setSlug("");
     }
-  }, [newCategoryName]);
+  }, [name]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!newCategoryName.trim()) {
+    if (!name.trim()) {
       toast.error("Nazwa kategorii jest wymagana");
       return;
     }
     setIsAdding(true);
     try {
       const formData = new FormData();
-      formData.append("name", newCategoryName);
-      formData.append("description", newCategoryDescription || "");
-      formData.append("slug", newCategorySlug || "");
+      formData.append("name", name);
+      formData.append("description", description || "");
+      formData.append("slug", slug || "");
       if (selectedCategory) {
         formData.append("parentId", selectedCategory.id);
       }
-      if (newCategoryImage) {
-        formData.append("image", newCategoryImage);
+      if (image) {
+        formData.append("image", image);
       }
 
-      console.log("Submitting category:", {
-        name: newCategoryName,
-        description: newCategoryDescription,
-        slug: newCategorySlug,
-        image: newCategoryImage?.name,
-        parentId: selectedCategory?.id,
-      });
+      await handleAddCategory(formData); // Przekazujemy tylko formData
 
-      if (editingCategory) {
-        await handleEditCategory(editingCategory);
-      } else {
-        await handleAddCategory(e, formData);
-      }
-      setNewCategorySlug("");
-      setNewCategoryImage(null);
-      setNewCategoryName("");
-      setNewCategoryDescription("");
+      // Resetowanie formularza
+      setName("");
+      setSlug("");
+      setDescription("");
+      setImage(null);
+      // Resetowanie inputu typu 'file'
+      e.target.reset();
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -98,9 +66,7 @@ export default function CategoryForm() {
       encType="multipart/form-data"
     >
       <h3 className="text-xl font-semibold text-gray-800 mb-4">
-        {editingCategory
-          ? `Edytuj kategorię ${editingCategory.name}`
-          : selectedCategory
+        {selectedCategory
           ? `Dodaj podkategorię dla ${selectedCategory.name}`
           : "Dodaj nową kategorię"}
       </h3>
@@ -111,8 +77,8 @@ export default function CategoryForm() {
           </label>
           <input
             type="text"
-            value={newCategoryName}
-            onChange={(e) => setNewCategoryName(e.target.value)}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             placeholder={
               selectedCategory
                 ? `Nowa podkategoria dla ${selectedCategory.name}`
@@ -128,8 +94,8 @@ export default function CategoryForm() {
           </label>
           <input
             type="text"
-            value={newCategorySlug}
-            onChange={(e) => setNewCategorySlug(e.target.value)}
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
             placeholder="np. nowa-kategoria"
             className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
           />
@@ -138,49 +104,20 @@ export default function CategoryForm() {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Obraz kategorii (opcjonalny)
           </label>
-          {editingCategory?.image && !editingCategory?.imageToRemove && (
-            <div className="mb-2">
-              <p className="text-gray-600">Aktualne zdjęcie:</p>
-              <a
-                href={editingCategory.image}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500 hover:underline"
-              >
-                Zobacz zdjęcie
-              </a>
-              <button
-                type="button"
-                onClick={() =>
-                  setEditingCategory({
-                    ...editingCategory,
-                    imageToRemove: editingCategory.image,
-                    image: null,
-                  })
-                }
-                className="ml-2 text-red-500 hover:text-red-700"
-              >
-                Usuń zdjęcie
-              </button>
-            </div>
-          )}
           <input
             type="file"
             accept="image/*"
-            onChange={(e) => setNewCategoryImage(e.target.files[0])}
+            onChange={(e) => setImage(e.target.files[0])}
             className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+            // Klucz do resetowania inputu po wysłaniu
+            key={image?.name || "file-input"}
           />
-          {(editingCategory?.newImage || newCategoryImage) && (
+          {image && (
             <p className="text-gray-600 mt-1">
-              Wybrano: {(editingCategory?.newImage || newCategoryImage)?.name}
+              Wybrano: {image.name}
               <button
                 type="button"
-                onClick={() => {
-                  if (editingCategory) {
-                    setEditingCategory({ ...editingCategory, newImage: null });
-                  }
-                  setNewCategoryImage(null);
-                }}
+                onClick={() => setImage(null)}
                 className="ml-2 text-red-500 hover:text-red-700"
               >
                 Usuń
@@ -193,8 +130,8 @@ export default function CategoryForm() {
             Opis kategorii (opcjonalny)
           </label>
           <textarea
-            value={newCategoryDescription}
-            onChange={(e) => setNewCategoryDescription(e.target.value)}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
             placeholder="Wpisz opis kategorii, np. 'Pantofle damskie to idealne...'"
             className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
             rows="4"
@@ -227,13 +164,7 @@ export default function CategoryForm() {
               ></path>
             </svg>
           )}
-          <span>
-            {isAdding
-              ? "Zapisywanie..."
-              : editingCategory
-              ? "Zapisz zmiany"
-              : "Dodaj kategorię"}
-          </span>
+          <span>{isAdding ? "Dodawanie..." : "Dodaj kategorię"}</span>
         </button>
       </div>
     </form>

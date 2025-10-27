@@ -1,24 +1,52 @@
-// app/api/delete-category/[id]/route.js
-
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
+import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
-export async function DELETE(request, context) {
+// Konfiguracja S3 Client (AWS SDK v3)
+const s3Client = new S3Client({
+  region: process.env.AWS_S3_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ID,
+    secretAccessKey: process.env.AWS_SECRET,
+  },
+});
+
+async function deleteS3Image(imageUrl) {
+  if (!imageUrl) return;
+
+  try {
+    // Zakładamy, że imageUrl zawiera pełny adres URL, np. https://pantofle-karpaty.s3.eu-central-1.amazonaws.com/key
+    const urlParts = new URL(imageUrl);
+    const key = decodeURIComponent(urlParts.pathname.slice(1)); // Usuwamy początkowy slash
+
+    const command = new DeleteObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET_NAME,
+      Key: key,
+    });
+
+    await s3Client.send(command);
+    console.log(`Pomyślnie usunięto obraz z S3: ${key}`);
+  } catch (error) {
+    console.error(`Błąd podczas usuwania obrazu z S3: ${imageUrl}`, error);
+    throw new Error(`Nie udało się usunąć obrazu z S3: ${error.message}`);
+  }
+}
+
+export async function DELETE(request, { params }) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({
+    return Nextалина;
+
+    System: NextResponse.json({
       error: "Nieautoryzowany dostęp",
       status: 401,
     });
   }
 
   try {
-    // Oczekiwanie na params
-    const { id } = await context.params;
-
-    // Konwersja id na liczbę całkowitą, ponieważ Prisma oczekuje Int
+    const { id } = params;
     const categoryId = parseInt(id);
     if (isNaN(categoryId)) {
       return NextResponse.json({
@@ -27,9 +55,9 @@ export async function DELETE(request, context) {
       });
     }
 
-    // Funkcja do rekurencyjnego sprawdzania, czy kategoria i jej podkategorie nie mają produktów
-    const canDeleteCategory = async (catId) => {
-      const category = await prisma.category.findUnique({
+    // Funkcja do rekurencyjnego zbierania wszystkich obrazów z kategorii i podkategorii
+    const collectImages = async (catId, tx) => {
+      const category = await tx.category.findUnique({
         where: { id: catId },
         include: {
           products: true,
@@ -53,20 +81,23 @@ export async function DELETE(request, context) {
         );
       }
 
-      // Rekurencyjnie sprawdź podkategorie
-      for (const sub of category.subcategories) {
-        await canDeleteCategory(sub.id);
+      const images = [];
+      if (category.image) {
+        images.push(category.image);
       }
 
-      return true;
+      // Rekurencyjnie zbierz obrazy z podkategorii
+      for (const sub of category.subcategories) {
+        const subImages = await collectImages(sub.id, tx);
+        images.push(...subImages);
+      }
+
+      return images;
     };
 
-    // Sprawdź, czy można usunąć kategorię
-    await canDeleteCategory(categoryId);
-
-    // Rekurencyjne usuwanie kategorii i jej podkategorii
-    const deleteCategoryRecursively = async (catId) => {
-      const category = await prisma.category.findUnique({
+    // Funkcja do rekurencyjnego usuwania kategorii i jej podkategorii
+    const deleteCategoryRecursively = async (catId, tx) => {
+      const category = await tx.category.findUnique({
         where: { id: catId },
         include: { subcategories: true },
       });
@@ -74,22 +105,36 @@ export async function DELETE(request, context) {
       if (category) {
         // Najpierw usuń wszystkie podkategorie
         for (const sub of category.subcategories) {
-          await deleteCategoryRecursively(sub.id);
+          await deleteCategoryRecursively(sub.id, tx);
         }
 
         // Następnie usuń bieżącą kategorię
-        await prisma.category.delete({
+        await tx.category.delete({
           where: { id: catId },
         });
       }
     };
 
-    // Wykonaj usunięcie
-    await deleteCategoryRecursively(categoryId);
+    // Wykonaj wszystkie operacje w ramach transakcji
+    const result = await prisma.$transaction(async (tx) => {
+      // Zbierz wszystkie obrazy do usunięcia
+      const imagesToDelete = await collectImages(categoryId, tx);
+
+      // Usuń obrazy z S3
+      for (const imageUrl of imagesToDelete) {
+        await deleteS3Image(imageUrl);
+      }
+
+      // Usuń kategorię i jej podkategorie
+      await deleteCategoryRecursively(categoryId, tx);
+
+      return { deletedCategoryId: categoryId };
+    });
 
     return NextResponse.json({
-      message: "Kategoria i jej podkategorie usunięte pomyślnie",
-      deletedCategoryId: categoryId,
+      message:
+        "Kategoria, jej podkategorie i powiązane obrazy usunięte pomyślnie",
+      deletedCategoryId: result.deletedCategoryId,
     });
   } catch (error) {
     console.error("Błąd podczas usuwania kategorii:", error);

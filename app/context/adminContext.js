@@ -103,50 +103,85 @@ export function AdminProvider({ children }) {
     },
     [fetchCategories, handleCategoryUpdate, selectedCategory, editingCategory]
   );
+  // w pliku AdminContext.js
 
   const handleEditProduct = useCallback(
     async (product) => {
+      // 'product' to są nowe dane z formularza (productData)
+      console.log("Rozpoczęcie handleEditProduct dla produktu:", product);
       try {
-        const formData = new FormData();
-        formData.append("name", editingProduct.name);
-        formData.append("slug", editingProduct.slug || "");
-        formData.append("price", editingProduct.price.toString());
-        formData.append("description", editingProduct.description || "");
-        formData.append("description2", editingProduct.description2 || "");
-        formData.append("additionalInfo", editingProduct.additionalInfo || "");
-        formData.append("sizes", JSON.stringify(editingProduct.sizes || []));
-        formData.append(
-          "categoryId",
-          editingProduct.categoryId?.toString() || product.categoryId.toString()
-        );
-
-        if (
-          editingProduct.imagesToRemove &&
-          editingProduct.imagesToRemove.length > 0
-        ) {
-          formData.append(
-            "imagesToRemove",
-            JSON.stringify(editingProduct.imagesToRemove)
-          );
+        if (!product || !product.id) {
+          // Użyj 'product'
+          console.error("Błąd: Brak danych produktu lub ID produktu");
+          toast.error("Błąd: Brak danych produktu");
+          return;
         }
 
-        if (
-          editingProduct.imagesToAdd &&
-          editingProduct.imagesToAdd.length > 0
-        ) {
-          editingProduct.imagesToAdd.forEach((file) => {
+        const formData = new FormData();
+        console.log("Tworzenie FormData z nowych danych...");
+
+        // UŻYWAJ DANYCH Z ARGUMENTU 'product'
+        formData.append("name", product.name || "");
+        formData.append("slug", product.slug || "");
+        formData.append("price", product.price?.toString() || "");
+        formData.append("description", product.description || "");
+        formData.append("description2", product.description2 || "");
+        formData.append("additionalInfo", product.additionalInfo || "");
+
+        if (product.sizes) {
+          try {
+            console.log("Parsowanie sizes:", product.sizes);
+            formData.append("sizes", JSON.stringify(product.sizes));
+          } catch (e) {
+            console.error("Błąd parsowania sizes:", e);
+            toast.error("Nieprawidłowy format rozmiarów");
+            return;
+          }
+        }
+
+        formData.append("categoryId", parseInt(product.categoryId));
+
+        if (product.imagesToRemove?.length > 0) {
+          try {
+            console.log("Parsowanie imagesToRemove:", product.imagesToRemove);
+            formData.append(
+              "imagesToRemove",
+              JSON.stringify(product.imagesToRemove)
+            );
+          } catch (e) {
+            console.error("Błąd parsowania imagesToRemove:", e);
+            toast.error("Nieprawidłowy format imagesToRemove");
+            return;
+          }
+        }
+
+        if (product.imagesToAdd?.length > 0) {
+          console.log("Dodawanie imagesToAdd:", product.imagesToAdd);
+          product.imagesToAdd.forEach((file) => {
             formData.append("imagesToAdd", file);
           });
         }
 
+        console.log("Wysyłane FormData:", [...formData.entries()]); // Sprawdź czy cena jest nowa
+
+        console.log(
+          "Wysyłanie żądania PUT do:",
+          `/api/update-product/${product.id}`
+        );
         const res = await fetch(`/api/update-product/${product.id}`, {
+          // Użyj 'product.id'
           method: "PUT",
           body: formData,
         });
+        console.log("Odpowiedź z API:", res.status, res.statusText);
         const data = await res.json();
+        console.log("Dane odpowiedzi:", data);
+
         if (!res.ok) {
           throw new Error(data.error || "Nie udało się zaktualizować produktu");
         }
+
+        console.log("Pobieranie zaktualizowanych kategorii...");
         const updatedCategories = await fetchCategories();
         handleCategoryUpdate(updatedCategories || categories);
         if (selectedCategory) {
@@ -164,6 +199,7 @@ export function AdminProvider({ children }) {
             updatedCategories,
             selectedCategory.id
           );
+          console.log("Zaktualizowana kategoria:", updatedCategory);
           setSelectedCategory(updatedCategory || selectedCategory);
         }
         setEditingProduct(null);
@@ -171,17 +207,11 @@ export function AdminProvider({ children }) {
         window.dispatchEvent(new Event("categoriesUpdated"));
         await fetchCart();
       } catch (err) {
-        console.error("Błąd podczas edytowania produktu:", err);
-        toast.error(err.message);
+        console.error("Błąd w handleEditProduct:", err);
+        toast.error(err.message || "Błąd podczas edytowania produktu");
       }
     },
-    [
-      fetchCategories,
-      handleCategoryUpdate,
-      selectedCategory,
-      editingProduct,
-      fetchCart,
-    ]
+    [fetchCategories, handleCategoryUpdate, selectedCategory, fetchCart]
   );
 
   const handleAddProduct = useCallback(
@@ -242,8 +272,7 @@ export function AdminProvider({ children }) {
   );
 
   const handleAddCategory = useCallback(
-    async (e, formData) => {
-      e.preventDefault();
+    async (formData) => {
       try {
         const res = await fetch("/api/add-category", {
           method: "POST",
