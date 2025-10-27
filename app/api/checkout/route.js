@@ -15,7 +15,17 @@ const validateNip = (nip) => {
 };
 
 async function handleStripePayment(order, formData, cartItems) {
+  console.log("handleStripePayment - dane wejściowe:", {
+    order,
+    formData,
+    cartItems,
+  });
+
   // Validate environment variables
+  console.log("Zmienne środowiskowe:", {
+    STRIPE_SECRET_KEY: !!process.env.STRIPE_SECRET_KEY,
+    NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
+  });
   if (!process.env.STRIPE_SECRET_KEY || !process.env.NEXT_PUBLIC_BASE_URL) {
     throw new Error(
       "Brak konfiguracji Stripe lub NEXT_PUBLIC_BASE_URL w zmiennych środowiskowych"
@@ -24,7 +34,7 @@ async function handleStripePayment(order, formData, cartItems) {
 
   // Validate cartItems
   if (!Array.isArray(cartItems)) {
-    console.error("cartItems is not an array:", cartItems);
+    console.error("cartItems nie jest tablicą:", cartItems);
     throw new Error("Pozycje koszyka muszą być tablicą");
   }
 
@@ -34,6 +44,7 @@ async function handleStripePayment(order, formData, cartItems) {
 
   // Validate item structure
   for (const item of cartItems) {
+    console.log("Walidacja item:", item);
     if (
       !item.productId ||
       !item.product ||
@@ -49,49 +60,54 @@ async function handleStripePayment(order, formData, cartItems) {
   }
 
   // Create Stripe Checkout session
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card", "blik", "p24"],
-    mode: "payment",
-    currency: "pln",
-    customer_email: formData.email,
-    metadata: {
-      orderId: order.id.toString(),
-    },
-    success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/zamowienie/${order.id}?status=success&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/zamowienie/${order.id}?status=error`,
-    line_items: cartItems.map((item) => ({
-      price_data: {
-        currency: "pln",
-        product_data: {
-          name: item.product.name,
-          description: `Rozmiar: ${item.size}`,
-        },
-        unit_amount: Math.round(item.product.price * 100), // Cena w groszach
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card", "blik", "p24"],
+      mode: "payment",
+      currency: "pln",
+      customer_email: formData.email,
+      metadata: {
+        orderId: order.id.toString(),
       },
-      quantity: item.quantity,
-    })),
-    shipping_options: [
-      {
-        shipping_rate_data: {
-          type: "fixed_amount",
-          fixed_amount: {
-            amount: Math.round(order.deliveryCost * 100),
-            currency: "pln",
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/zamowienie/${order.id}?status=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/zamowienie/${order.id}?status=error`,
+      line_items: cartItems.map((item) => ({
+        price_data: {
+          currency: "pln",
+          product_data: {
+            name: item.product.name,
+            description: `Rozmiar: ${item.size}`,
           },
-          display_name:
-            order.deliveryMethod === "paczkomat" ? "Paczkomat" : "Kurier",
+          unit_amount: Math.round(item.product.price * 100), // Cena w groszach
         },
-      },
-    ],
-  });
+        quantity: item.quantity,
+      })),
+      shipping_options: [
+        {
+          shipping_rate_data: {
+            type: "fixed_amount",
+            fixed_amount: {
+              amount: Math.round(order.deliveryCost * 100),
+              currency: "pln",
+            },
+            display_name:
+              order.deliveryMethod === "paczkomat" ? "Paczkomat" : "Kurier",
+          },
+        },
+      ],
+    });
 
-  // Update order with Stripe session ID
-  await prisma.order.update({
-    where: { id: order.id },
-    data: { paymentId: session.id, status: "PENDING" },
-  });
+    // Update order with Stripe session ID
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { paymentId: session.id, status: "PENDING" },
+    });
 
-  return session.url; // Return session URL for redirection
+    return session.url;
+  } catch (stripeError) {
+    console.error("Błąd Stripe:", stripeError);
+    throw new Error(`Błąd Stripe: ${stripeError.message}`);
+  }
 }
 
 export async function POST(req) {
@@ -210,6 +226,8 @@ export async function POST(req) {
           where: { id: item.productId },
         });
 
+        console.log("Produkt z bazy:", product);
+
         if (!product || !product.sizes || !Array.isArray(product.sizes)) {
           throw new Error(
             `Nie można znaleźć produktu lub informacji o rozmiarach dla ID: ${item.productId}`
@@ -247,7 +265,7 @@ export async function POST(req) {
       const redirectUrl = await handleStripePayment(
         createdOrder,
         formData,
-        cartItems // Fixed: Pass cartItems instead of total
+        cartItems
       );
       return NextResponse.json({ redirectUrl });
     } else {
@@ -270,7 +288,7 @@ export async function POST(req) {
     }
 
     return NextResponse.json(
-      { error: "Wystąpił nieoczekiwany błąd" },
+      { error: `Wystąpił nieoczekiwany błąd: ${error.message}` }, // Dodano error.message dla lepszej diagnozy
       { status: 500 }
     );
   }
