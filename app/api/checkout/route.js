@@ -62,7 +62,7 @@ async function handleStripePayment(order, formData, cartItems) {
   // Create Stripe Checkout session
   try {
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card", "blik", "p24", "apple_pay", "google_pay"],
+      payment_method_types: ["card", "blik", "p24"],
       mode: "payment",
       currency: "pln",
       customer_email: formData.email,
