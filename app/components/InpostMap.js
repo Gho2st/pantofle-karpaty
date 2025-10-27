@@ -98,9 +98,6 @@ const InPostGeowidget = ({
               marginBottom: "20px",
             }}
           />
-          <p className="text-gray-600 text-sm mb-4">
-            Kliknij na paczkomat na mapie aby wybrać
-          </p>
         </div>
       ) : null}
 

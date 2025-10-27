@@ -91,15 +91,7 @@ export default function Profil() {
 
         {/* Zawartość (po prawej) */}
         <div className="w-full md:w-3/4 bg-white border border-gray-200 rounded-md p-6 shadow-sm">
-          {activeTab === "orders" && (
-            <div>
-              <h1 className="text-3xl mb-4">Twoje zamówienia</h1>
-              <p className="text-gray-700">
-                Tutaj znajdziesz listę swoich zamówień.
-              </p>
-              <Orders />
-            </div>
-          )}
+          {activeTab === "orders" && <Orders />}
 
           {activeTab === "personal" && <Name />}
 

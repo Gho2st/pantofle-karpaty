@@ -42,8 +42,8 @@ export default async function CheckoutPage() {
   const { user, primaryAddress } = await getUserData(session?.user?.email);
 
   return (
-    <div className="max-w-4xl mx-auto my-24 px-4">
-      <h1 className="text-3xl font-bold mb-6">Finalizacja zamówienia</h1>
+    <div className="max-w-4xl mx-auto my-12 2xl:my-24">
+      <h1 className="text-3xl font-bold text-center">Finalizacja zamówienia</h1>
 
       {/* Suspense jest nadal przydatny do ładowania komponentu klienckiego */}
       <Suspense

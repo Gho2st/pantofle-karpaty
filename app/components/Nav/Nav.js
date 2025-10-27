@@ -1,6 +1,16 @@
 "use client";
 import Image from "next/image";
-import { ShoppingCart, User, Menu, X, ChevronDown } from "lucide-react"; // Dodano ChevronDown
+import {
+  ShoppingCart,
+  User,
+  Menu,
+  X,
+  ChevronDown,
+  Home,
+  Mail,
+  LogIn,
+  LogOut,
+} from "lucide-react"; // Dodano nowe ikony
 import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useState, useEffect } from "react";
@@ -14,7 +24,7 @@ export default function Nav() {
   const { categories, isLoading } = useCategories();
   const [animateCart, setAnimateCart] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [openCategory, setOpenCategory] = useState(null); // Stan dla rozwijanych kategorii w menu mobilnym
+  const [openCategory, setOpenCategory] = useState(null);
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -30,22 +40,20 @@ export default function Nav() {
     }
   }, [cartCount]);
 
-  const baseMenuItemClasses = "p-2 hover:text-red-600 transition duration-300";
-  const iconButtonClasses = `relative text-gray-700 ${baseMenuItemClasses}`;
+  const baseMenuItemClasses =
+    "p-3 hover:text-red-600 transition duration-300 flex items-center";
+  const iconButtonClasses = `relative text-gray-700 p-3 hover:bg-gray-100 rounded-md transition duration-300`;
 
-  // Warianty animacji dla menu mobilnego
   const mobileMenuVariants = {
     closed: { x: "100%", opacity: 0, transition: { duration: 0.3 } },
     open: { x: 0, opacity: 1, transition: { duration: 0.3 } },
   };
 
-  // Warianty animacji dla rozwijanych podkategorii
   const dropdownVariants = {
     closed: { height: 0, opacity: 0, transition: { duration: 0.2 } },
     open: { height: "auto", opacity: 1, transition: { duration: 0.2 } },
   };
 
-  // Funkcja do przełączania kategorii w menu mobilnym
   const toggleCategory = (categoryId) => {
     setOpenCategory(openCategory === categoryId ? null : categoryId);
   };
@@ -53,12 +61,12 @@ export default function Nav() {
   return (
     <nav className="bg-white py-3 shadow-sm">
       <div className="flex justify-between items-center max-w-7xl mx-auto px-4 sm:px-6">
-        {/* Logo (mniejsze) */}
+        {/* Logo */}
         <Link href="/">
-          <div className="flex-shrink-0 w-1/2 md:w-1/1">
+          <div className="flex-shrink-0 w-1/2 md:w-2/3 2xl:w-1/1">
             <Image
               src={"/logo.png"}
-              width={120} // Zmniejszone logo
+              width={120}
               height={40}
               alt="Logo firmy"
               className="h-auto w-auto"
@@ -66,18 +74,34 @@ export default function Nav() {
           </div>
         </Link>
 
-        {/* Ikona Hamburgera (mobilne) */}
-        <button
-          className="md:hidden text-gray-700 p-2"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          aria-label="Menu"
-        >
-          {isMobileMenuOpen ? (
-            <X className="w-6 h-6" />
-          ) : (
-            <Menu className="w-6 h-6" />
-          )}
-        </button>
+        {/* Ikona Hamburgera i Koszyk (mobilne) */}
+        <div className="flex items-center space-x-2 md:hidden">
+          <Link
+            href="/koszyk"
+            className={iconButtonClasses}
+            aria-label="Koszyk"
+          >
+            <ShoppingCart className="w-6 h-6" />
+            <span
+              className={`absolute -top-1 -right-1 text-base bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center transition-transform duration-300 ${
+                animateCart ? "scale-125" : "scale-100"
+              }`}
+            >
+              {cartCount}
+            </span>
+          </Link>
+          <button
+            className="text-gray-700 p-2 hover:bg-gray-100 rounded-md"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Menu"
+          >
+            {isMobileMenuOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Menu className="w-6 h-6" />
+            )}
+          </button>
+        </div>
 
         {/* Menu Desktopowe */}
         <div className="hidden md:flex items-center space-x-4">
@@ -181,7 +205,6 @@ export default function Nav() {
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
-            {/* Overlay */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.5 }}
@@ -195,27 +218,38 @@ export default function Nav() {
               animate="open"
               exit="closed"
               variants={mobileMenuVariants}
-              className="md:hidden fixed top-0 right-0 w-4/5 max-w-sm h-full bg-white shadow-lg z-50 p-4"
+              className="md:hidden fixed top-0 right-0 w-4/5 max-w-sm h-full bg-white shadow-lg z-50 p-6"
             >
               <div className="flex justify-end">
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
+                  className="text-gray-700 p-2 hover:bg-gray-100 rounded-full transition duration-300"
                   aria-label="Zamknij menu"
                 >
-                  <X className="w-6 h-6 text-gray-700" />
+                  <X className="w-8 h-8" />
                 </button>
               </div>
-              <ul className="flex flex-col space-y-2 text-base font-medium mt-4">
-                <li className={baseMenuItemClasses}>
+              <ul className="flex flex-col space-y-3 text-base font-medium mt-6">
+                <li
+                  className={`${baseMenuItemClasses} border-b border-gray-200 pb-2`}
+                >
+                  <Home className="w-5 h-5 mr-2" />
                   <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
                     Strona Główna
                   </Link>
                 </li>
                 {isLoading ? (
-                  <li className={baseMenuItemClasses}>Ładowanie...</li>
+                  <li
+                    className={`${baseMenuItemClasses} border-b border-gray-200 pb-2`}
+                  >
+                    Ładowanie...
+                  </li>
                 ) : (
                   categories.map((category) => (
-                    <li key={category.id}>
+                    <li
+                      key={category.id}
+                      className="border-b border-gray-200 pb-2"
+                    >
                       <div className="flex items-center justify-between">
                         <Link
                           href={`/kategoria/${category.slug || category.name}`}
@@ -230,7 +264,7 @@ export default function Nav() {
                             aria-label={`Rozwiń ${category.name}`}
                           >
                             <ChevronDown
-                              className={`w-4 h-4 transition-transform duration-200 ${
+                              className={`w-5 h-5 transition-transform duration-200 ${
                                 openCategory === category.id ? "rotate-180" : ""
                               }`}
                             />
@@ -245,7 +279,7 @@ export default function Nav() {
                               animate="open"
                               exit="closed"
                               variants={dropdownVariants}
-                              className="pl-4 mt-1 space-y-1 overflow-hidden"
+                              className="pl-6 mt-2 space-y-2 overflow-hidden"
                             >
                               {category.subcategories.map((subcategory) => (
                                 <li key={subcategory.id}>
@@ -253,7 +287,7 @@ export default function Nav() {
                                     href={`/kategoria/${category.slug}/${
                                       subcategory.slug || subcategory.id
                                     }`}
-                                    className="block capitalize px-3 py-1 text-gray-700 hover:bg-gray-100 font-medium rounded"
+                                    className="block capitalize px-3 py-2 text-gray-700 hover:bg-gray-100 font-medium rounded-md transition duration-300"
                                     onClick={() => setIsMobileMenuOpen(false)}
                                   >
                                     {subcategory.name}
@@ -266,7 +300,10 @@ export default function Nav() {
                     </li>
                   ))
                 )}
-                <li className={baseMenuItemClasses}>
+                <li
+                  className={`${baseMenuItemClasses} border-b border-gray-200 pb-2`}
+                >
+                  <Mail className="w-5 h-5 mr-2" />
                   <Link
                     href="/kontakt"
                     onClick={() => setIsMobileMenuOpen(false)}
@@ -274,7 +311,10 @@ export default function Nav() {
                     Kontakt
                   </Link>
                 </li>
-                <li className={baseMenuItemClasses}>
+                <li
+                  className={`${baseMenuItemClasses} border-b border-gray-200 pb-2`}
+                >
+                  <User className="w-5 h-5 mr-2" />
                   <Link
                     href="/profil"
                     onClick={() => setIsMobileMenuOpen(false)}
@@ -282,27 +322,46 @@ export default function Nav() {
                     Profil
                   </Link>
                 </li>
-                <li className={baseMenuItemClasses}>
+                <li
+                  className={`${baseMenuItemClasses} border-b border-gray-200 pb-2`}
+                >
+                  <ShoppingCart className="w-5 h-5 mr-2" />
+                  <Link
+                    href="/koszyk"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Koszyk
+                  </Link>
+                </li>
+                <li
+                  className={`${baseMenuItemClasses} border-b border-gray-200 pb-2`}
+                >
                   {session ? (
-                    <button
-                      onClick={() => {
-                        signOut();
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="text-left w-full"
-                    >
-                      Wyloguj
-                    </button>
+                    <>
+                      <LogOut className="w-5 h-5 mr-2" />
+                      <button
+                        onClick={() => {
+                          signOut();
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="text-left w-full flex items-center"
+                      >
+                        Wyloguj
+                      </button>
+                    </>
                   ) : (
-                    <button
-                      onClick={() => {
-                        signIn();
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="text-left w-full"
-                    >
-                      Zaloguj
-                    </button>
+                    <>
+                      <LogIn className="w-5 h-5 mr-2" />
+                      <button
+                        onClick={() => {
+                          signIn();
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="text-left w-full flex items-center"
+                      >
+                        Zaloguj
+                      </button>
+                    </>
                   )}
                 </li>
               </ul>

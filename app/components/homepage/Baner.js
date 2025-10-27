@@ -8,7 +8,7 @@ export default function Baner() {
 
   return (
     <>
-      <div className="lg:px-[9%]  lg:py-24">
+      <div className="md:px-[2%] 2xl:px-[9%]  md:py-12 2xl:py-24">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-stretch">
           <div className="flex flex-col gap-8 lg:gap-12">
             {/* 1. DUŻY BANER */}

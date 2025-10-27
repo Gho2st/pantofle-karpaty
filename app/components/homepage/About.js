@@ -2,18 +2,14 @@ import Collection from "./Collection";
 
 export default function About() {
   return (
-    <section className="max-w-7xl mx-auto py-20 px-6 sm:px-8">
+    <section className="max-w-7xl mx-auto py-20 px-6 sm:px-8 text-center">
       {/* NAGŁÓWEK H2 */}
-      <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-center text-gray-900 mb-8 md:mb-16 leading-tight tracking-tight">
-        {/* Zmniejszono rozmiar tekstu na mniejszych ekranach (text-3xl), dodano text-gray-900 dla kontrastu */}
+      <h2 className="text-3xl sm:text-4xl 2xl:text-5xl font-medium text-center text-gray-900 mb-8 md:mb-16 leading-tight tracking-tight">
         Odkryj Wyjątkowe Pantofle Skórzane Karpaty – Tradycja i Jakość Prosto z
         Polski
       </h2>
 
-      {/* Kontener dla bloku tekstu */}
       <div className="max-w-4xl mx-auto space-y-8 md:space-y-10 text-gray-700 text-base sm:text-lg leading-relaxed">
-        {/* Zmniejszono domyślny rozmiar tekstu (text-base), dodano leading-relaxed globalnie dla lepszej czytelności */}
-
         {/* PARAGRAF 1 */}
         <p className="leading-relaxed">
           Jesteśmy firmą Karpaty, dumnym, polskim producentem pantofli. Od lat
