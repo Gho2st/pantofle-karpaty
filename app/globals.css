@@ -6,6 +6,7 @@
 }
 
 @layer utilities {
+  /* glowny kolor */
   .text-primary {
     @apply text-[#ca001a];
   }
