@@ -107,6 +107,8 @@ export async function POST(req) {
       deliveryMethod,
     } = body;
 
+    console.log("Ciało żądania:", body);
+
     // Validate request body
     if (!Array.isArray(cartItems)) {
       console.error("Invalid cartItems received:", cartItems);
