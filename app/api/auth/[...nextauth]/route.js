@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+// import FacebookProvider from "next-auth/providers/facebook";
 import prisma from "@/app/lib/prisma";
 
 const authOptions = {
@@ -8,6 +9,10 @@ const authOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
+    // FacebookProvider({
+    //   clientId: process.env.FACEBOOK_CLIENT_ID,
+    //   clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+    // }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
   session: {
@@ -17,8 +22,10 @@ const authOptions = {
     signIn: "/login",
   },
   callbacks: {
-    async signIn({ user, account, profile, email, credentials }) {
-      if (!user.email) {
+    async signIn({ user, account, profile }) {
+      // Dostosuj logikę, aby obsługiwać email z Facebooka
+      const email = user.email || profile.email;
+      if (!email) {
         console.error("❌ Brak emaila w danych użytkownika");
         return false;
       }
@@ -26,22 +33,22 @@ const authOptions = {
       try {
         // 🔹 Krok 1: Sprawdzamy, czy użytkownik istnieje
         let dbUser = await prisma.user.findUnique({
-          where: { email: user.email },
+          where: { email: email },
         });
 
         if (!dbUser) {
           // 🔹 Krok 2: Jeśli nie, tworzymy go w naszej bazie (z domyślną rolą 'USER')
           await prisma.user.create({
             data: {
-              email: user.email,
-              name: user.name ?? null,
-              image: user.image ?? null,
+              email: email,
+              name: user.name ?? profile.name ?? null,
+              image: user.image ?? profile.picture?.data?.url ?? null, // Facebook zwraca obrazek w profile.picture.data.url
               role: "USER",
             },
           });
-          console.log("✅ Utworzono nowego użytkownika:", user.email);
+          console.log("✅ Utworzono nowego użytkownika:", email);
         } else {
-          console.log("ℹ️ Użytkownik już istnieje:", user.email);
+          console.log("ℹ️ Użytkownik już istnieje:", email);
         }
 
         return true; // Kontynuuj logowanie
@@ -80,9 +87,8 @@ const authOptions = {
     },
     async redirect({ url, baseUrl }) {
       console.log("🔍 Callback redirect: url=", url, "baseUrl=", baseUrl);
-      // 🔹 Zawsze przekieruj na stronę główną po udanym logowaniu
       console.log("ℹ️ Przekierowanie na stronę główną:", baseUrl);
-      url = "https://appointable-roxanna-thirstily.ngrok-free.dev";
+      // Uwaga: Usuń hardcoded URL, jeśli nie jest potrzebny
       return baseUrl; // Zwraca np. http://localhost:3000/
     },
   },

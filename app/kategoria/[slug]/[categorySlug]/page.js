@@ -27,7 +27,7 @@ export default async function CategorySlug({ params }) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto my-24">
+    <div className="max-w-7xl mx-auto my-16 lg:my-24">
       <h1 className="text-5xl font-light uppercase text-center">
         {category.name}
       </h1>

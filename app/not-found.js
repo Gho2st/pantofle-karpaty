@@ -1,10 +1,10 @@
-import { MdErrorOutline } from "react-icons/md";
+import { Bug } from "lucide-react";
 import Link from "next/link";
 
 export default function NotFoundPage() {
   return (
     <div className="text-center px-4 py-12">
-      <MdErrorOutline className="mx-auto mb-8 text-red-600 text-[6rem] md:text-[8rem]" />
+      <Bug className="mx-auto mb-8 text-red-600 text-[6rem] md:text-[8rem]" />
       <h1 className="text-3xl md:text-5xl font-bold mb-4">
         404 - Strona nie znaleziona
       </h1>

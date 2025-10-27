@@ -38,9 +38,9 @@ export default async function CategoryPage({ params }) {
   const subcategories = mainCategory.subcategories || [];
 
   return (
-    <div className="max-w-7xl text-center mx-auto my-24">
+    <div className="max-w-7xl text-center mx-auto my-16 lg:my-24">
       <h1 className="text-5xl font-light uppercase">{mainCategory.name}</h1>
-      <p className="my-8 font-light">
+      <p className="my-8 px-4 lg:px-0 font-light xl:text-lg">
         {mainCategory.description ||
           "Odkryj naszą kolekcję wyjątkowego obuwia ręcznie robionego z pasją i tradycją."}
       </p>

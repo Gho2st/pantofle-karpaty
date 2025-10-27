@@ -179,8 +179,8 @@ export default function Orders() {
     switch (method) {
       case "traditional":
         return "Przelew tradycyjny";
-      case "p24":
-        return "Przelewy24";
+      case "stripe":
+        return "stripe";
       default:
         return method || "Nieznana";
     }
@@ -229,7 +229,7 @@ export default function Orders() {
           >
             <option value="all">Wszystkie</option>
             <option value="traditional">Przelew tradycyjny</option>
-            <option value="p24">Przelewy24</option>
+            <option value="stripe">Stripe</option>
           </select>
         </div>
         {filteredOrders.length === 0 ? (

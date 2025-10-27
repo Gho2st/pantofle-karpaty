@@ -40,7 +40,7 @@ export default function Profil() {
 
   if (status === "unauthenticated") {
     return (
-      <div className="max-w-7xl mx-auto p-4">
+      <div className="max-w-7xl mx-auto p-4 my-16">
         <h1 className="text-3xl">Nie jesteś zalogowany</h1>
         <p>
           <button

@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useCart } from "@/app/context/cartContext";
 import { ToastContainer, toast } from "react-toastify";
 import { CheckCircle, AlertCircle } from "lucide-react";
+import Collection from "../components/homepage/Collection";
 
 // 1. Komponent ładowania
 const LoadingOverlay = ({ text }) => (
@@ -18,7 +18,6 @@ export default function Checkout() {
   const {
     cartItems,
     loading, // To jest loading z useCart() do pobierania koszyka
-    fetchCart,
     updateQuantity,
     removeFromCart,
     checkAvailability,
@@ -113,13 +112,19 @@ export default function Checkout() {
 
   return (
     // 4. Dodaj 'relative' do głównego kontenera
-    <div className="max-w-7xl mx-auto my-24 px-4 relative">
+    <div className="max-w-7xl mx-auto my-16 lg:my-24 px-4 relative">
       {/* 5. Dodaj warunkowo nakładkę ładowania */}
       {isRedirecting && <LoadingOverlay text="Przechodzenie do kasy..." />}
 
       <h1 className="text-3xl font-bold mb-6">Koszyk</h1>
       {cartItems.length === 0 ? (
-        <p className="text-gray-600">Twój koszyk jest pusty.</p>
+        <div>
+          <p className="text-gray-600">
+            Twój koszyk jest pusty. Czeka na coś wyjątkowego! Odkryj naszą
+            ofertę i dodaj produkty, które pokochasz!
+          </p>
+          <Collection />
+        </div>
       ) : (
         <div className="space-y-6">
           {/* Sekcja błędów dostępności */}
