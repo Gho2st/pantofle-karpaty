@@ -4,19 +4,19 @@ import { motion } from "framer-motion";
 
 const testimonials = [
   {
-    name: "Anna K.",
+    name: "Małgorzata S",
     rating: 5,
-    text: "Najwygodniejsze pantofle, jakie kiedykolwiek nosiłam!",
+    text: "Zakupiłam siedem par różnych klapek i kapci dla pań i panów w rodzinie i ..... jestem bardzo zadowolona z zakupu.Nie tylko ja,obdarowani również.Bardzo dobra jakość, to przede wszystkim,duży wybór,piękne i staranne wykonanie,promocyjne ceny i szybka wysyłka.Dziękuję i polecam! Zadowolona klientka z Gdańska.",
   },
   {
-    name: "Piotr M.",
-    rating: 4,
-    text: "Solidne wykonanie, idealne na co dzień.",
+    name: "Marysia",
+    rating: 5,
+    text: "Świetna jakość i cena!! Polecam 😍",
   },
   {
-    name: "Kasia L.",
+    name: "Agnieszka G",
     rating: 5,
-    text: "Dziecięce pantofle są świetne, córka je uwielbia!",
+    text: "Najlepszy i najbardziej dokładny producent pantofli w Małopolsce z jakim współpracowałam, godny polecenia i uwagi.",
   },
 ];
 

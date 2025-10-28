@@ -1,15 +1,12 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
 import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
+import { authOptions } from "../auth/[...nextauth]/route";
 
 export async function GET(request) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json(
-      { error: "Nieautoryzowany dostęp" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Nieautoryzowany" }, { status: 401 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -19,15 +16,13 @@ export async function GET(request) {
 
   try {
     const categories = await prisma.category.findMany({
-      where: {
-        parentId, // Pobierz kategorie główne lub podkategorie
-      },
+      where: { parentId },
       include: {
         subcategories: {
           include: {
             subcategories: {
               include: {
-                subcategories: true, // Rekurencyjne podkategorie
+                subcategories: true,
                 products: {
                   select: {
                     id: true,
@@ -37,8 +32,9 @@ export async function GET(request) {
                     description2: true,
                     additionalInfo: true,
                     sizes: true,
-                    images: true, // Dodane pole images
+                    images: true,
                     categoryId: true,
+                    deletedAt: true, // Admin widzi usunięte
                   },
                 },
               },
@@ -52,8 +48,9 @@ export async function GET(request) {
                 description2: true,
                 additionalInfo: true,
                 sizes: true,
-                images: true, // Dodane pole images
+                images: true,
                 categoryId: true,
+                deletedAt: true,
               },
             },
           },
@@ -67,8 +64,9 @@ export async function GET(request) {
             description2: true,
             additionalInfo: true,
             sizes: true,
-            images: true, // Dodane pole images
+            images: true,
             categoryId: true,
+            deletedAt: true,
           },
         },
       },
@@ -76,14 +74,11 @@ export async function GET(request) {
     });
 
     return NextResponse.json({
-      message: "Kategorie pobrane pomyślnie",
+      message: "Kategorie (admin) – pełna lista",
       categories,
     });
   } catch (error) {
-    console.error("Błąd podczas pobierania kategorii:", error);
-    return NextResponse.json(
-      { error: "Błąd serwera podczas pobierania danych" },
-      { status: 500 }
-    );
+    console.error("Błąd GET /api/admin/categories:", error);
+    return NextResponse.json({ error: "Błąd serwera" }, { status: 500 });
   }
 }

@@ -103,7 +103,6 @@ export function AdminProvider({ children }) {
     },
     [fetchCategories, handleCategoryUpdate, selectedCategory, editingCategory]
   );
-  // w pliku AdminContext.js
 
   const handleEditProduct = useCallback(
     async (product) => {
@@ -380,12 +379,31 @@ export function AdminProvider({ children }) {
     if (
       status === "authenticated" &&
       session?.user?.role === "ADMIN" &&
-      categories.length === 0 // <-- TA LINIA TO POPRAWKA
+      categories.length === 0
     ) {
       console.log("Inicjalne pobieranie kategorii dla admina...");
       fetchCategories();
     }
-  }, [status, session, fetchCategories, categories.length]); // <-- Dodaj 'categories.length' do tablicy zależności
+  }, [status, session, fetchCategories, categories.length]);
+
+  const handleRestoreProduct = useCallback(
+    async (productId) => {
+      try {
+        const res = await fetch(`/api/restore-product/${productId}`, {
+          method: "PATCH",
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        const updated = await fetchCategories();
+        handleCategoryUpdate(updated);
+        toast.success("Produkt przywrócony!");
+        window.dispatchEvent(new Event("categoriesUpdated"));
+      } catch (err) {
+        toast.error(err.message);
+      }
+    },
+    [fetchCategories, handleCategoryUpdate]
+  );
 
   return (
     <AdminContext.Provider
@@ -413,6 +431,7 @@ export function AdminProvider({ children }) {
         setNewCategoryName,
         newCategoryDescription,
         setNewCategoryDescription,
+        handleRestoreProduct,
       }}
     >
       {children}

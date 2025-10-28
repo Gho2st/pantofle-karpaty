@@ -15,79 +15,90 @@ const s3Client = new S3Client({
 const BUCKET_NAME = "pantofle-karpaty";
 
 async function deleteFileFromS3(url) {
-  try {
-    // Wyodrębnij klucz z URL-a
-    const key = url.split(
-      `https://${BUCKET_NAME}.s3.eu-central-1.amazonaws.com/`
-    )[1];
-    if (!key) {
-      throw new Error(`Nieprawidłowy URL S3: ${url}`);
-    }
-
-    const params = {
-      Bucket: BUCKET_NAME,
-      Key: key,
-    };
-
-    const command = new DeleteObjectCommand(params);
-    await s3Client.send(command);
-    console.log(`Usunięto plik z S3: ${key}`);
-  } catch (error) {
-    console.error(`Błąd podczas usuwania pliku z S3 (${url}):`, error);
-    // Nie przerywamy usuwania produktu, tylko logujemy błąd
+  const key = url.split(
+    `https://${BUCKET_NAME}.s3.eu-central-1.amazonaws.com/`
+  )[1];
+  if (!key) {
+    throw new Error(`Nieprawidłowy URL S3: ${url}`);
   }
+
+  const command = new DeleteObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+  });
+
+  await s3Client.send(command);
+  console.log(`Usunięto z S3: ${key}`);
 }
 
 export async function DELETE(request, { params }) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({
-      error: "Nieautoryzowany dostęp",
-      status: 401,
-    });
+    return NextResponse.json(
+      { error: "Nieautoryzowany dostęp" },
+      { status: 401 }
+    );
+  }
+
+  const { id } = params;
+  const productId = parseInt(id);
+  if (isNaN(productId)) {
+    return NextResponse.json({ error: "ID musi być liczbą" }, { status: 400 });
   }
 
   try {
-    const { id } = await params;
-    const productId = parseInt(id);
-    if (isNaN(productId)) {
-      return NextResponse.json({
-        error: "Id produktu musi być liczbą",
-        status: 400,
-      });
-    }
-
-    // Pobierz produkt z polem images
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      select: { id: true, images: true },
+      select: { id: true, images: true, deletedAt: true },
     });
+
     if (!product) {
       return NextResponse.json(
-        { error: "Produkt nie został znaleziony" },
+        { error: "Produkt nie znaleziony" },
         { status: 404 }
       );
     }
 
-    // Usuń zdjęcia z S3, jeśli istnieją
-    if (product.images && product.images.length > 0) {
-      const deletePromises = product.images.map((url) => deleteFileFromS3(url));
-      await Promise.all(deletePromises);
+    if (product.deletedAt) {
+      return NextResponse.json({ message: "Produkt już usunięty" });
     }
 
-    // Usuń produkt z bazy danych
-    await prisma.product.delete({
-      where: { id: productId },
+    if (product.images && product.images.length > 0) {
+      console.log(`Usuwanie ${product.images.length} zdjęć z S3...`);
+      await Promise.all(
+        product.images.map((url) =>
+          deleteFileFromS3(url).catch((err) => {
+            throw err; // Przerwij, jeśli choć jedno się nie uda
+          })
+        )
+      );
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Usuń z koszyków
+      await tx.cart.deleteMany({
+        where: { productId },
+      });
+
+      // Soft delete produktu
+      await tx.product.update({
+        where: { id: productId },
+        data: { deletedAt: new Date() },
+      });
     });
 
     return NextResponse.json({
-      message: "Produkt i powiązane zdjęcia usunięte pomyślnie",
+      message: "Produkt usunięty: zdjęcia z S3 + koszyki + soft delete",
       deletedProductId: productId,
     });
   } catch (error) {
     console.error("Błąd podczas usuwania produktu:", error);
+
     return NextResponse.json(
-      { error: "Błąd serwera podczas usuwania produktu" },
+      {
+        error: "Nie udało się usunąć produktu. Operacja przerwana.",
+        details: error.message,
+      },
       { status: 500 }
     );
   }

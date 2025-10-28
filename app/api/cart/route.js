@@ -6,147 +6,177 @@ import { authOptions } from "../auth/[...nextauth]/route";
 export async function GET(request) {
   const session = await getServerSession(authOptions);
   try {
-    let cart = [];
-    if (session) {
-      cart = await prisma.cart.findMany({
-        where: { userId: session.user.id },
-        include: {
-          product: {
-            select: {
-              id: true,
-              name: true,
-              price: true,
-              images: true,
-            },
+    if (!session) {
+      return NextResponse.json({ cart: [] }, { status: 200 });
+    }
+
+    const cart = await prisma.cart.findMany({
+      where: {
+        userId: session.user.id,
+        product: { deletedAt: null }, // TYLKO AKTYWNE PRODUKTY
+      },
+      include: {
+        product: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            images: true,
           },
         },
-      });
-    }
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
     return NextResponse.json({ cart }, { status: 200 });
   } catch (error) {
-    console.error("Błąd podczas pobierania koszyka:", error);
-    return NextResponse.json(
-      { error: "Błąd serwera podczas pobierania koszyka" },
-      { status: 500 }
-    );
+    console.error("Błąd GET koszyka:", error);
+    return NextResponse.json({ error: "Błąd serwera" }, { status: 500 });
   }
 }
 
 export async function POST(request) {
   const session = await getServerSession(authOptions);
-  try {
-    const { productId, size, quantity } = await request.json();
+  const { productId, size, quantity } = await request.json();
 
-    if (!productId || !size || !quantity || quantity < 1) {
+  if (!productId || !size || !quantity || quantity < 1) {
+    return NextResponse.json({ error: "Nieprawidłowe dane" }, { status: 400 });
+  }
+
+  try {
+    const product = await prisma.product.findUnique({
+      where: { id: parseInt(productId), deletedAt: null }, // TYLKO AKTYWNY
+    });
+
+    if (!product) {
       return NextResponse.json(
-        { error: "Nieprawidłowe dane produktu" },
-        { status: 400 }
+        { error: "Produkt nie istnieje lub został usunięty" },
+        { status: 404 }
       );
     }
 
     let cartItem;
     if (session) {
-      cartItem = await prisma.cart.findFirst({
+      const existing = await prisma.cart.findFirst({
         where: {
           userId: session.user.id,
-          productId: parseInt(productId),
+          productId: product.id,
           size,
         },
       });
 
-      if (cartItem) {
+      if (existing) {
         cartItem = await prisma.cart.update({
-          where: { id: cartItem.id },
-          data: { quantity: cartItem.quantity + parseInt(quantity) },
+          where: { id: existing.id },
+          data: { quantity: existing.quantity + parseInt(quantity) },
         });
       } else {
         cartItem = await prisma.cart.create({
           data: {
             userId: session.user.id,
-            productId: parseInt(productId),
+            productId: product.id,
             size,
             quantity: parseInt(quantity),
           },
         });
       }
     } else {
-      cartItem = {
-        productId: parseInt(productId),
-        size,
-        quantity: parseInt(quantity),
-      };
+      cartItem = { productId: product.id, size, quantity: parseInt(quantity) };
     }
 
     return NextResponse.json(
-      { message: "Produkt dodany do koszyka", cartItem },
+      { message: "Dodano do koszyka", cartItem },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Błąd podczas dodawania do koszyka:", error);
-    return NextResponse.json(
-      { error: "Błąd serwera podczas dodawania do koszyka" },
-      { status: 500 }
-    );
+    console.error("Błąd POST koszyka:", error);
+    return NextResponse.json({ error: "Błąd serwera" }, { status: 500 });
   }
 }
 
 export async function PUT(request) {
   const session = await getServerSession(authOptions);
+  const { cartItemId, quantity } = await request.json();
+
+  if (!cartItemId || !quantity || quantity < 1) {
+    return NextResponse.json({ error: "Nieprawidłowe dane" }, { status: 400 });
+  }
+
   try {
-    const { cartItemId, quantity } = await request.json();
-
-    if (!cartItemId || !quantity || quantity < 1) {
-      return NextResponse.json(
-        { error: "Nieprawidłowe dane" },
-        { status: 400 }
-      );
-    }
-
-    if (session) {
-      const cartItem = await prisma.cart.findUnique({
-        where: { id: parseInt(cartItemId) },
-      });
-
-      if (!cartItem || cartItem.userId !== session.user.id) {
-        return NextResponse.json(
-          { error: "Pozycja w koszyku nie znaleziona" },
-          { status: 404 }
-        );
-      }
-
-      const updatedCartItem = await prisma.cart.update({
-        where: { id: parseInt(cartItemId) },
-        data: { quantity: parseInt(quantity) },
-      });
-
-      return NextResponse.json(
-        { message: "Koszyk zaktualizowany", cartItem: updatedCartItem },
-        { status: 200 }
-      );
-    } else {
+    if (!session) {
       return NextResponse.json(
         {
-          message: "Koszyk zaktualizowany",
+          message: "Zaktualizowano (gość)",
           cartItem: { id: cartItemId, quantity },
         },
         { status: 200 }
       );
     }
-  } catch (error) {
-    console.error("Błąd podczas aktualizacji koszyka:", error);
+
+    const cartItem = await prisma.cart.findUnique({
+      where: { id: parseInt(cartItemId) },
+      include: { product: true },
+    });
+
+    if (!cartItem || cartItem.userId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Pozycja nie znaleziona" },
+        { status: 404 }
+      );
+    }
+
+    // Sprawdź, czy produkt nadal istnieje
+    if (cartItem.product.deletedAt !== null) {
+      await prisma.cart.delete({ where: { id: cartItem.id } });
+      return NextResponse.json(
+        { error: "Produkt został usunięty – usunięto z koszyka" },
+        { status: 410 }
+      );
+    }
+
+    const updated = await prisma.cart.update({
+      where: { id: cartItem.id },
+      data: { quantity: parseInt(quantity) },
+    });
+
     return NextResponse.json(
-      { error: "Błąd serwera podczas aktualizacji koszyka" },
-      { status: 500 }
+      { message: "Zaktualizowano", cartItem: updated },
+      { status: 200 }
     );
+  } catch (error) {
+    console.error("Błąd PUT koszyka:", error);
+    return NextResponse.json({ error: "Błąd serwera" }, { status: 500 });
   }
 }
 
 export async function DELETE(request) {
   const session = await getServerSession(authOptions);
-  try {
-    const { cartItemId, clearAll } = await request.json();
+  const { cartItemId, clearAll, clearDead } = await request.json();
 
-    if (clearAll && session) {
+  try {
+    if (!session) {
+      return NextResponse.json(
+        { message: "Koszyk gościa wyczyszczony" },
+        { status: 200 }
+      );
+    }
+
+    // Czyszczenie martwych produktów
+    if (clearDead) {
+      await prisma.cart.deleteMany({
+        where: {
+          userId: session.user.id,
+          product: { deletedAt: { not: null } },
+        },
+      });
+      return NextResponse.json(
+        { message: "Usunięto martwe produkty z koszyka" },
+        { status: 200 }
+      );
+    }
+
+    // Czyszczenie całego koszyka
+    if (clearAll) {
       await prisma.cart.deleteMany({
         where: { userId: session.user.id },
       });
@@ -156,39 +186,27 @@ export async function DELETE(request) {
       );
     }
 
+    // Usuwanie jednej pozycji
     if (!cartItemId) {
-      return NextResponse.json(
-        { error: "Nieprawidłowe ID pozycji w koszyku" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Brak ID" }, { status: 400 });
     }
 
-    if (session) {
-      const cartItem = await prisma.cart.findUnique({
-        where: { id: parseInt(cartItemId) },
-      });
+    const cartItem = await prisma.cart.findUnique({
+      where: { id: parseInt(cartItemId) },
+    });
 
-      if (!cartItem || cartItem.userId !== session.user.id) {
-        return NextResponse.json(
-          { error: "Pozycja w koszyku nie znaleziona" },
-          { status: 404 }
-        );
-      }
-
-      await prisma.cart.delete({
-        where: { id: parseInt(cartItemId) },
-      });
+    if (!cartItem || cartItem.userId !== session.user.id) {
+      return NextResponse.json({ error: "Nie znaleziono" }, { status: 404 });
     }
+
+    await prisma.cart.delete({ where: { id: cartItem.id } });
 
     return NextResponse.json(
-      { message: "Produkt usunięty z koszyka" },
+      { message: "Usunięto z koszyka" },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Błąd podczas usuwania z koszyka:", error);
-    return NextResponse.json(
-      { error: "Błąd serwera podczas usuwania z koszyka" },
-      { status: 500 }
-    );
+    console.error("Błąd DELETE koszyka:", error);
+    return NextResponse.json({ error: "Błąd serwera" }, { status: 500 });
   }
 }

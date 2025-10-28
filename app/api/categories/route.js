@@ -26,6 +26,9 @@ export async function GET(request) {
             slug: true,
             image: true,
             products: {
+              where: {
+                deletedAt: null, // TYLKO AKTYWNE PRODUKTY
+              },
               select: {
                 id: true,
                 name: true,
