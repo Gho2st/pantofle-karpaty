@@ -31,6 +31,7 @@ export default function Products() {
   const [newSize, setNewSize] = useState("");
   const [newStock, setNewStock] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false); // FILTR
 
   useEffect(() => {
     if (newProduct.name) {
@@ -114,6 +115,7 @@ export default function Products() {
       setIsAdding(false);
     }
   };
+
   const handleRestoreProduct = async (productId) => {
     if (!confirm("Przywrócić produkt?")) return;
 
@@ -122,14 +124,11 @@ export default function Products() {
         method: "PATCH",
       });
       const data = await res.json();
-
       if (!res.ok) throw new Error(data.error);
 
-      // 1. Pobierz nowe dane
       const updatedCategories = await fetchCategories();
       handleCategoryUpdate(updatedCategories);
 
-      // 2. ZAKTUALIZUJ selectedCategory (KLUCZOWE!)
       if (selectedCategory) {
         const findCategoryById = (cats, id) => {
           for (const cat of cats) {
@@ -145,9 +144,7 @@ export default function Products() {
           updatedCategories,
           selectedCategory.id
         );
-        if (newSelected) {
-          setSelectedCategory(newSelected); // To odświeży UI!
-        }
+        if (newSelected) setSelectedCategory(newSelected);
       }
 
       toast.success("Produkt przywrócony!");
@@ -156,11 +153,31 @@ export default function Products() {
     }
   };
 
+  // FILTR: tylko aktywne lub wszystkie
+  const filteredProducts =
+    selectedCategory?.products?.filter((p) =>
+      showDeleted ? true : !p.deletedAt
+    ) || [];
+
   return (
     <div className="mt-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">
-        Produkty w {selectedCategory?.name || "Kategorii"}
-      </h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold text-gray-800">
+          Produkty w {selectedCategory?.name || "Kategorii"}
+        </h2>
+
+        {/* FILTR */}
+        <button
+          onClick={() => setShowDeleted((prev) => !prev)}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+            showDeleted
+              ? "bg-red-600 text-white hover:bg-red-700"
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+          }`}
+        >
+          {showDeleted ? "Ukryj usunięte" : "Pokaż usunięte"}
+        </button>
+      </div>
 
       {!showAddForm && (
         <button
@@ -176,18 +193,213 @@ export default function Products() {
           onSubmit={handleAddProductSubmit}
           className="mb-6 p-6 bg-gray-50 rounded-lg shadow-md"
         >
-          {/* Twój formularz – bez zmian */}
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            Dodaj nowy produkt
+          </h3>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nazwa produktu
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={newProduct.name}
+                onChange={handleNewProductChange}
+                placeholder="Nazwa produktu"
+                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Slug (automatycznie)
+              </label>
+              <input
+                type="text"
+                name="slug"
+                value={newProduct.slug}
+                onChange={handleNewProductChange}
+                placeholder="np. nowy-produkt"
+                className="w-full p-3 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cena (PLN)
+              </label>
+              <input
+                type="number"
+                name="price"
+                value={newProduct.price}
+                onChange={handleNewProductChange}
+                placeholder="Cena (PLN)"
+                className="w-full p-3 border border-gray-300 rounded-md"
+                required
+                min="0"
+                step="0.01"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Opis produktu
+              </label>
+              <textarea
+                name="description"
+                value={newProduct.description}
+                onChange={handleNewProductChange}
+                placeholder="Opis produktu"
+                className="w-full p-3 border border-gray-300 rounded-md"
+                rows="4"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Dodatkowy opis
+              </label>
+              <textarea
+                name="description2"
+                value={newProduct.description2}
+                onChange={handleNewProductChange}
+                placeholder="Dodatkowy opis"
+                className="w-full p-3 border border-gray-300 rounded-md"
+                rows="4"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Dodatkowe informacje
+              </label>
+              <textarea
+                name="additionalInfo"
+                value={newProduct.additionalInfo}
+                onChange={handleNewProductChange}
+                placeholder="Materiały, pielęgnacja..."
+                className="w-full p-3 border border-gray-300 rounded-md"
+                rows="4"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Zdjęcia (wiele)
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageChange}
+                className="w-full p-3 border border-gray-300 rounded-md"
+              />
+              {newProductImages.length > 0 && (
+                <ul className="mt-2 list-disc pl-5">
+                  {newProductImages.map((file, i) => (
+                    <li key={i} className="text-gray-600">
+                      {file.name}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(i)}
+                        className="ml-2 text-red-500"
+                      >
+                        Usuń
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Rozmiary i stany
+              </label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={newSize}
+                  onChange={(e) => setNewSize(e.target.value)}
+                  placeholder="Rozmiar (np. 38)"
+                  className="flex-1 p-3 border rounded-md"
+                />
+                <input
+                  type="number"
+                  value={newStock}
+                  onChange={(e) => setNewStock(e.target.value)}
+                  placeholder="Stan"
+                  className="flex-1 p-3 border rounded-md"
+                  min="0"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddSize}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md"
+                >
+                  Dodaj
+                </button>
+              </div>
+              {newProduct.sizes.length > 0 ? (
+                <ul className="list-disc pl-5">
+                  {newProduct.sizes.map((item) => (
+                    <li key={item.size} className="text-gray-600">
+                      {item.size}: {item.stock}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSize(item.size)}
+                        className="ml-2 text-red-500"
+                      >
+                        Usuń
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-600">Brak rozmiarów</p>
+              )}
+            </div>
+          </div>
           <div className="flex gap-3 mt-4">
             <button
               type="submit"
               disabled={isAdding}
-              className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400"
+              className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 flex items-center space-x-2"
             >
-              {isAdding ? "Dodawanie..." : "Dodaj produkt"}
+              {isAdding && (
+                <svg
+                  className="w-5 h-5 animate-spin"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v8z"
+                  ></path>
+                </svg>
+              )}
+              <span>{isAdding ? "Dodawanie..." : "Dodaj produkt"}</span>
             </button>
             <button
               type="button"
-              onClick={() => setShowAddForm(false)}
+              onClick={() => {
+                setNewProduct({
+                  name: "",
+                  slug: "",
+                  price: "",
+                  description: "",
+                  description2: "",
+                  additionalInfo: "",
+                  sizes: [],
+                });
+                setNewProductImages([]);
+                setShowAddForm(false);
+              }}
               className="px-6 py-3 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400"
             >
               Anuluj
@@ -198,14 +410,16 @@ export default function Products() {
 
       <h3 className="text-lg font-semibold text-gray-800 mb-4">Produkty</h3>
 
-      {!selectedCategory?.products?.length ? (
-        <div className="text-gray-600">Brak produktów</div>
+      {filteredProducts.length === 0 ? (
+        <div className="text-gray-600">
+          {showDeleted ? "Brak usuniętych produktów" : "Brak produktów"}
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {selectedCategory.products.map((product) => (
+          {filteredProducts.map((product) => (
             <div
               key={product.id}
-              className={`p-6 bg-white rounded-lg shadow-md transition-all ${
+              className={`p-6 bg-white rounded-lg shadow-md transition-all duration-200 ${
                 product.deletedAt
                   ? "opacity-60 border-2 border-red-300"
                   : "hover:shadow-lg"
@@ -225,7 +439,7 @@ export default function Products() {
                 )}
               </h4>
               <p className="text-gray-600">
-                Cena: {product.price?.toFixed(2)} PLN
+                Cena: {product.price?.toFixed(2) || "Brak"} PLN
               </p>
 
               <div className="flex gap-2 mt-4">
@@ -241,7 +455,6 @@ export default function Products() {
                 >
                   Edytuj
                 </button>
-
                 {product.deletedAt ? (
                   <button
                     onClick={() => handleRestoreProduct(product.id)}

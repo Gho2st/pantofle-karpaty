@@ -374,17 +374,13 @@ export function AdminProvider({ children }) {
     [fetchCategories, handleCategoryUpdate, selectedCategory, fetchCart]
   );
 
+  // ZAMIEŃ CAŁY useEffect NA TEN:
   useEffect(() => {
-    // Sprawdzamy, czy użytkownik jest adminem ORAZ czy kategorie nie zostały jeszcze pobrane
-    if (
-      status === "authenticated" &&
-      session?.user?.role === "ADMIN" &&
-      categories.length === 0
-    ) {
-      console.log("Inicjalne pobieranie kategorii dla admina...");
-      fetchCategories();
+    if (status === "authenticated" && session?.user?.role === "ADMIN") {
+      console.log("Admin zalogowany – pobieranie kategorii...");
+      fetchCategories(); // TYLKO RAZ!
     }
-  }, [status, session, fetchCategories, categories.length]);
+  }, [status, session, fetchCategories]); // USUŃ categories.length
 
   const handleRestoreProduct = useCallback(
     async (productId) => {
