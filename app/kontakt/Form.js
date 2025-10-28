@@ -72,7 +72,7 @@ export default function Form() {
     <>
       <>
         {!formSubmitted ? (
-          <div className="flex flex-col pt-4 max-w-7xl mx-auto mt-10 px-[4%]">
+          <div className="flex flex-col pt-4 max-w-7xl mx-auto mt-10 px-[4%] mb-10">
             <h2 className="text-2xl xl:text-3xl font-bold mb-2">
               Zostaw Wiadomość
             </h2>
@@ -154,7 +154,6 @@ export default function Form() {
           </div>
         )}
       </>
-      );
     </>
   );
 }

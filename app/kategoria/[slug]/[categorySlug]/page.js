@@ -6,21 +6,19 @@ export default async function CategorySlug({ params }) {
 
   const slug = categorySlug;
 
-  // Pobierz kategorię po name LUB slug
   const category = await prisma.category.findFirst({
     where: {
-      OR: [
-        { slug }, // Szukaj po slug (np. "dla-kobiet")
-        { name: slug }, // Szukaj po name (np. "Dla Kobiet")
-      ],
+      OR: [{ slug }, { name: slug }],
     },
     include: {
-      subcategories: true, // Pobierz subkategorie
-      products: true, // Pobierz produkty
+      subcategories: true,
+      products: {
+        where: {
+          deletedAt: null,
+        },
+      },
     },
   });
-
-  console.log(category); // Do debugowania
 
   if (!category) {
     return <div>Kategoria nie znaleziona</div>;
@@ -28,7 +26,7 @@ export default async function CategorySlug({ params }) {
 
   return (
     <div className="max-w-7xl mx-auto my-16 lg:my-24">
-      <h1 className="text-4xl 2xl:text-5xl font-light uppercase text-center">
+      <h1 className="text-3xl xl:text-4xl 2xl:text-5xl font-light uppercase text-center">
         {category.name}
       </h1>
       <p className="my-8 font-light text-center">

@@ -20,6 +20,9 @@ export default async function CategoryPage({ params }) {
       subcategories: {
         include: {
           products: {
+            where: {
+              deletedAt: null, // TYLKO AKTYWNE PRODUKTY
+            },
             select: {
               id: true,
               name: true,
