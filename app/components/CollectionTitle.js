@@ -38,12 +38,6 @@ export default function CollectionTitle({
           <span className="text-xl font-bold text-primary">
             {price.toFixed(2)} PLN
           </span>
-
-          {lowestPrice && lowestPrice < price && (
-            <div className="text-xs text-green-600 font-medium">
-              ↓ {lowestPrice.toFixed(2)} PLN
-            </div>
-          )}
         </div>
       )}
     </Link>

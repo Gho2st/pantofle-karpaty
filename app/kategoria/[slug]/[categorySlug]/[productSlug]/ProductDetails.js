@@ -131,7 +131,7 @@ export default function ProductDetails({ product }) {
                 <span
                   className={`font-bold ${
                     product.lowestPrice < product.price
-                      ? "text-green-600"
+                      ? "text-gray-600"
                       : "text-gray-700"
                   }`}
                 >
