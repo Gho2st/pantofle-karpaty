@@ -89,6 +89,8 @@ export default async function CategorySlug({ params }) {
               alt={product.name}
               label={product.name}
               href={`${basePath}/${product.slug}`}
+              price={product.price}
+              lowestPrice={product.lowestPrice}
             />
           ))
         ) : (

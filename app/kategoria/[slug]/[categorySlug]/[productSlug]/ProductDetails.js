@@ -121,7 +121,7 @@ export default function ProductDetails({ product }) {
 
           {/* CENA + NAJNIŻSZA Z 30 DNI */}
           <div className="mb-6">
-            <span className="text-3xl font-bold text-red-600">
+            <span className="text-3xl font-bold text-primary">
               {product.price.toFixed(2)} PLN
             </span>
 
