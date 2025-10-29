@@ -8,18 +8,20 @@ export async function GET(request) {
     : null;
 
   try {
-    if (!prisma.category) {
-      throw new Error("Prisma.category is undefined");
-    }
-
     const categories = await prisma.category.findMany({
-      where: { parentId },
+      where: {
+        parentId,
+        deletedAt: null, // TYLKO AKTYWNE KATEGORIE
+      },
       select: {
         id: true,
         name: true,
         slug: true,
         image: true,
         subcategories: {
+          where: {
+            deletedAt: null, // TYLKO AKTYWNE PODKATEGORIE
+          },
           select: {
             id: true,
             name: true,

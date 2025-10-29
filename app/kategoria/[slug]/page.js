@@ -2,22 +2,29 @@ import prisma from "@/app/lib/prisma";
 import { notFound } from "next/navigation";
 import CollectionTitle from "@/app/components/CollectionTitle";
 
-// Funkcja do generowania bezpiecznego sluga (serwerowa)
+// Bezpieczny slug (na wszelki wypadek)
 function generateSlug(name) {
   return name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
+    .replace(/(^-|-$)/g, "")
+    .replace(/-+/g, "-");
 }
 
 export default async function CategoryPage({ params }) {
   const { slug } = await params;
 
-  // Pobierz kategorię główną po slug z podkategoriami i ich produktami
+  // --- POBIERZ TYLKO AKTYWNĄ KATEGORIĘ ---
   const mainCategory = await prisma.category.findFirst({
-    where: { slug },
+    where: {
+      slug,
+      deletedAt: null, // KLUCZOWE: TYLKO AKTYWNE KATEGORIE
+    },
     include: {
       subcategories: {
+        where: {
+          deletedAt: null, // TYLKO AKTYWNE PODKATEGORIE
+        },
         include: {
           products: {
             where: {
@@ -34,8 +41,9 @@ export default async function CategoryPage({ params }) {
     },
   });
 
+  // --- 404 JEŚLI KATEGORIA NIE ISTNIEJE LUB JEST USUNIĘTA ---
   if (!mainCategory) {
-    notFound(); // Next.js automatycznie renderuje 404
+    notFound();
   }
 
   const subcategories = mainCategory.subcategories || [];
@@ -63,7 +71,7 @@ export default async function CategoryPage({ params }) {
           ))
         ) : (
           <p className="text-gray-600 col-span-full">
-            Brak dostępnych kategorii dla {mainCategory.name.toLowerCase()}.
+            Brak dostępnych podkategorii w {mainCategory.name.toLowerCase()}.
           </p>
         )}
       </div>

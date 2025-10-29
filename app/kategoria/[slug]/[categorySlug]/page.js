@@ -1,27 +1,60 @@
 import prisma from "@/app/lib/prisma";
+import { notFound } from "next/navigation";
 import CollectionTitle from "@/app/components/CollectionTitle";
+
+// Bezpieczny fallback slug
+function generateSlug(name) {
+  if (!name) return "produkt";
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .replace(/-+/g, "-");
+}
 
 export default async function CategorySlug({ params }) {
   const { categorySlug } = await params;
 
-  const slug = categorySlug;
+  // Walidacja podstawowa
+  if (!categorySlug || typeof categorySlug !== "string") {
+    notFound();
+  }
 
+  const slug = categorySlug.trim();
+
+  // Pobierz TYLKO AKTYWNĄ kategorię
   const category = await prisma.category.findFirst({
     where: {
-      OR: [{ slug }, { name: slug }],
+      deletedAt: null, // TYLKO AKTYWNA KATEGORIA
+      OR: [
+        { slug: slug },
+        { name: slug }, // fallback na nazwę (jeśli slug nie istnieje)
+      ],
     },
     include: {
-      subcategories: true,
+      subcategories: {
+        where: { deletedAt: null }, // TYLKO AKTYWNE PODKATEGORIE
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      },
       products: {
-        where: {
-          deletedAt: null,
+        where: { deletedAt: null }, // TYLKO AKTYWNE PRODUKTY
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          images: true,
         },
       },
     },
   });
 
+  // 404 jeśli kategoria nie istnieje LUB jest usunięta
   if (!category) {
-    return <div>Kategoria nie znaleziona</div>;
+    notFound();
   }
 
   return (
@@ -29,7 +62,7 @@ export default async function CategorySlug({ params }) {
       <h1 className="text-3xl xl:text-4xl 2xl:text-5xl font-light uppercase text-center">
         {category.name}
       </h1>
-      <p className="my-8 font-light text-center">
+      <p className="my-8 font-light text-center max-w-3xl mx-auto">
         {category.description || "Brak opisu kategorii"}
       </p>
 
@@ -38,12 +71,10 @@ export default async function CategorySlug({ params }) {
           category.products.map((product) => (
             <CollectionTitle
               key={product.id}
-              src={product.images?.[0] || "/pantofle/pantofle.jpg"} // Bierz pierwsze zdjęcie z tablicy
-              alt={product.name || "Produkt"}
+              src={product.images?.[0] || "/pantofle/pantofle.jpg"}
+              alt={product.name}
               label={product.name}
-              href={`/kategoria/dla-kobiet/${category.slug || category.name}/${
-                product.slug || product.name
-              }`}
+              href={`/produkt/${product.slug || generateSlug(product.name)}`}
             />
           ))
         ) : (
