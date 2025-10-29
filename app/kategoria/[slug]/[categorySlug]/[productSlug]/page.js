@@ -26,11 +26,7 @@ export default async function ProductSlug({ params }) {
   const product = await prisma.product.findFirst({
     where: {
       deletedAt: null, // TYLKO AKTYWNY PRODUKT
-      OR: [
-        { slug: slug },
-        // Opcjonalnie: fallback na nazwę (jeśli slug nie istnieje)
-        // { name: { equals: slug, mode: "insensitive" } }
-      ],
+      OR: [{ slug: slug }],
     },
     include: {
       category: {

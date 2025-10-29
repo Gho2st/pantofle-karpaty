@@ -63,7 +63,7 @@ export default async function CategorySlug({ params }) {
         {category.name}
       </h1>
       <p className="my-8 font-light text-center max-w-3xl mx-auto">
-        {category.description || "Brak opisu kategorii"}
+        {category.description || ""}
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">

@@ -37,6 +37,10 @@ export default function ProductDetails({ product }) {
     { name: product.name, href: null },
   ].filter(Boolean);
 
+  // --- NAJNIŻSZA CENA Z 30 DNI ---
+  const lowestPrice30Days = product.lowestPrice;
+  const currentPrice = product.price;
+
   // --- DODAJ DO KOSZYKA ---
   const handleAddToCart = async (e) => {
     e.preventDefault();
@@ -130,9 +134,24 @@ export default function ProductDetails({ product }) {
           <h1 className="text-3xl md:text-4xl uppercase mb-6">
             {product.name}
           </h1>
-          <span className="font-light text-2xl">{product.price} PLN</span>
 
-          <p className="mt-6 md:mt-10 text-gray-700">{product.description}</p>
+          {/* === CENA + NAJNIŻSZA Z 30 DNI === */}
+          <div className="mb-6">
+            <span className="text-3xl font-bold text-red-600">
+              {currentPrice.toFixed(2)} PLN
+            </span>
+
+            {lowestPrice30Days && lowestPrice30Days < currentPrice && (
+              <div className="text-sm text-gray-500 mt-1">
+                Najniższa cena z 30 dni:{" "}
+                <span className="font-bold text-green-600">
+                  {lowestPrice30Days.toFixed(2)} PLN
+                </span>
+              </div>
+            )}
+          </div>
+
+          <p className="mt-6 text-gray-700">{product.description}</p>
 
           <form onSubmit={handleAddToCart} className="mt-6">
             {/* ROZMIAR */}
