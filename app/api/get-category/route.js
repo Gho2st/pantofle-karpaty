@@ -50,6 +50,7 @@ export async function GET(request) {
         slug: true,
         image: true,
         parentId: true,
+        description: true,
         deletedAt: true, // Admin widzi pole, ale tylko dla aktywnych
 
         // --- AKTYWNE PRODUKTY ---
@@ -79,6 +80,7 @@ export async function GET(request) {
             image: true,
             parentId: true,
             deletedAt: true,
+            description: true,
 
             // Aktywne produkty w podkategorii
             products: {
