@@ -40,18 +40,19 @@ model Category {
   name          String
   description   String?
   parentId      Int?
-  slug          String?
+  slug          String
   image         String?
   parent        Category?  @relation("Subcategories", fields: [parentId], references: [id])
   subcategories Category[] @relation("Subcategories")
   products      Product[]
-  deletedAt     DateTime? 
+  deletedAt     DateTime?
+  @@unique([slug, deletedAt])
 }
 
 model Product {
   id              Int       @id @default(autoincrement())
   name            String
-  slug            String    @unique
+  slug            String
   price           Float
   description     String?
   description2    String?
@@ -64,6 +65,7 @@ model Product {
   category        Category  @relation(fields: [categoryId], references: [id])
   deletedAt       DateTime?
   lowestPrice     Float?
+  @@unique([slug, deletedAt])  // KLUCZ: unikalny TYLKO wśród aktywnych!
 }
 
 model Cart {

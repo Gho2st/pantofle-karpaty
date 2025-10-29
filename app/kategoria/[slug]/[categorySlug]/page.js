@@ -1,64 +1,78 @@
 import prisma from "@/app/lib/prisma";
 import { notFound } from "next/navigation";
 import CollectionTitle from "@/app/components/CollectionTitle";
-
-// Bezpieczny fallback slug
-function generateSlug(name) {
-  if (!name) return "produkt";
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")
-    .replace(/-+/g, "-");
-}
+import Link from "next/link";
 
 export default async function CategorySlug({ params }) {
-  const { categorySlug } = await params;
+  const awaitedParams = await params;
+  const { categorySlug } = awaitedParams;
 
-  // Walidacja podstawowa
-  if (!categorySlug || typeof categorySlug !== "string") {
-    notFound();
-  }
+  if (!categorySlug) notFound();
 
-  const slug = categorySlug.trim();
-
-  // Pobierz TYLKO AKTYWNĄ kategorię
+  // UŻYJ findFirst – findUnique NIE DZIAŁA z deletedAt
   const category = await prisma.category.findFirst({
     where: {
-      deletedAt: null, // TYLKO AKTYWNA KATEGORIA
-      OR: [
-        { slug: slug },
-        { name: slug }, // fallback na nazwę (jeśli slug nie istnieje)
-      ],
+      slug: categorySlug,
+      deletedAt: null,
     },
     include: {
-      subcategories: {
-        where: { deletedAt: null }, // TYLKO AKTYWNE PODKATEGORIE
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-        },
+      parent: {
+        where: { deletedAt: null },
+        select: { slug: true, name: true },
       },
       products: {
-        where: { deletedAt: null }, // TYLKO AKTYWNE PRODUKTY
+        where: { deletedAt: null },
         select: {
           id: true,
           name: true,
           slug: true,
           images: true,
+          price: true,
+          lowestPrice: true,
         },
       },
     },
   });
 
-  // 404 jeśli kategoria nie istnieje LUB jest usunięta
-  if (!category) {
-    notFound();
-  }
+  if (!category) notFound();
+
+  // PEŁNA ŚCIEŻKA URL
+  const parentSlug = category.parent?.slug;
+  const basePath = parentSlug
+    ? `/kategoria/${parentSlug}/${category.slug}`
+    : `/kategoria/${category.slug}`;
+
+  // BREADCRUMB
+  const breadcrumb = [
+    { name: "Strona główna", href: "/" },
+    category.parent && {
+      name: category.parent.name,
+      href: `/kategoria/${category.parent.slug}`,
+    },
+    { name: category.name, href: null },
+  ].filter(Boolean);
 
   return (
-    <div className="max-w-7xl mx-auto my-16 lg:my-24">
+    <div className="max-w-7xl mx-auto my-16 lg:my-24 px-4">
+      {/* BREADCRUMB */}
+      <nav className="text-sm text-gray-600 mb-6 text-center">
+        {breadcrumb.map((item, i) => (
+          <span key={i}>
+            {item.href ? (
+              <Link
+                href={item.href}
+                className="hover:text-red-600 hover:underline"
+              >
+                {item.name}
+              </Link>
+            ) : (
+              <span className="font-medium text-gray-900">{item.name}</span>
+            )}
+            {i < breadcrumb.length - 1 && <span className="mx-2">›</span>}
+          </span>
+        ))}
+      </nav>
+
       <h1 className="text-3xl xl:text-4xl 2xl:text-5xl font-light uppercase text-center">
         {category.name}
       </h1>
@@ -74,7 +88,7 @@ export default async function CategorySlug({ params }) {
               src={product.images?.[0] || "/pantofle/pantofle.jpg"}
               alt={product.name}
               label={product.name}
-              href={`/produkt/${product.slug || generateSlug(product.name)}`}
+              href={`${basePath}/${product.slug}`}
             />
           ))
         ) : (

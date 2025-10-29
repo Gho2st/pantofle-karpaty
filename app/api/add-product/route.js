@@ -1,71 +1,16 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
-import prisma from "@/app/lib/prisma";
-import { NextResponse } from "next/server";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { v4 as uuidv4 } from "uuid";
-
-function validateSizes(sizes) {
-  if (!sizes) return true; // sizes jest opcjonalne
-  if (!Array.isArray(sizes)) {
-    throw new Error("Pole sizes musi być tablicą");
-  }
-  sizes.forEach((item) => {
-    if (!item.size || typeof item.stock !== "number" || item.stock < 0) {
-      throw new Error("Nieprawidłowy format rozmiaru lub stanu");
-    }
-  });
-  return true;
-}
-
-const s3Client = new S3Client({
-  region: "eu-central-1",
-  credentials: {
-    accessKeyId: process.env.AWS_ID,
-    secretAccessKey: process.env.AWS_SECRET,
-  },
-});
-
-const BUCKET_NAME = "pantofle-karpaty";
-
-async function uploadFileToS3(fileBuffer, fileName, contentType) {
-  const uniqueFileName = `${uuidv4()}-${fileName}`; // Unikalna nazwa pliku
-  const params = {
-    Bucket: BUCKET_NAME,
-    Key: `products/${uniqueFileName}`, // Folder 'products' w buckecie
-    Body: fileBuffer,
-    ContentType: contentType || "application/octet-stream",
-  };
-
-  const command = new PutObjectCommand(params);
-  await s3Client.send(command);
-
-  return `https://${BUCKET_NAME}.s3.eu-central-1.amazonaws.com/products/${uniqueFileName}`;
-}
-
-function generateSlug(name) {
-  if (!name) return "";
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "") // Usuń znaki specjalne
-    .replace(/\s+/g, "-") // Zamień spacje na myślniki
-    .replace(/-+/g, "-"); // Usuń wielokrotne myślniki
-}
-
 export async function POST(request) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({
-      error: "Nieautoryzowany dostęp",
-      status: 401,
-    });
+    return NextResponse.json(
+      { error: "Nieautoryzowany dostęp" },
+      { status: 401 }
+    );
   }
 
   try {
     const formData = await request.formData();
     const name = formData.get("name");
-    const slug = formData.get("slug") || generateSlug(name); // Pobierz slug lub wygeneruj z name
+    const slug = formData.get("slug") || generateSlug(name);
     const price = formData.get("price");
     const description = formData.get("description") || null;
     const description2 = formData.get("description2") || null;
@@ -82,7 +27,22 @@ export async function POST(request) {
       );
     }
 
-    // Sprawdź, czy kategoria istnieje
+    // === WALIDACJA SLUG ===
+    const existingActiveProduct = await prisma.product.findFirst({
+      where: {
+        slug: slug,
+        deletedAt: null, // tylko aktywne
+      },
+    });
+
+    if (existingActiveProduct) {
+      return NextResponse.json(
+        { error: `Slug "${slug}" jest już używany przez aktywny produkt` },
+        { status: 400 }
+      );
+    }
+
+    // === RESZTA WALIDACJI ===
     const category = await prisma.category.findUnique({
       where: { id: parseInt(categoryId) },
     });
@@ -93,7 +53,6 @@ export async function POST(request) {
       );
     }
 
-    // Walidacja ceny
     const parsedPrice = parseFloat(price);
     if (isNaN(parsedPrice) || parsedPrice <= 0) {
       return NextResponse.json(
@@ -102,10 +61,9 @@ export async function POST(request) {
       );
     }
 
-    // Walidacja sizes
     validateSizes(sizes);
 
-    // Upload zdjęć do S3
+    // === UPLOAD ZDJĘĆ ===
     const uploadPromises = files.map(async (file) => {
       if (file instanceof File) {
         const buffer = Buffer.from(await file.arrayBuffer());
@@ -116,11 +74,11 @@ export async function POST(request) {
 
     const imageUrls = (await Promise.all(uploadPromises)).filter((url) => url);
 
-    // Utwórz nowy produkt
+    // === TWORZENIE PRODUKTU ===
     const product = await prisma.product.create({
       data: {
         name,
-        slug, // Zapisz slug (wygenerowany lub podany)
+        slug,
         price: parsedPrice,
         description,
         description2,

@@ -29,7 +29,6 @@ async function uploadFileToS3(fileBuffer, fileName, contentType) {
 
   return `https://${BUCKET_NAME}.s3.eu-central-1.amazonaws.com/categories/${uniqueFileName}`;
 }
-
 export async function POST(request) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "ADMIN") {
@@ -54,14 +53,40 @@ export async function POST(request) {
       );
     }
 
-    // Sprawdzanie, czy parentId wskazuje na podkategorię
+    // === WALIDACJA SLUG (KLUCZOWA ZMIANA!) ===
+    const generatedSlug = slug || name.toLowerCase().replace(/\s+/g, "-");
+
+    const existingActiveCategory = await prisma.category.findFirst({
+      where: {
+        slug: generatedSlug,
+        deletedAt: null,
+      },
+    });
+
+    if (existingActiveCategory) {
+      return NextResponse.json(
+        {
+          error: `Slug "${generatedSlug}" jest już używany przez inną aktywną kategorię`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // === SPRAWDZENIE RODZICA (tylko główne kategorie mogą mieć podkategorie) ===
     if (parentId) {
       const parentCategory = await prisma.category.findUnique({
         where: { id: parseInt(parentId) },
-        select: { parentId: true },
+        select: { parentId: true, deletedAt: true },
       });
 
-      if (parentCategory && parentCategory.parentId !== null) {
+      if (!parentCategory || parentCategory.deletedAt) {
+        return NextResponse.json(
+          { error: "Kategoria nadrzędna nie istnieje lub jest usunięta" },
+          { status: 404 }
+        );
+      }
+
+      if (parentCategory.parentId !== null) {
         return NextResponse.json(
           { error: "Nie można dodawać podkategorii do podkategorii" },
           { status: 400 }
@@ -69,16 +94,14 @@ export async function POST(request) {
       }
     }
 
-    // Generowanie slugu, jeśli nie podano
-    const generatedSlug = slug || name.toLowerCase().replace(/\s+/g, "-");
-
-    // Upload zdjęcia do S3, jeśli podano
+    // === UPLOAD ZDJĘCIA ===
     let imageUrl = null;
     if (imageFile instanceof File) {
       const buffer = Buffer.from(await imageFile.arrayBuffer());
       imageUrl = await uploadFileToS3(buffer, imageFile.name, imageFile.type);
     }
 
+    // === TWORZENIE KATEGORII ===
     const category = await prisma.category.create({
       data: {
         name,
@@ -96,7 +119,7 @@ export async function POST(request) {
   } catch (error) {
     console.error("Błąd podczas tworzenia kategorii:", error);
     return NextResponse.json(
-      { error: "Błąd serwera podczas tworzenia kategorii" },
+      { error: error.message || "Błąd serwera podczas tworzenia kategorii" },
       { status: 500 }
     );
   }

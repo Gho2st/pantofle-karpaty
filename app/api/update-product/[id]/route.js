@@ -77,6 +77,7 @@ function generateSlug(name) {
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
 }
+// ... reszta importów bez zmian
 
 export async function PUT(request, { params }) {
   const session = await getServerSession(authOptions);
@@ -109,26 +110,26 @@ export async function PUT(request, { params }) {
     let imagesToRemove = formData.get("imagesToRemove");
     const imagesToAdd = formData.getAll("imagesToAdd");
 
-    console.log("Otrzymane dane FormData:", {
-      productId,
-      name,
-      slug,
-      price,
-      description,
-      description2,
-      additionalInfo,
-      sizes,
-      categoryId,
-      imagesToRemove,
-      imagesToAdd: imagesToAdd.map((f) => f.name),
+    // === WALIDACJA SLUG (KLUCZOWA ZMIANA!) ===
+    const existingActiveProduct = await prisma.product.findFirst({
+      where: {
+        slug: slug,
+        deletedAt: null,
+        id: { not: productId }, // wyklucz bieżący produkt
+      },
     });
 
+    if (existingActiveProduct) {
+      return NextResponse.json(
+        { error: `Slug "${slug}" jest już używany przez inny aktywny produkt` },
+        { status: 400 }
+      );
+    }
+
+    // === RESZTA WALIDACJI ===
     if (!name || !price) {
       return NextResponse.json(
-        {
-          error: "Nazwa i cena produktu są wymagane",
-          missingFields: { name: !name, price: !price },
-        },
+        { error: "Nazwa i cena produktu są wymagane" },
         { status: 400 }
       );
     }
@@ -183,6 +184,7 @@ export async function PUT(request, { params }) {
       );
     }
 
+    // === USUWANIE ZDJĘĆ ===
     let updatedImages = product.images || [];
     if (imagesToRemove.length > 0) {
       for (const imageUrl of imagesToRemove) {
@@ -197,6 +199,7 @@ export async function PUT(request, { params }) {
       );
     }
 
+    // === DODAWANIE ZDJĘĆ ===
     if (imagesToAdd && imagesToAdd.length > 0) {
       const newImageUrls = [];
       for (const file of imagesToAdd) {
@@ -214,6 +217,7 @@ export async function PUT(request, { params }) {
       updatedImages = [...updatedImages, ...newImageUrls];
     }
 
+    // === AKTUALIZACJA PRODUKTU ===
     const updatedProduct = await prisma.product.update({
       where: { id: productId },
       data: {
@@ -228,8 +232,6 @@ export async function PUT(request, { params }) {
         categoryId: categoryId ? parseInt(categoryId) : product.categoryId,
       },
     });
-
-    console.log("Zaktualizowany produkt:", updatedProduct);
 
     return NextResponse.json({
       message: "Produkt zaktualizowany pomyślnie",

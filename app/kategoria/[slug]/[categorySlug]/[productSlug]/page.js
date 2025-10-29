@@ -1,53 +1,57 @@
+// app/produkt/[productSlug]/page.js
 import prisma from "@/app/lib/prisma";
 import { notFound } from "next/navigation";
 import ProductDetails from "./ProductDetails";
 
-// Bezpieczny fallback slug
-function generateSlug(name) {
-  if (!name) return "produkt";
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")
-    .replace(/-+/g, "-");
-}
-
 export default async function ProductSlug({ params }) {
-  const { productSlug } = await params;
+  const awaitedParams = await params;
+  const { productSlug } = awaitedParams;
 
-  // --- WALIDACJA ---
-  if (!productSlug || typeof productSlug !== "string") {
-    notFound();
-  }
+  if (!productSlug) notFound();
 
-  const slug = productSlug.trim();
-
-  // --- POBIERZ TYLKO AKTYWNY PRODUKT + KATEGORIĘ ---
   const product = await prisma.product.findFirst({
     where: {
-      deletedAt: null, // TYLKO AKTYWNY PRODUKT
-      OR: [{ slug: slug }],
-    },
-    include: {
+      slug: productSlug,
+      deletedAt: null,
       category: {
-        where: { deletedAt: null }, // TYLKO AKTYWNA KATEGORIA
+        deletedAt: null,
+        parent: {
+          is: { deletedAt: null },
+        },
+      },
+    },
+    select: {
+      // POBIERZ WSZYSTKIE POTRZEBNE POLA
+      id: true,
+      name: true,
+      slug: true,
+      price: true,
+      lowestPrice: true, // KLUCZOWE!
+      description: true,
+      description2: true,
+      additionalInfo: true,
+      sizes: true,
+      images: true,
+
+      // RELACJA: KATEGORIA
+      category: {
         select: {
           id: true,
           name: true,
           slug: true,
           parent: {
-            where: { deletedAt: null },
-            select: { id: true, name: true, slug: true },
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
           },
         },
       },
     },
   });
 
-  // --- 404 JEŚLI PRODUKT NIE ISTNIEJE LUB JEST USUNIĘTY ---
-  if (!product) {
-    notFound();
-  }
+  if (!product) notFound();
 
   return <ProductDetails product={product} />;
 }

@@ -65,7 +65,6 @@ async function deleteFileFromS3(imageUrl) {
     // Kontynuuj, nawet jeśli usunięcie nie powiedzie się (np. obraz nie istnieje)
   }
 }
-
 export async function PUT(request, { params }) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "ADMIN") {
@@ -99,44 +98,69 @@ export async function PUT(request, { params }) {
       );
     }
 
-    // Sprawdź, czy kategoria istnieje
+    // === WALIDACJA SLUG (KLUCZOWA ZMIANA!) ===
+    const generatedSlug = slug || name.toLowerCase().replace(/\s+/g, "-");
+
+    const existingActiveCategory = await prisma.category.findFirst({
+      where: {
+        slug: generatedSlug,
+        deletedAt: null,
+        id: { not: categoryId }, // wyklucz bieżącą kategorię
+      },
+    });
+
+    if (existingActiveCategory) {
+      return NextResponse.json(
+        {
+          error: `Slug "${generatedSlug}" jest już używany przez inną aktywną kategorię`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // === SPRAWDZENIE ISTNIENIA KATEGORII ===
     const existingCategory = await prisma.category.findUnique({
       where: { id: categoryId },
-      select: { image: true },
+      select: { image: true, deletedAt: true },
     });
-    if (!existingCategory) {
+    if (!existingCategory || existingCategory.deletedAt) {
       return NextResponse.json(
-        { error: "Kategoria nie została znaleziona" },
+        { error: "Kategoria nie została znaleziona lub jest usunięta" },
         { status: 404 }
       );
     }
 
-    const generatedSlug = slug || name.toLowerCase().replace(/\s+/g, "-");
     let imageUrl = existingCategory.image;
 
-    // Usuwanie istniejącego zdjęcia, jeśli podano imageToRemove
+    // === USUWANIE ZDJĘCIA ===
     if (imageToRemove && imageUrl) {
-      await deleteFileFromS3(imageUrl);
-      imageUrl = null; // Usuń zdjęcie z bazy danych
+      try {
+        await deleteFileFromS3(imageUrl);
+        console.log(`Usunięto zdjęcie: ${imageUrl}`);
+      } catch (err) {
+        console.error(`Nie udało się usunąć zdjęcia ${imageUrl}:`, err);
+        // Kontynuuj – zdjęcie może nie istnieć
+      }
+      imageUrl = null;
     }
 
-    // Dodawanie nowego zdjęcia, jeśli przesłano plik
+    // === DODAWANIE NOWEGO ZDJĘCIA ===
     if (imageFile instanceof File && imageFile.size > 0) {
       if (imageFile.size > 5 * 1024 * 1024) {
-        // Limit 5MB
         throw new Error(`Plik ${imageFile.name} przekracza limit 5MB`);
       }
       const buffer = Buffer.from(await imageFile.arrayBuffer());
       imageUrl = await uploadFileToS3(buffer, imageFile.name, imageFile.type);
     }
 
+    // === AKTUALIZACJA KATEGORII ===
     const category = await prisma.category.update({
       where: { id: categoryId },
       data: {
         name,
         description,
         slug: generatedSlug,
-        image: imageUrl, // Może być null, jeśli zdjęcie usunięto i nie dodano nowego
+        image: imageUrl,
       },
     });
 
