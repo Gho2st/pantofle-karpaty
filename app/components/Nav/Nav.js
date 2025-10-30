@@ -346,23 +346,6 @@ export default function Nav() {
                   </Link>
                 </li>
 
-                {/* Koszyk */}
-                <li>
-                  <Link
-                    href="/koszyk"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={`${baseMenuItemClasses} text-gray-800`}
-                  >
-                    <ShoppingCart className="w-5 h-5 mr-3" />
-                    Koszyk
-                    {cartCount > 0 && (
-                      <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
-                        {cartCount}
-                      </span>
-                    )}
-                  </Link>
-                </li>
-
                 {/* Logowanie / Wylogowanie */}
                 <li>
                   {session ? (
