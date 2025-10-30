@@ -322,7 +322,7 @@ export default function Checkout() {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <h2 className="text-lg font-semibold truncate">
+                    <h2 className="text-lg font-semibold">
                       {item.product.name}
                     </h2>
                     <p className="text-sm text-gray-600">
