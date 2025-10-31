@@ -34,7 +34,7 @@ export default function RootLayout({ children }) {
                 <FreeDelivery />
                 <Nav />
                 <main className="grow">{children}</main>
-                <CookieConsent />
+                {/* <CookieConsent /> */}
                 <Footer />
               </AdminProvider>
             </CategoriesProvider>
