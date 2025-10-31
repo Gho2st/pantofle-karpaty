@@ -7,6 +7,7 @@ import AuthProvider from "./providers";
 import { CartProvider } from "./context/cartContext";
 import { AdminProvider } from "./context/adminContext";
 import { CategoriesProvider } from "./context/categoriesContext";
+import CookieConsent from "./components/CookieConsent";
 
 // Konfiguracja czcionki Josefin Sans
 const josefinSans = Josefin_Sans({
@@ -32,7 +33,8 @@ export default function RootLayout({ children }) {
               <AdminProvider>
                 <FreeDelivery />
                 <Nav />
-                <main className="flex-grow">{children}</main>
+                <main className="grow">{children}</main>
+                <CookieConsent />
                 <Footer />
               </AdminProvider>
             </CategoriesProvider>
