@@ -1,4 +1,15 @@
-"use client";
+// app/polityka-prywatnosci/page.js
+import { Metadata } from "next";
+
+export const metadata = {
+  title: "Polityka Prywatności | Pantofle Karpaty",
+  description:
+    "Pełna polityka prywatności sklepu Pantofle Karpaty. Dowiedz się, jakie dane zbieramy, jak je chronimy i jakie masz prawa. Bezpieczeństwo i RODO.",
+  alternates: {
+    canonical: "/polityka-prywatnosci",
+  },
+  robots: "index, follow",
+};
 
 export default function PolitykaPrywatnosci() {
   return (
@@ -34,13 +45,16 @@ export default function PolitykaPrywatnosci() {
           E-mail:{" "}
           <a
             href="mailto:mwidel@pantofle-karpaty.pl"
-            className="text-blue-600 underline"
+            className="text-blue-600 underline hover:text-blue-800"
           >
             mwidel@pantofle-karpaty.pl
           </a>
           <br />
           Telefon:{" "}
-          <a href="tel:+48608238103" className="text-blue-600 underline">
+          <a
+            href="tel:+48608238103"
+            className="text-blue-600 underline hover:text-blue-800"
+          >
             +48 608 238 103
           </a>
         </p>
@@ -95,8 +109,8 @@ export default function PolitykaPrywatnosci() {
         <h2 className="text-2xl font-semibold text-gray-800 mb-5 border-b-2 border-blue-600 pb-2">
           § 3 W jakim celu przetwarzamy dane?
         </h2>
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <table className="w-full text-sm text-left text-gray-700">
+        <div className="bg-gray-50 p-4 rounded-lg overflow-x-auto">
+          <table className="w-full text-sm text-left text-gray-700 min-w-[600px]">
             <thead className="text-xs uppercase bg-gray-100">
               <tr>
                 <th className="px-4 py-2">Cel</th>
@@ -211,7 +225,7 @@ export default function PolitykaPrywatnosci() {
           Napisz:{" "}
           <a
             href="mailto:mwidel@pantofle-karpaty.pl"
-            className="text-blue-600 underline"
+            className="text-blue-600 underline hover:text-blue-800"
           >
             mwidel@pantofle-karpaty.pl
           </a>
@@ -242,13 +256,13 @@ export default function PolitykaPrywatnosci() {
           Używamy tylko <strong>analitycznych cookies</strong> z Google
           Analytics 4.
         </p>
-        <div className="bg-gray-50 p-4 rounded-lg text-sm">
-          <table className="w-full">
+        <div className="bg-gray-50 p-4 rounded-lg overflow-x-auto">
+          <table className="w-full text-sm text-left text-gray-700 min-w-[500px]">
             <thead className="text-xs uppercase bg-gray-100">
               <tr>
-                <th className="px-3 py-2 text-left">Cookie</th>
-                <th className="px-3 py-2 text-left">Cel</th>
-                <th className="px-3 py-2 text-left">Czas</th>
+                <th className="px-3 py-2">Cookie</th>
+                <th className="px-3 py-2">Cel</th>
+                <th className="px-3 py-2">Czas</th>
               </tr>
             </thead>
             <tbody className="divide-y text-gray-700">
@@ -293,14 +307,14 @@ export default function PolitykaPrywatnosci() {
           <br />
           <a
             href="mailto:mwidel@pantofle-karpaty.pl"
-            className="text-blue-600 underline font-medium"
+            className="text-blue-600 underline font-medium hover:text-blue-800"
           >
             mwidel@pantofle-karpaty.pl
           </a>
           <br />
           <a
             href="tel:+48608238103"
-            className="text-blue-600 underline font-medium"
+            className="text-blue-600 underline font-medium hover:text-blue-800"
           >
             +48 608 238 103
           </a>

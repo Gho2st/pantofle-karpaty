@@ -1,9 +1,17 @@
-// app/login/page.js
 import { getProviders } from "next-auth/react";
 import ClientSignIn from "./ClientSignIn";
 import AnimatedLock from "./AnimatedLock";
-// Możemy dodać ikonę tarczy dla wzmocnienia przekazu
-import { ShieldCheck } from "lucide-react";
+
+export const metadata = {
+  title: "Logowanie | Pantofle Karpaty",
+  description:
+    "Zaloguj się bezpiecznie przez Google. Bez haseł, bez ryzyka. Zarządzaj zamówieniami i profilem w Pantofle Karpaty.",
+
+  alternates: {
+    canonical: "/login",
+  },
+  robots: "noindex, nofollow", // Strona logowania – NIE indeksuj
+};
 
 export default async function SignInPage() {
   const providers = await getProviders();
@@ -20,7 +28,7 @@ export default async function SignInPage() {
           Zaloguj się do panelu Pantofle Karpaty
         </p>
 
-        {/* Komponent klienta renderuje przyciski */}
+        {/* Przyciski logowania – w komponencie klienckim */}
         <ClientSignIn providers={providers} />
 
         <div className="mt-8 text-xs lg:text-base text-slate-600 border-t border-slate-200 pt-6">

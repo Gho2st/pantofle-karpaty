@@ -8,33 +8,50 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
 });
 
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  const orderId = parseInt(id, 10);
+
+  if (isNaN(orderId)) {
+    return {
+      title: "Zamówienie nie znalezione | Pantofle Karpaty",
+      robots: "noindex, nofollow",
+    };
+  }
+
+  return {
+    title: `Zamówienie #${orderId} – Potwierdzenie | Pantofle Karpaty`,
+    description: `Twoje zamówienie #${orderId} zostało przyjęte. Sprawdź szczegóły i status płatności.`,
+
+    alternates: {
+      canonical: `/potwierdzenie/${orderId}`, // TYLKO Z PARAMS.ID
+    },
+    robots: "noindex, nofollow", // Prywatna strona
+  };
+}
+
+// === Pobierz zamówienie (tylko do renderowania) ===
 async function getOrder(id) {
   const orderId = parseInt(id, 10);
-  if (isNaN(orderId)) {
-    notFound();
-  }
+  if (isNaN(orderId)) notFound();
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: { items: true },
   });
 
-  if (!order) {
-    notFound();
-  }
+  if (!order) notFound();
   return order;
 }
 
 export default async function OrderConfirmationPage({ params, searchParams }) {
-  const param = await params;
-  // 2. Pobieramy zamówienie PIERWSZY RAZ
-  let order = await getOrder(param.id);
-
-  // 3. Await searchParams to resolve the promise
+  const { id } = await params;
   const resolvedSearchParams = await searchParams;
   const sessionId = resolvedSearchParams.session_id;
 
-  // 4. Weryfikacja sesji Stripe (jeśli jest to powrót ze Stripe)
+  let order = await getOrder(id);
+
+  // Weryfikacja Stripe
   if (
     sessionId &&
     order.paymentId === sessionId &&
@@ -42,6 +59,7 @@ export default async function OrderConfirmationPage({ params, searchParams }) {
   ) {
     try {
       const session = await stripe.checkout.sessions.retrieve(sessionId);
+
       if (session.payment_status === "paid") {
         await prisma.order.update({
           where: { id: order.id },
@@ -57,81 +75,99 @@ export default async function OrderConfirmationPage({ params, searchParams }) {
       console.error("Błąd weryfikacji sesji Stripe:", error);
     }
 
-    // 5. Pobierz zamówienie PONOWNIE po aktualizacji
-    order = await getOrder(params.id);
+    order = await getOrder(id);
   }
 
   return (
-    <div className="max-w-3xl mx-auto my-12 p-8 bg-white shadow-lg rounded-lg">
-      <h1 className="text-3xl font-bold text-center text-gray-800 mb-4">
-        Dziękujemy za Twoje zamówienie!
-      </h1>
-      <p className="text-lg text-center text-gray-600 mb-6">
-        Otrzymaliśmy Twoje zamówienie o numerze <strong>#{order.id}</strong>.
-        Potwierdzenie wysłaliśmy na Twój adres email ({order.email}).
-      </p>
+    <div className="max-w-3xl mx-auto my-12 2xl:my-24 px-4">
+      <div className="bg-white p-6 sm:p-8 rounded-xl shadow-lg border border-gray-100">
+        <h1 className="text-3xl font-bold text-center text-gray-800 mb-4">
+          Dziękujemy za Twoje zamówienie!
+        </h1>
+        <p className="text-lg text-center text-gray-600 mb-8">
+          Otrzymaliśmy Twoje zamówienie o numerze <strong>#{order.id}</strong>.
+          <br />
+          Potwierdzenie wysłaliśmy na <strong>{order.email}</strong>.
+        </p>
 
-      {order.paymentMethod === "traditional" && (
-        <TraditionalPaymentInstructions order={order} />
-      )}
-      {order.paymentMethod === "stripe" && (
-        <StripeStatus order={order} /> // Używamy zaimportowanego komponentu
-      )}
+        {order.paymentMethod === "traditional" && (
+          <TraditionalPaymentInstructions order={order} />
+        )}
+        {order.paymentMethod === "stripe" && <StripeStatus order={order} />}
 
-      <div className="mt-10">
-        <h2 className="text-2xl font-semibold mb-4 border-b pb-2">
-          Podsumowanie zamówienia
-        </h2>
-        <div className="space-y-4">
-          {order.items.map((item) => (
-            <div
-              key={item.id}
-              className="flex justify-between items-center py-2"
-            >
-              <div>
-                <p className="font-semibold">{item.name}</p>
-                <p className="text-sm text-gray-600">
-                  Rozmiar: {item.size} | Ilość: {item.quantity} x{" "}
-                  {item.price.toFixed(2)} PLN
+        {/* Podsumowanie – bez zmian */}
+        <div className="mt-10">
+          <h2 className="text-2xl font-semibold mb-4 border-b pb-2 text-gray-800">
+            Podsumowanie zamówienia
+          </h2>
+          <div className="space-y-4">
+            {order.items.map((item) => (
+              <div
+                key={item.id}
+                className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 border-b last:border-b-0"
+              >
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-900">{item.name}</p>
+                  <p className="text-sm text-gray-600">
+                    Rozmiar: <strong>{item.size}</strong> | Ilość:{" "}
+                    <strong>{item.quantity}</strong> x {item.price.toFixed(2)}{" "}
+                    PLN
+                  </p>
+                </div>
+                <p className="font-semibold text-gray-800 mt-2 sm:mt-0">
+                  {(item.price * item.quantity).toFixed(2)} PLN
                 </p>
               </div>
-              <p className="font-semibold">
-                {(item.price * item.quantity).toFixed(2)} PLN
-              </p>
+            ))}
+          </div>
+
+          <div className="border-t pt-4 mt-6 space-y-2">
+            <div className="flex justify-between text-gray-700">
+              <span>Dostawa ({order.deliveryMethod})</span>
+              <span>{order.deliveryCost.toFixed(2)} PLN</span>
             </div>
-          ))}
-        </div>
-        <div className="border-t pt-4 mt-4 space-y-2">
-          <div className="flex justify-between">
-            <span className="text-gray-600">
-              Dostawa ({order.deliveryMethod})
-            </span>
-            <span>{order.deliveryCost.toFixed(2)} PLN</span>
-          </div>
-          <div className="flex justify-between text-xl font-bold">
-            <span>Łącznie</span>
-            <span>{order.totalAmount.toFixed(2)} PLN</span>
+            <div className="flex justify-between text-xl font-bold text-gray-900">
+              <span>Łącznie</span>
+              <span>{order.totalAmount.toFixed(2)} PLN</span>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="mt-10">
-        <h2 className="text-2xl font-semibold mb-4 border-b pb-2">
-          Adres dostawy
-        </h2>
-        <div className="bg-gray-50 p-4 rounded-md">
-          <p className="font-semibold">
-            {order.firstName} {order.lastName}
-          </p>
+
+        {/* Adres dostawy */}
+        <div className="mt-10">
+          <h2 className="text-2xl font-semibold mb-4 border-b pb-2 text-gray-800">
+            Adres dostawy
+          </h2>
+          <div className="bg-gray-50 p-5 rounded-lg">
+            <p className="font-semibold text-gray-900">
+              {order.firstName} {order.lastName}
+            </p>
+            <p className="text-gray-700">
+              {order.email} | tel: {order.phone}
+            </p>
+            <p className="text-gray-700">{order.street}</p>
+            <p className="text-gray-700">
+              {order.postalCode} {order.city}
+            </p>
+            {order.deliveryMethod === "paczkomat" && (
+              <p className="font-semibold text-gray-900 mt-3">
+                Paczkomat: {order.paczkomat}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-12 text-center text-sm text-gray-500">
           <p>
-            {order.email} | tel: {order.phone}
+            Masz pytania? Napisz na{" "}
+            <a
+              href="mailto:mwidel@pantofle-karpaty.pl"
+              className="text-blue-600 underline"
+            >
+              mwidel@pantofle-karpaty.pl
+            </a>{" "}
+            lub zadzwoń: <strong>+48 608 238 103</strong>
           </p>
-          <p>{order.street}</p>
-          <p>
-            {order.postalCode} {order.city}
-          </p>
-          {order.deliveryMethod === "paczkomat" && (
-            <p className="font-semibold mt-2">Paczkomat: {order.paczkomat}</p>
-          )}
         </div>
       </div>
     </div>

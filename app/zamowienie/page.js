@@ -4,6 +4,17 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../api/auth/[...nextauth]/route";
 import prisma from "../lib/prisma";
 
+export const metadata = {
+  title: "Finalizacja zamówienia | Pantofle Karpaty",
+  description:
+    "Złóż zamówienie. Bezpieczne płatności, szybka dostawa. Pantofle Karpaty.",
+  alternates: {
+    canonical: "/zamowienie",
+  },
+  robots: "noindex, nofollow", // Prywatna strona – NIE w Google
+};
+
+// === Pobierz dane użytkownika i adres główny ===
 async function getUserData(email) {
   if (!email) return { user: null, primaryAddress: null };
 
@@ -12,16 +23,13 @@ async function getUserData(email) {
       where: { email },
       include: {
         addresses: {
-          orderBy: {
-            isPrimary: "desc", // Najpierw te z `isPrimary: true`
-          },
+          orderBy: { isPrimary: "desc" }, // Najpierw główny
         },
       },
     });
 
     if (!user) return { user: null, primaryAddress: null };
 
-    // Znajdź adres główny (lub pierwszy dowolny, jeśli żaden nie jest główny)
     const primaryAddress =
       user.addresses.find((addr) => addr.isPrimary) ||
       user.addresses[0] ||
@@ -35,26 +43,31 @@ async function getUserData(email) {
 }
 
 export default async function CheckoutPage() {
-  // 1. Pobierz sesję na serwerze
+  // 1. Sesja (server-side)
   const session = await getServerSession(authOptions);
 
-  // 2. Pobierz dane użytkownika i jego domyślny adres
+  // 2. Dane użytkownika i adres
   const { user, primaryAddress } = await getUserData(session?.user?.email);
 
   return (
-    <div className="max-w-4xl mx-auto my-12 2xl:my-24">
-      <h1 className="text-2xl lg:text-3xl font-bold text-center px-4">Finalizacja zamówienia</h1>
+    <div className="max-w-4xl mx-auto my-12 2xl:my-24 px-4">
+      <h1 className="text-2xl lg:text-3xl font-bold text-center mb-8">
+        Finalizacja zamówienia
+      </h1>
 
-      {/* Suspense jest nadal przydatny do ładowania komponentu klienckiego */}
+      {/* Suspense – ładuje komponent kliencki */}
       <Suspense
         fallback={
-          <div className="p-4 border rounded-md">Ładowanie formularza...</div>
+          <div className="bg-white p-6 rounded-lg shadow text-center text-gray-600">
+            Ładowanie formularza...
+          </div>
         }
       >
-        {/* Przekaż pobrane dane jako propsy do CheckoutForm */}
+        {/* Przekaż dane do CheckoutForm */}
         <CheckoutForm
           primaryAddress={primaryAddress}
           userName={user?.name || session?.user?.name || ""}
+          userEmail={session?.user?.email || ""}
         />
       </Suspense>
     </div>

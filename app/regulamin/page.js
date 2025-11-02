@@ -1,3 +1,15 @@
+import { Metadata } from "next";
+
+export const metadata = {
+  title: "Regulamin Sklepu | Pantofle Karpaty",
+  description:
+    "Pełny regulamin sklepu internetowego KARPATY. Zasady zakupów, zwroty, reklamacje, dane osobowe. Wszystko jasno i zgodnie z prawem.",
+  alternates: {
+    canonical: "/regulamin",
+  },
+  robots: "index, follow",
+};
+
 export default function RegulaminSklepu() {
   return (
     <div className="max-w-5xl mx-auto p-6 sm:p-8 lg:p-12 bg-white shadow-lg rounded-xl">
@@ -14,10 +26,10 @@ export default function RegulaminSklepu() {
           <li>
             Sklep internetowy <strong>KARPATY</strong>, dostępny pod adresem{" "}
             <a
-              href="https://www.sklep-pantofle-karpaty.pl"
+              href="https://www.pantofle-karpaty.pl"
               className="text-blue-600 hover:text-blue-800 transition-colors underline"
             >
-              www.sklep-pantofle-karpaty.pl
+              www.pantofle-karpaty.pl
             </a>
             , prowadzony jest przez <strong>Macieja Wideł</strong> prowadzącego
             działalność gospodarczą pod firmą{" "}
@@ -60,7 +72,7 @@ export default function RegulaminSklepu() {
             },
             {
               term: "Sklep",
-              def: "sklep internetowy dostępny pod adresem www.sklep-pantofle-karpaty.pl.",
+              def: "sklep internetowy dostępny pod adresem www.pantofle-karpaty.pl.",
             },
             {
               term: "Umowa zawarta na odległość",
