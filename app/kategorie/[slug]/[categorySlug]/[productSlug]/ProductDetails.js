@@ -26,9 +26,9 @@ export default function ProductDetails({ product }) {
     { name: "Strona główna", href: "/" },
     category?.parent && {
       name: category.parent.name,
-      href: `/kategoria/${category.parent.slug}`,
+      href: `/kategorie/${category.parent.slug}`,
     },
-    category && { name: category.name, href: `/kategoria/${category.slug}` },
+    category && { name: category.name, href: `/kategorie/${category.slug}` },
     { name: product.name, href: null },
   ].filter(Boolean);
 

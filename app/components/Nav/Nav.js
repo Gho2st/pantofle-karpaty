@@ -122,7 +122,7 @@ export default function Nav() {
               categories.map((category) => (
                 <li key={category.id} className="group relative">
                   <Link
-                    href={`/kategoria/${category.slug || category.name}`}
+                    href={`/kategorie/${category.slug || category.name}`}
                     className={`flex items-center ${baseMenuItemClasses} pr-1`}
                   >
                     {category.name}
@@ -140,7 +140,7 @@ export default function Nav() {
                         {category.subcategories.map((subcategory) => (
                           <Link
                             key={subcategory.id}
-                            href={`/kategoria/${category.slug}/${
+                            href={`/kategorie/${category.slug}/${
                               subcategory.slug || subcategory.id
                             }`}
                             className="block px-4 py-3 text-gray-800 hover:bg-gray-100 font-medium transition-colors"
@@ -272,7 +272,7 @@ export default function Nav() {
                     <li key={category.id}>
                       <div className="flex items-center justify-between">
                         <Link
-                          href={`/kategoria/${category.slug || category.name}`}
+                          href={`/kategorie/${category.slug || category.name}`}
                           onClick={() => setIsMobileMenuOpen(false)}
                           className={`${baseMenuItemClasses} flex-1 mr-2 text-gray-800`}
                         >
@@ -305,7 +305,7 @@ export default function Nav() {
                             {category.subcategories.map((subcategory) => (
                               <li key={subcategory.id}>
                                 <Link
-                                  href={`/kategoria/${category.slug}/${
+                                  href={`/kategorie/${category.slug}/${
                                     subcategory.slug || subcategory.id
                                   }`}
                                   onClick={() => setIsMobileMenuOpen(false)}
