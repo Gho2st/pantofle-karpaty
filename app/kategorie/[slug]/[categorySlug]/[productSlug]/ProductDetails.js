@@ -85,7 +85,7 @@ export default function ProductDetails({ product }) {
               images.map((image, i) => (
                 <SwiperSlide
                   key={i}
-                  className="aspect-[4/5] bg-gray-100 rounded-md overflow-hidden"
+                  className="aspect-4/5 bg-gray-100 rounded-md overflow-hidden"
                 >
                   <div className="swiper-zoom-container">
                     <Image
@@ -100,7 +100,7 @@ export default function ProductDetails({ product }) {
                 </SwiperSlide>
               ))
             ) : (
-              <SwiperSlide className="aspect-[4/5] bg-gray-100 rounded-md overflow-hidden">
+              <SwiperSlide className="aspect-4/5 bg-gray-100 rounded-md overflow-hidden">
                 <Image
                   src="/placeholder.png"
                   fill

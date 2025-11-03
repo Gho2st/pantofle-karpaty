@@ -64,7 +64,7 @@ export default function Nav() {
     <nav className="bg-white py-3 shadow-sm sticky top-0 z-50">
       <div className="flex justify-between items-center max-w-7xl mx-auto px-4 sm:px-6">
         {/* Logo */}
-        <Link href="/" className="flex-shrink-0">
+        <Link href="/" className="shrink-0">
           <div className="w-32 md:w-40 2xl:w-48">
             <Image
               src="/logo.png"

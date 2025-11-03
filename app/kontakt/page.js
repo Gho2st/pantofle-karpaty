@@ -1,4 +1,5 @@
 import Form from "./Form";
+import Hurt from "./Hurt";
 import Map from "./Map";
 
 export const metadata = {
@@ -10,8 +11,15 @@ export const metadata = {
 export default function Contact() {
   return (
     <>
-      <Form />
-      <Map />
+      <section>
+        <Form />
+      </section>
+      <section>
+        <Hurt />
+      </section>
+      <section>
+        <Map />
+      </section>
     </>
   );
 }
