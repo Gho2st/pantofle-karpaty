@@ -3,8 +3,8 @@
 
 import { signIn } from "next-auth/react";
 import { ExternalLink } from "lucide-react";
+import { useEffect, useState } from "react";
 
-// Ikona Google (możesz przenieść do osobnego pliku)
 const GoogleIcon = () => (
   <svg
     className="w-5 h-5 mr-3"
@@ -30,19 +30,29 @@ const GoogleIcon = () => (
   </svg>
 );
 
-// DETEKCJA iOS + MESSENGER
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-const isInMessenger = /fbav|fb_iab|messenger/i.test(navigator.userAgent);
-const isInWebView = isIOS && isInMessenger;
-
 export default function ClientSignIn({ providers }) {
+  const [isClient, setIsClient] = useState(false);
+  const [directGoogleUrl, setDirectGoogleUrl] = useState("");
+
+  // Czekamy, aż klient się załaduje
+  useEffect(() => {
+    setIsClient(true);
+    setDirectGoogleUrl(
+      `${
+        window.location.origin
+      }/api/auth/signin/google?callbackUrl=${encodeURIComponent("/")}`
+    );
+  }, []);
+
+  // DETEKCJA iOS + MESSENGER (tylko po stronie klienta)
+  const isIOS = isClient && /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isInMessenger =
+    isClient && /fbav|fb_iab|messenger/i.test(navigator.userAgent);
+  const isInWebView = isIOS && isInMessenger;
+
   if (!providers?.google) {
     return <p className="text-red-500">Brak Google.</p>;
   }
-
-  const directGoogleUrl = `${
-    window.location.origin
-  }/api/auth/signin/google?callbackUrl=${encodeURIComponent("/")}`;
 
   return (
     <div className="space-y-4">
