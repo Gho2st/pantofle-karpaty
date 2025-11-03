@@ -1,6 +1,5 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-// import FacebookProvider from "next-auth/providers/facebook";
 import prisma from "@/app/lib/prisma";
 
 const authOptions = {
@@ -18,7 +17,7 @@ const authOptions = {
         },
       },
       // DODAJ TO:
-      checks: ["none"], // Wyłącza weryfikację stanu w WebView
+      checks: ["none"], // Wyłącza weryfikację stanu w WebView .
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
