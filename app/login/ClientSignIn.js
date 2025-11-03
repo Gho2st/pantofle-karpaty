@@ -1,3 +1,4 @@
+// components/ClientSignIn.jsx
 "use client";
 
 import { signIn } from "next-auth/react";
@@ -32,50 +33,68 @@ const providerConfig = {
   google: {
     icon: <GoogleIcon />,
     className:
-      "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50", // Styl przycisku Google
+      "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50",
   },
-  // Domyślny styl dla innych dostawców (jak poprzedni niebieski)
   default: {
     icon: <LogIn className="w-5 h-5 mr-3" />,
     className: "bg-blue-600 text-white hover:bg-blue-700",
   },
 };
 
-// Funkcja pomocnicza do pobierania ikony i stylu
-const getProviderConfig = (id) => {
-  const providerId = id.toLowerCase();
-  return providerConfig[providerId] || providerConfig.default;
+const getProviderConfig = (id) =>
+  providerConfig[id.toLowerCase()] || providerConfig.default;
+
+// DETEKCJA MESSENGERA / WEBVIEW
+const isInMessenger = () => {
+  const ua = navigator.userAgent.toLowerCase();
+  return (
+    ua.includes("fbav") || ua.includes("fb_iab") || ua.includes("messenger")
+  ); // Facebook/Messenger WebView
 };
 
 export default function ClientSignIn({ providers }) {
   if (!providers) {
-    return (
-      <p className="text-red-500">Brak skonfigurowanych dostawców logowania.</p>
-    );
+    return <p className="text-red-500">Brak dostawców logowania.</p>;
   }
 
+  const handleGoogleSignIn = () => {
+    if (isInMessenger()) {
+      // W MESSENGERZE: Otwórz bezpośredni link do zewnętrznej przeglądarki
+      const authUrl = `${window.location.origin}/api/auth/signin/google?callbackUrl=/`;
+      window.open(authUrl, "_system"); // _system = systemowa przeglądarka (Chrome/Safari)
+      return;
+    }
+
+    // Normalnie: Użyj next-auth
+    signIn("google", {
+      callbackUrl: "/",
+      redirect: true,
+    });
+  };
+
   return (
-    // Używamy `space-y-4` do automatycznego zarządzania odstępami
     <div className="space-y-4">
       {Object.values(providers).map((provider) => {
-        // Pobieramy dedykowaną ikonę i styl
         const config = getProviderConfig(provider.id);
 
         return (
-          <div key={provider.name}>
+          <div key={provider.id}>
             <button
-              onClick={() =>
-                signIn(provider.id, { callbackUrl: "/", redirect: true })
-              } // Dodajemy callbackUrl dla pewności
-              // Wspólne style przycisku + dynamiczne style z konfiguracji
+              onClick={handleGoogleSignIn} // Użyj funkcji z detekcją
               className={`w-full flex items-center justify-center px-4 py-2.5 text-base font-medium rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${config.className}`}
             >
-              {config.icon} {/* Renderujemy dynamiczną ikonę */}
+              {config.icon}
               Zaloguj się przez {provider.name}
             </button>
           </div>
         );
       })}
+      {isInMessenger() && (
+        <p className="text-xs text-orange-600 text-center mt-2">
+          Otworzy się Chrome/Safari – dla bezpieczeństwa Google blokuje WebView
+          w Messengerze.
+        </p>
+      )}
     </div>
   );
 }
