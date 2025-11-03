@@ -1,9 +1,10 @@
-// components/ClientSignIn.jsx
+// app/login/ClientSignIn.jsx
 "use client";
 
 import { signIn } from "next-auth/react";
-import { LogIn, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 
+// Ikona Google (możesz przenieść do osobnego pliku)
 const GoogleIcon = () => (
   <svg
     className="w-5 h-5 mr-3"
@@ -29,39 +30,16 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const providerConfig = {
-  google: {
-    icon: <GoogleIcon />,
-    className:
-      "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50",
-  },
-  default: {
-    icon: <LogIn className="w-5 h-5 mr-3" />,
-    className: "bg-blue-600 text-white hover:bg-blue-700",
-  },
-};
-
-const getProviderConfig = (id) =>
-  providerConfig[id.toLowerCase()] || providerConfig.default;
-
 // DETEKCJA iOS + MESSENGER
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 const isInMessenger = /fbav|fb_iab|messenger/i.test(navigator.userAgent);
 const isInWebView = isIOS && isInMessenger;
 
 export default function ClientSignIn({ providers }) {
-  if (!providers) {
-    return <p className="text-red-500">Brak dostawców logowania.</p>;
+  if (!providers?.google) {
+    return <p className="text-red-500">Brak Google.</p>;
   }
 
-  const googleProvider = Object.values(providers).find(
-    (p) => p.id === "google"
-  );
-  if (!googleProvider) return null;
-
-  const config = getProviderConfig("google");
-
-  // Bezpośredni link do logowania Google (otwiera w Safari)
   const directGoogleUrl = `${
     window.location.origin
   }/api/auth/signin/google?callbackUrl=${encodeURIComponent("/")}`;
@@ -69,31 +47,28 @@ export default function ClientSignIn({ providers }) {
   return (
     <div className="space-y-4">
       {isInWebView ? (
-        // iOS + MESSENGER: Pokaż wyraźny link
         <a
           href={directGoogleUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className={`w-full flex items-center justify-center px-4 py-2.5 text-base font-medium rounded-lg shadow-sm transition-all duration-200 ${config.className}`}
+          className="w-full flex items-center justify-center px-4 py-2.5 text-base font-medium rounded-lg shadow-sm transition-all bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
         >
-          {config.icon}
+          <GoogleIcon />
           Otwórz w Safari <ExternalLink className="w-4 h-4 ml-1" />
         </a>
       ) : (
-        // Normalnie: Użyj next-auth
         <button
           onClick={() => signIn("google", { callbackUrl: "/", redirect: true })}
-          className={`w-full flex items-center justify-center px-4 py-2.5 text-base font-medium rounded-lg shadow-sm transition-all duration-200 ${config.className}`}
+          className="w-full flex items-center justify-center px-4 py-2.5 text-base font-medium rounded-lg shadow-sm transition-all bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
         >
-          {config.icon}
+          <GoogleIcon />
           Zaloguj się przez Google
         </button>
       )}
 
-      {/* Komunikat dla iOS */}
       {isInWebView && (
         <p className="text-xs text-orange-600 text-center mt-2">
-          iOS wymaga ręcznego otwarcia w Safari. Kliknij przycisk powyżej.
+          Kliknij, by otworzyć w Safari
         </p>
       )}
     </div>

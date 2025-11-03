@@ -1,6 +1,3 @@
-// app/polityka-prywatnosci/page.js
-import { Metadata } from "next";
-
 export const metadata = {
   title: "Polityka Prywatności | Pantofle Karpaty",
   description:
