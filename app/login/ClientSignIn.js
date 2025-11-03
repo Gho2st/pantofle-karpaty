@@ -2,7 +2,7 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { LogIn } from "lucide-react";
+import { LogIn, ExternalLink } from "lucide-react";
 
 const GoogleIcon = () => (
   <svg
@@ -44,55 +44,56 @@ const providerConfig = {
 const getProviderConfig = (id) =>
   providerConfig[id.toLowerCase()] || providerConfig.default;
 
-// DETEKCJA MESSENGERA / WEBVIEW
-const isInMessenger = () => {
-  const ua = navigator.userAgent.toLowerCase();
-  return (
-    ua.includes("fbav") || ua.includes("fb_iab") || ua.includes("messenger")
-  ); // Facebook/Messenger WebView
-};
+// DETEKCJA iOS + MESSENGER
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+const isInMessenger = /fbav|fb_iab|messenger/i.test(navigator.userAgent);
+const isInWebView = isIOS && isInMessenger;
 
 export default function ClientSignIn({ providers }) {
   if (!providers) {
     return <p className="text-red-500">Brak dostawców logowania.</p>;
   }
 
-  const handleGoogleSignIn = () => {
-    if (isInMessenger()) {
-      // W MESSENGERZE: Otwórz bezpośredni link do zewnętrznej przeglądarki
-      const authUrl = `${window.location.origin}/api/auth/signin/google?callbackUrl=/`;
-      window.open(authUrl, "_system"); // _system = systemowa przeglądarka (Chrome/Safari)
-      return;
-    }
+  const googleProvider = Object.values(providers).find(
+    (p) => p.id === "google"
+  );
+  if (!googleProvider) return null;
 
-    // Normalnie: Użyj next-auth
-    signIn("google", {
-      callbackUrl: "/",
-      redirect: true,
-    });
-  };
+  const config = getProviderConfig("google");
+
+  // Bezpośredni link do logowania Google (otwiera w Safari)
+  const directGoogleUrl = `${
+    window.location.origin
+  }/api/auth/signin/google?callbackUrl=${encodeURIComponent("/")}`;
 
   return (
     <div className="space-y-4">
-      {Object.values(providers).map((provider) => {
-        const config = getProviderConfig(provider.id);
+      {isInWebView ? (
+        // iOS + MESSENGER: Pokaż wyraźny link
+        <a
+          href={directGoogleUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`w-full flex items-center justify-center px-4 py-2.5 text-base font-medium rounded-lg shadow-sm transition-all duration-200 ${config.className}`}
+        >
+          {config.icon}
+          Otwórz w Safari <ExternalLink className="w-4 h-4 ml-1" />
+        </a>
+      ) : (
+        // Normalnie: Użyj next-auth
+        <button
+          onClick={() => signIn("google", { callbackUrl: "/", redirect: true })}
+          className={`w-full flex items-center justify-center px-4 py-2.5 text-base font-medium rounded-lg shadow-sm transition-all duration-200 ${config.className}`}
+        >
+          {config.icon}
+          Zaloguj się przez Google
+        </button>
+      )}
 
-        return (
-          <div key={provider.id}>
-            <button
-              onClick={handleGoogleSignIn} // Użyj funkcji z detekcją
-              className={`w-full flex items-center justify-center px-4 py-2.5 text-base font-medium rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${config.className}`}
-            >
-              {config.icon}
-              Zaloguj się przez {provider.name}
-            </button>
-          </div>
-        );
-      })}
-      {isInMessenger() && (
+      {/* Komunikat dla iOS */}
+      {isInWebView && (
         <p className="text-xs text-orange-600 text-center mt-2">
-          Otworzy się Chrome/Safari – dla bezpieczeństwa Google blokuje WebView
-          w Messengerze.
+          iOS wymaga ręcznego otwarcia w Safari. Kliknij przycisk powyżej.
         </p>
       )}
     </div>
