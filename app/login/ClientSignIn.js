@@ -53,7 +53,7 @@ export default function ClientSignIn({ providers }) {
           Logowanie Google nie działa w Messengerze
         </p>
         <p className="text-xs text-orange-700">
-          Aby się zalogować, skopiuj link i otwórz stronę w przeglądarce Safari.
+          Aby się zalogować, skopiuj link i otwórz stronę w przeglądarce.
         </p>
         <p className="text-xs text-slate-500 pt-2 border-t border-orange-200 mt-2">
           (Problem wynika z blokad bezpieczeństwa Google i Meta)
