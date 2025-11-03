@@ -315,6 +315,7 @@ export default function CheckoutForm({ primaryAddress, userName }) {
             touchedFields={touchedFields}
             setTouchedFields={setTouchedFields}
             validateField={validateField}
+            setErrors={setErrors} // <--- DODAJ TO
           />
           <div className="mt-6">
             <PaymentMethodSelector

@@ -11,7 +11,7 @@ export const metadata = {
   alternates: {
     canonical: "/zamowienie",
   },
-  robots: "noindex, nofollow", // Prywatna strona – NIE w Google
+  robots: "noindex, nofollow",
 };
 
 // === Pobierz dane użytkownika i adres główny ===
@@ -23,7 +23,7 @@ async function getUserData(email) {
       where: { email },
       include: {
         addresses: {
-          orderBy: { isPrimary: "desc" }, // Najpierw główny
+          orderBy: { isPrimary: "desc" },
         },
       },
     });
@@ -43,10 +43,10 @@ async function getUserData(email) {
 }
 
 export default async function CheckoutPage() {
-  // 1. Sesja (server-side)
+  // 1. Sesja
   const session = await getServerSession(authOptions);
 
-  // 2. Dane użytkownika i adres
+  // 2. Dane użytkownika
   const { user, primaryAddress } = await getUserData(session?.user?.email);
 
   return (
@@ -55,7 +55,6 @@ export default async function CheckoutPage() {
         Finalizacja zamówienia
       </h1>
 
-      {/* Suspense – ładuje komponent kliencki */}
       <Suspense
         fallback={
           <div className="bg-white p-6 rounded-lg shadow text-center text-gray-600">
@@ -63,8 +62,9 @@ export default async function CheckoutPage() {
           </div>
         }
       >
-        {/* Przekaż dane do CheckoutForm */}
+        {/* PRZEKAŻ WSZYSTKO, CO POTRZEBA */}
         <CheckoutForm
+          session={session} // <--- DODANE!
           primaryAddress={primaryAddress}
           userName={user?.name || session?.user?.name || ""}
           userEmail={session?.user?.email || ""}

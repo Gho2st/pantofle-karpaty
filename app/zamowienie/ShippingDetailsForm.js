@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+"use client";
+import React from "react";
 import InPostGeowidget from "../components/InpostMap";
 
 const InputField = ({
@@ -12,21 +13,19 @@ const InputField = ({
   touched,
   setTouchedFields,
   validateField,
+  setErrors,
   ...rest
 }) => {
-  const [internalTouched, setInternalTouched] = useState(false);
+  const [internalTouched, setInternalTouched] = React.useState(false);
   const isTouched = touched || internalTouched;
 
   const handleBlur = () => {
     setInternalTouched(true);
-    if (setTouchedFields) {
-      setTouchedFields((prev) => ({ ...prev, [name]: true }));
-    }
-    if (validateField && !error) {
+    setTouchedFields?.((prev) => ({ ...prev, [name]: true }));
+
+    if (validateField && setErrors) {
       const fieldError = validateField(name, value);
-      if (fieldError) {
-        // Błąd zostanie ustawiony w rodzicu
-      }
+      setErrors((prev) => ({ ...prev, [name]: fieldError }));
     }
   };
 
@@ -70,7 +69,23 @@ export default function ShippingDetailsForm({
   touchedFields,
   setTouchedFields,
   validateField,
+  setErrors,
 }) {
+  // === WALIDACJA TELEFONU: dokładnie 9 cyfr (np. 666521401) ===
+  const validatePhone = (value) => {
+    const cleaned = value.replace(/[\s\-\+]/g, "");
+    if (cleaned.length !== 9 || !/^\d+$/.test(cleaned)) {
+      return "Podaj numer telefonu – dokładnie 9 cyfr (np. 666521401)";
+    }
+    return undefined;
+  };
+
+  // === Połącz walidację z CheckoutForm + telefon 9 cyfr ===
+  const getFieldError = (name, value) => {
+    if (name === "phone") return validatePhone(value);
+    return validateField(name, value);
+  };
+
   return (
     <>
       <style jsx>{`
@@ -112,24 +127,26 @@ export default function ShippingDetailsForm({
               label="Nazwa firmy"
               name="companyName"
               required
-              value={formData.companyName}
+              value={formData.companyName || ""}
               onChange={handleInputChange}
               error={errors.companyName}
               touched={touchedFields.companyName}
               setTouchedFields={setTouchedFields}
-              validateField={validateField}
+              validateField={getFieldError}
+              setErrors={setErrors}
               placeholder="np. Firma Łączność Sp. z o.o."
             />
             <InputField
               label="NIP"
               name="nip"
               required
-              value={formData.nip}
+              value={formData.nip || ""}
               onChange={handleInputChange}
               error={errors.nip}
               touched={touchedFields.nip}
               setTouchedFields={setTouchedFields}
-              validateField={validateField}
+              validateField={getFieldError}
+              setErrors={setErrors}
               placeholder="1234567890"
             />
           </>
@@ -139,24 +156,26 @@ export default function ShippingDetailsForm({
           label="Imię"
           name="firstName"
           required={!isCompanyPurchase}
-          value={formData.firstName}
+          value={formData.firstName || ""}
           onChange={handleInputChange}
           error={errors.firstName}
           touched={touchedFields.firstName}
           setTouchedFields={setTouchedFields}
-          validateField={validateField}
+          validateField={getFieldError}
+          setErrors={setErrors}
         />
 
         <InputField
           label="Nazwisko"
           name="lastName"
           required={!isCompanyPurchase}
-          value={formData.lastName}
+          value={formData.lastName || ""}
           onChange={handleInputChange}
           error={errors.lastName}
           touched={touchedFields.lastName}
           setTouchedFields={setTouchedFields}
-          validateField={validateField}
+          validateField={getFieldError}
+          setErrors={setErrors}
         />
 
         <div>
@@ -165,12 +184,13 @@ export default function ShippingDetailsForm({
             name="email"
             type="email"
             required
-            value={formData.email}
+            value={formData.email || ""}
             onChange={handleInputChange}
             error={errors.email}
             touched={touchedFields.email}
             setTouchedFields={setTouchedFields}
-            validateField={validateField}
+            validateField={getFieldError}
+            setErrors={setErrors}
           />
           {session?.user?.email && formData.email !== session.user.email && (
             <p className="mt-1 text-sm text-amber-600">
@@ -181,18 +201,20 @@ export default function ShippingDetailsForm({
           )}
         </div>
 
+        {/* TELEFON – 9 CYFR */}
         <InputField
           label="Telefon"
           name="phone"
           type="tel"
           required
-          value={formData.phone}
+          value={formData.phone || ""}
           onChange={handleInputChange}
           error={errors.phone}
           touched={touchedFields.phone}
           setTouchedFields={setTouchedFields}
-          validateField={validateField}
-          placeholder="+48123456789 lub 123456789"
+          validateField={getFieldError}
+          setErrors={setErrors}
+          placeholder="666521401"
         />
 
         <div className="md:col-span-2">
@@ -200,12 +222,13 @@ export default function ShippingDetailsForm({
             label="Ulica i numer"
             name="street"
             required
-            value={formData.street}
+            value={formData.street || ""}
             onChange={handleInputChange}
             error={errors.street}
             touched={touchedFields.street}
             setTouchedFields={setTouchedFields}
-            validateField={validateField}
+            validateField={getFieldError}
+            setErrors={setErrors}
             placeholder="np. Marszałkowska 1/2"
           />
         </div>
@@ -214,12 +237,13 @@ export default function ShippingDetailsForm({
           label="Kod pocztowy"
           name="postalCode"
           required
-          value={formData.postalCode}
+          value={formData.postalCode || ""}
           onChange={handleInputChange}
           error={errors.postalCode}
           touched={touchedFields.postalCode}
           setTouchedFields={setTouchedFields}
-          validateField={validateField}
+          validateField={getFieldError}
+          setErrors={setErrors}
           placeholder="np. 12-345 lub 12345"
         />
 
@@ -227,12 +251,13 @@ export default function ShippingDetailsForm({
           label="Miasto"
           name="city"
           required
-          value={formData.city}
+          value={formData.city || ""}
           onChange={handleInputChange}
           error={errors.city}
           touched={touchedFields.city}
           setTouchedFields={setTouchedFields}
-          validateField={validateField}
+          validateField={getFieldError}
+          setErrors={setErrors}
         />
 
         {deliveryMethod === "paczkomat" && (
@@ -244,7 +269,12 @@ export default function ShippingDetailsForm({
               token={INPOST_TOKEN}
               language="pl"
               config="parcelCollectPayment"
-              onPointSelect={handlePointSelection}
+              onPointSelect={(point) => {
+                handlePointSelection(point);
+                setTouchedFields((prev) => ({ ...prev, parcelLocker: true }));
+                const error = point ? undefined : "Wybierz paczkomat";
+                setErrors((prev) => ({ ...prev, parcelLocker: error }));
+              }}
             />
             {errors.parcelLocker && touchedFields.parcelLocker && (
               <p className="mt-1 text-sm text-red-600 animate-in fade-in duration-200">
@@ -264,7 +294,7 @@ export default function ShippingDetailsForm({
               value={formData.courierInstructions || ""}
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-              rows="3"
+              rows={3}
               placeholder="Np. zostaw paczkę u sąsiada pod numerem 5"
             />
           </div>
