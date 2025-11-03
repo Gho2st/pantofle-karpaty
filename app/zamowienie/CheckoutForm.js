@@ -1,6 +1,6 @@
 "use client";
 import { useSession } from "next-auth/react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useCart } from "@/app/context/cartContext";
 import { useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
@@ -15,36 +15,28 @@ const PageLoader = ({ text }) => (
     <span className="mt-4 text-lg text-gray-700">{text}</span>
   </div>
 );
-// ---
 
 const splitName = (fullName = "") => {
-  const parts = (fullName || "").split(" ");
+  const parts = (fullName || "").trim().split(" ");
   const firstName = parts[0] || "";
   const lastName = parts.slice(1).join(" ") || "";
   return { firstName, lastName };
 };
 
 export default function CheckoutForm({ primaryAddress, userName }) {
-  // const INPOST_TOKEN = process.env.NEXT_PUBLIC_INPOST_SANDBOX_TOKEN;
   const INPOST_TOKEN = process.env.NEXT_PUBLIC_INPOST_TOKEN;
 
-  // 1. Pobierz status sesji
   const { data: session, status: sessionStatus } = useSession();
-
-  // 2. Zmień nazwę 'loading' z useCart na 'isCartLoading'
   const { cartItems, clearCart, loading: isCartLoading } = useCart();
-
   const searchParams = useSearchParams();
 
-  // 3. Zmień nazwę 'loading' na 'isStripeProcessing'
   const [isStripeProcessing, setIsStripeProcessing] = useState(false);
-
   const [isCompanyPurchase, setIsCompanyPurchase] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("stripe");
   const { firstName, lastName } = splitName(userName);
 
   const [formData, setFormData] = useState({
-    email: session?.user.email || "",
+    email: session?.user?.email || "",
     firstName: firstName || "",
     lastName: lastName || "",
     street: primaryAddress?.street || "",
@@ -58,11 +50,15 @@ export default function CheckoutForm({ primaryAddress, userName }) {
     courierInstructions: "",
   });
 
-  const [deliveryMethod, setDeliveryMethod] = useState(
+  const [deliveryMethod] = useState(
     searchParams.get("deliveryMethod") || "paczkomat"
   );
 
-  // Aktualizuj email w formData, gdy sesja się załaduje
+  // Walidacja i błędy
+  const [touchedFields, setTouchedFields] = useState({});
+  const [errors, setErrors] = useState({});
+  const formRef = useRef(null);
+
   useEffect(() => {
     if (session?.user?.email && !formData.email) {
       setFormData((prev) => ({ ...prev, email: session.user.email }));
@@ -90,6 +86,9 @@ export default function CheckoutForm({ primaryAddress, userName }) {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
   };
 
   const handleCompanyPurchaseToggle = () => {
@@ -118,9 +117,141 @@ export default function CheckoutForm({ primaryAddress, userName }) {
     }
   }, []);
 
+  // Walidacja pojedynczego pola
+  const validateField = (name, value) => {
+    const labels = {
+      firstName: "Imię",
+      lastName: "Nazwisko",
+      email: "E-mail",
+      phone: "Telefon",
+      street: "Ulica i numer",
+      postalCode: "Kod pocztowy",
+      city: "Miasto",
+      companyName: "Nazwa firmy",
+      nip: "NIP",
+    };
+
+    const required = [
+      "email",
+      "phone",
+      "street",
+      "postalCode",
+      "city",
+      ...(isCompanyPurchase ? ["companyName", "nip"] : []),
+      ...(!isCompanyPurchase ? ["firstName", "lastName"] : []),
+    ];
+
+    if (!value && required.includes(name)) {
+      return `${labels[name]} wymagane`;
+    }
+
+    switch (name) {
+      case "companyName":
+        if (value.length < 2)
+          return "Nazwa firmy musi mieć co najmniej 2 znaki";
+        if (!/^[a-zA-ZąĄćĆęĘłŁńŃóÓśŚźŹżŻ0-9\s.,&-]+$/.test(value))
+          return "Nazwa firmy może zawierać litery (w tym polskie znaki), cyfry, spacje, kropki, przecinki, & lub -";
+        break;
+
+      case "nip":
+        const nip = value.replace(/[\s-]/g, "");
+        if (nip.length !== 10) return "NIP musi mieć dokładnie 10 cyfr";
+        if (!/^\d{10}$/.test(nip)) return "NIP może zawierać tylko cyfry";
+        const weights = [6, 5, 7, 2, 3, 4, 5, 6, 7];
+        let sum = 0;
+        for (let i = 0; i < 9; i++) sum += parseInt(nip[i]) * weights[i];
+        const checksum = sum % 11;
+        if (checksum !== parseInt(nip[9])) return "Nieprawidłowy numer NIP";
+        break;
+
+      case "firstName":
+      case "lastName":
+        if (value.length < 2)
+          return `${labels[name]} musi mieć co najmniej 2 znaki`;
+        if (!/^[a-zA-ZąĄćĆęĘłŁńŃóÓśŚźŹżŻ\s-]+$/.test(value))
+          return `${labels[name]} może zawierać tylko litery (w tym polskie znaki), spacje lub myślniki`;
+        break;
+
+      case "email":
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+          return "Podaj prawidłowy adres e-mail, np. jan.kowalski@example.com";
+        break;
+
+      case "phone":
+        const cleaned = value.replace(/[\s-]/g, "");
+        if (!/^\+?[0-9]{9,12}$/.test(cleaned))
+          return "Numer telefonu musi mieć 9-12 cyfr, np. +48123456789 lub 123456789";
+        if (cleaned.startsWith("+") && cleaned.length < 10)
+          return "Numer z kodem kraju musi mieć co najmniej 10 cyfr";
+        break;
+
+      case "street":
+        if (value.length < 3)
+          return "Ulica i numer muszą mieć co najmniej 3 znaki";
+        break;
+
+      case "postalCode":
+        if (!/^[0-9-]{2,10}$/.test(value))
+          return "Podaj prawidłowy kod pocztowy, np. 12-345 lub 12345";
+        break;
+
+      case "city":
+        if (value.length < 2) return "Miasto musi mieć co najmniej 2 znaki";
+        if (!/^[a-zA-ZąĄćĆęĘłŁńŃóÓśŚźŹżŻ\s-]+$/.test(value))
+          return "Miasto może zawierać tylko litery (w tym polskie znaki), spacje lub myślniki";
+        break;
+
+      default:
+        break;
+    }
+    return "";
+  };
+
+  // Walidacja wszystkich pól
+  const validateAll = () => {
+    const fieldsToValidate = [
+      "email",
+      "phone",
+      "street",
+      "postalCode",
+      "city",
+      ...(isCompanyPurchase ? ["companyName", "nip"] : []),
+      ...(!isCompanyPurchase ? ["firstName", "lastName"] : []),
+    ];
+
+    const newErrors = {};
+    fieldsToValidate.forEach((field) => {
+      const error = validateField(field, formData[field]);
+      if (error) newErrors[field] = error;
+    });
+
+    if (deliveryMethod === "paczkomat" && !formData.parcelLocker) {
+      newErrors.parcelLocker = "Wybierz paczkomat";
+    }
+
+    setErrors(newErrors);
+    setTouchedFields(
+      Object.fromEntries(fieldsToValidate.map((f) => [f, true]))
+    );
+
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // 4. Użyj 'isStripeProcessing'
+
+    if (!validateAll()) {
+      toast.error("Wypełnij poprawnie wszystkie wymagane pola.");
+      // Przewiń do pierwszego błędu
+      setTimeout(() => {
+        const firstError = document.querySelector(".text-red-600");
+        if (firstError) {
+          firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
+      return;
+    }
+
     setIsStripeProcessing(true);
 
     const total = calculateTotal();
@@ -144,26 +275,17 @@ export default function CheckoutForm({ primaryAddress, userName }) {
       if (!response.ok) throw new Error(data.error || "Błąd serwera");
 
       clearCart();
-
-      if (paymentMethod === "stripe" && data.redirectUrl) {
-        window.location.href = data.redirectUrl;
-      } else {
-        window.location.href = data.redirectUrl;
-      }
+      window.location.href = data.redirectUrl;
     } catch (error) {
       toast.error(error.message || "Wystąpił błąd. Spróbuj ponownie.");
-      // 5. Użyj 'isStripeProcessing'
       setIsStripeProcessing(false);
     }
   };
 
-  // 6. GŁÓWNA BLOKADA RENDEROWANIA
-  // Czekaj, aż załaduje się koszyk ORAZ sesja użytkownika
   if (isCartLoading || sessionStatus === "loading") {
     return <PageLoader text="Ładowanie danych zamówienia..." />;
   }
 
-  // Renderuj stronę dopiero, gdy dane są gotowe
   return (
     <div className="container mx-auto py-8">
       <CartSummary
@@ -172,11 +294,11 @@ export default function CheckoutForm({ primaryAddress, userName }) {
         calculateSubtotal={calculateSubtotal}
         calculateDeliveryCost={calculateDeliveryCost}
         calculateTotal={calculateTotal}
-        // 7. Przekaż stan przetwarzania Stripe do CartSummary
         isProcessing={isStripeProcessing}
       />
       {cartItems.length > 0 && (
         <form
+          ref={formRef}
           className="bg-white rounded-lg shadow-md p-6 mb-6"
           onSubmit={handleSubmit}
         >
@@ -188,8 +310,11 @@ export default function CheckoutForm({ primaryAddress, userName }) {
             deliveryMethod={deliveryMethod}
             INPOST_TOKEN={INPOST_TOKEN}
             handlePointSelection={handlePointSelection}
-            parcelLockerDetails={formData.parcelLockerDetails}
             session={session}
+            errors={errors}
+            touchedFields={touchedFields}
+            setTouchedFields={setTouchedFields}
+            validateField={validateField}
           />
           <div className="mt-6">
             <PaymentMethodSelector
@@ -200,14 +325,13 @@ export default function CheckoutForm({ primaryAddress, userName }) {
           <button
             type="submit"
             disabled={
-              // 8. Użyj 'isStripeProcessing'
               isStripeProcessing ||
               cartItems.length === 0 ||
               (deliveryMethod === "paczkomat" && !formData.parcelLocker)
             }
-            className="mt-6 w-full bg-red-600 text-white py-3 rounded-md hover:bg-red-700 disabled:opacity-50"
+            className="mt-6 w-full bg-red-600 text-white py-3 rounded-md hover:bg-red-700 disabled:opacity-50 transition"
           >
-            {isStripeProcessing // 9. Użyj 'isStripeProcessing'
+            {isStripeProcessing
               ? "Przetwarzanie..."
               : `Złóż zamówienie i zapłać (${calculateTotal()} PLN)`}
           </button>
