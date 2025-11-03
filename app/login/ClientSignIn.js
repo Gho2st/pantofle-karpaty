@@ -1,8 +1,6 @@
-// app/login/ClientSignIn.jsx
 "use client";
 
 import { signIn } from "next-auth/react";
-import { ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const GoogleIcon = () => (
@@ -32,17 +30,12 @@ const GoogleIcon = () => (
 
 export default function ClientSignIn({ providers }) {
   const [isClient, setIsClient] = useState(false);
-  const [directGoogleUrl, setDirectGoogleUrl] = useState("");
 
   useEffect(() => {
     setIsClient(true);
-    setDirectGoogleUrl(
-      `${
-        window.location.origin
-      }/api/auth/signin/google?callbackUrl=${encodeURIComponent("/")}`
-    );
   }, []);
 
+  // Wykrywanie WebView dla opcjonalnej wiadomości
   const isIOS = isClient && /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isInMessenger =
     isClient && /fbav|fb_iab|messenger/i.test(navigator.userAgent);
@@ -52,35 +45,23 @@ export default function ClientSignIn({ providers }) {
     return <p className="text-red-500">Brak Google.</p>;
   }
 
-  const handleOpenInSafari = (e) => {
-    e.preventDefault();
-    // JEDYNA METODA, KTÓRA DZIAŁA NA iOS
-    window.location.href = directGoogleUrl;
-  };
-
   return (
     <div className="space-y-4">
-      {isInWebView ? (
-        <button
-          onClick={handleOpenInSafari}
-          className="w-full flex items-center justify-center px-4 py-2.5 text-base font-medium rounded-lg shadow-sm transition-all bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
-        >
-          <GoogleIcon />
-          Otwórz w Safari <ExternalLink className="w-4 h-4 ml-1" />
-        </button>
-      ) : (
-        <button
-          onClick={() => signIn("google", { callbackUrl: "/", redirect: true })}
-          className="w-full flex items-center justify-center px-4 py-2.5 text-base font-medium rounded-lg shadow-sm transition-all bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
-        >
-          <GoogleIcon />
-          Zaloguj się przez Google
-        </button>
-      )}
+      {/* Teraz jest tylko jeden przycisk. 
+        `signIn` zadziała wewnątrz WebView dzięki `checks: ["none"]` w NextAuth.
+      */}
+      <button
+        onClick={() => signIn("google", { callbackUrl: "/", redirect: true })}
+        className="w-full flex items-center justify-center px-4 py-2.5 text-base font-medium rounded-lg shadow-sm transition-all bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
+      >
+        <GoogleIcon />
+        Zaloguj się przez Google
+      </button>
 
+      {/* Opcjonalna wiadomość dla użytkowników w Messengerze */}
       {isInWebView && (
-        <p className="text-xs text-orange-600 text-center mt-2">
-          Kliknij, by otworzyć w Safari
+        <p className="text-xs text-slate-500 text-center mt-2">
+          Logowanie odbywa się w przeglądarce aplikacji Messenger.
         </p>
       )}
     </div>
