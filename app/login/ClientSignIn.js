@@ -30,39 +30,39 @@ const GoogleIcon = () => (
 );
 
 export default function ClientSignIn({ providers }) {
-  // Stan, aby pokazać przycisk tylko wtedy, gdy nie przekierowujemy
-  const [showLoginButton, setShowLoginButton] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    const userAgent = window.navigator.userAgent;
-    const currentUrl = window.location.href;
+    setIsClient(true);
+  }, []);
 
-    // Detekcja iOS (iPhone, iPad, iPod)
-    const isIOS = /iPad|iPhone|iPod/.test(userAgent);
-    // Detekcja Messengera
-    const isInMessenger = /fbav|fb_iab|messenger/i.test(userAgent);
+  const userAgent = isClient ? window.navigator.userAgent : "";
+  const isIOS = isClient && /iPad|iPhone|iPod/.test(userAgent);
+  const isInMessenger = isClient && /fbav|fb_iab|messenger/i.test(userAgent);
+  const isInWebView = isIOS && isInMessenger;
 
-    if (isIOS && isInMessenger) {
-      // ✅ Jesteśmy w Messengerze na iOS. Próbujemy uciec do Safari.
-      // Nie pokazujemy przycisku, bo strona zaraz zniknie.
-      setShowLoginButton(false);
-      window.location.href = `x-safari-${currentUrl}`;
-      return; // Kończymy działanie skryptu
-    }
-
-    // ⛔ Jeśli nie jesteśmy w Messengerze na iOS (np. Android, PC, lub już w Safari),
-    // po prostu pokaż normalny przycisk logowania.
-    setShowLoginButton(true);
-  }, []); // Uruchom tylko raz przy załadowaniu komponentu
-
-  // Nie renderuj niczego, dopóki nie skończymy sprawdzania
-  // lub jeśli nie ma dostawcy Google.
-  if (!showLoginButton || !providers?.google) {
-    // Można tu wstawić spinner ładowania, jeśli chcemy
-    return null;
+  if (!providers?.google) {
+    return <p className="text-red-500">Brak Google.</p>;
   }
 
-  // Ten kod renderuje się tylko wtedy, gdy showLoginButton === true
+  // Jeśli jesteśmy w Messengerze na iOS, pokaż instrukcje
+  if (isInWebView) {
+    return (
+      <div className="p-4 bg-orange-100 border border-orange-300 rounded-lg text-center space-y-2">
+        <p className="text-sm font-medium text-orange-800">
+          Logowanie Google nie działa w Messengerze
+        </p>
+        <p className="text-xs text-orange-700">
+          Aby się zalogować, skopiuj link i otwórz stronę w przeglądarce Safari.
+        </p>
+        <p className="text-xs text-slate-500 pt-2 border-t border-orange-200 mt-2">
+          (Problem wynika z blokad bezpieczeństwa Google i Meta)
+        </p>
+      </div>
+    );
+  }
+
+  // W każdym innym przypadku (Android, PC, Safari) pokaż normalny przycisk
   return (
     <div className="space-y-4">
       <button
