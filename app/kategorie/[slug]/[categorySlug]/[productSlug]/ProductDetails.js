@@ -21,16 +21,36 @@ export default function ProductDetails({ product }) {
   const images = product.images || [];
   const category = product.category;
 
-  // BREADCRUMB
+  // BREADCRUMB – buduje pełną ścieżkę kategorii z rodzicami
+  const buildCategoryPath = (cat) => {
+    if (!cat) return [];
+    const path = [];
+    let current = cat;
+
+    // Zbieramy wszystkie kategorie od bieżącej do korzenia
+    while (current) {
+      const slugPath = current.parent
+        ? `${current.parent.slug}/${current.slug}`
+        : current.slug;
+
+      path.unshift({
+        name: current.name,
+        href: `/kategorie/${slugPath}`,
+      });
+
+      current = current.parent;
+    }
+
+    return path;
+  };
+
+  const categoryPath = buildCategoryPath(category);
+
   const breadcrumb = [
     { name: "Strona główna", href: "/" },
-    category?.parent && {
-      name: category.parent.name,
-      href: `/kategorie/${category.parent.slug}`,
-    },
-    category && { name: category.name, href: `/kategorie/${category.slug}` },
+    ...categoryPath,
     { name: product.name, href: null },
-  ].filter(Boolean);
+  ];
 
   const handleAddToCart = async (e) => {
     e.preventDefault();
@@ -51,7 +71,7 @@ export default function ProductDetails({ product }) {
   return (
     <div className="max-w-7xl mx-auto my-12 md:my-24 px-4">
       {/* BREADCRUMB */}
-      <nav className="text-sm text-gray-600 mb-8">
+      <nav className="text-sm text-center md:text-left text-gray-600 mb-8 xl:mb-12">
         {breadcrumb.map((item, i) => (
           <span key={i}>
             {item.href ? (
