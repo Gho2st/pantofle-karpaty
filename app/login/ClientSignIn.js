@@ -64,7 +64,9 @@ export default function ClientSignIn({ providers }) {
         return (
           <div key={provider.name}>
             <button
-              onClick={() => signIn(provider.id, { callbackUrl: "/" })} // Dodajemy callbackUrl dla pewności
+              onClick={() =>
+                signIn(provider.id, { callbackUrl: "/", redirect: true })
+              } // Dodajemy callbackUrl dla pewności
               // Wspólne style przycisku + dynamiczne style z konfiguracji
               className={`w-full flex items-center justify-center px-4 py-2.5 text-base font-medium rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${config.className}`}
             >

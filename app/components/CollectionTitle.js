@@ -29,7 +29,7 @@ export default function CollectionTitle({
   return (
     <Link
       href={href}
-      className="block transform hover:scale-[1.01] transition duration-300 group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md"
+      className="block transform hover:scale-[1.01] transition duration-300 group bg-white rounded-lg overflow-hidden "
     >
       <div className={imageContainerClasses}>
         <Image
