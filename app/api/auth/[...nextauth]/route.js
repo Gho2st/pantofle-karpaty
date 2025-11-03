@@ -13,7 +13,7 @@ const authOptions = {
           prompt: "consent",
           access_type: "offline",
           response_type: "code",
-          // KLUCZOWE: Wymuś otwieranie w przeglądarce
+          // KLUCZOWE: Wymuś otwieranie w przeglądarce 
           redirect_uri: `${process.env.NEXTAUTH_URL}/api/auth/callback/google`,
         },
       },
