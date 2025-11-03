@@ -34,7 +34,6 @@ export default function ClientSignIn({ providers }) {
   const [isClient, setIsClient] = useState(false);
   const [directGoogleUrl, setDirectGoogleUrl] = useState("");
 
-  // Czekamy, aż klient się załaduje
   useEffect(() => {
     setIsClient(true);
     setDirectGoogleUrl(
@@ -44,7 +43,6 @@ export default function ClientSignIn({ providers }) {
     );
   }, []);
 
-  // DETEKCJA iOS + MESSENGER (tylko po stronie klienta)
   const isIOS = isClient && /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isInMessenger =
     isClient && /fbav|fb_iab|messenger/i.test(navigator.userAgent);
@@ -54,18 +52,22 @@ export default function ClientSignIn({ providers }) {
     return <p className="text-red-500">Brak Google.</p>;
   }
 
+  const handleOpenInSafari = (e) => {
+    e.preventDefault();
+    // JEDYNA METODA, KTÓRA DZIAŁA NA iOS
+    window.location.href = directGoogleUrl;
+  };
+
   return (
     <div className="space-y-4">
       {isInWebView ? (
-        <a
-          href={directGoogleUrl}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={handleOpenInSafari}
           className="w-full flex items-center justify-center px-4 py-2.5 text-base font-medium rounded-lg shadow-sm transition-all bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
         >
           <GoogleIcon />
           Otwórz w Safari <ExternalLink className="w-4 h-4 ml-1" />
-        </a>
+        </button>
       ) : (
         <button
           onClick={() => signIn("google", { callbackUrl: "/", redirect: true })}
