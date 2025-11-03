@@ -123,6 +123,15 @@ export function AdminProvider({ children }) {
         formData.append("name", product.name || "");
         formData.append("slug", product.slug || "");
         formData.append("price", product.price?.toString() || "");
+        if (product.promoPrice !== null && product.promoPrice !== undefined) {
+          formData.append("promoPrice", product.promoPrice.toString());
+        }
+        if (product.promoStartDate) {
+          formData.append("promoStartDate", product.promoStartDate);
+        }
+        if (product.promoEndDate) {
+          formData.append("promoEndDate", product.promoEndDate);
+        }
         formData.append("description", product.description || "");
         formData.append("description2", product.description2 || "");
         formData.append("additionalInfo", product.additionalInfo || "");

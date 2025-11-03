@@ -24,7 +24,7 @@ export async function GET(request) {
   }
 
   try {
-    // --- SPRAWDZENIE ISTNIENIA RODZICA (nawet usuniętego – dla spójności) ---
+    // --- SPRAWDZENIE ISTNIENIA RODZICA ---
     if (parentId !== null) {
       const parentExists = await prisma.category.findUnique({
         where: { id: parentId },
@@ -38,11 +38,11 @@ export async function GET(request) {
       }
     }
 
-    // --- POBIERANIE TYLKO AKTYWNYCH KATEGORII I PRODUKTÓW ---
+    // --- POBIERANIE AKTYWNYCH KATEGORII + PRODUKTY Z PROMOCJĄ ---
     const categories = await prisma.category.findMany({
       where: {
         parentId,
-        deletedAt: null, // TYLKO AKTYWNE KATEGORIE
+        deletedAt: null,
       },
       select: {
         id: true,
@@ -51,15 +51,19 @@ export async function GET(request) {
         image: true,
         parentId: true,
         description: true,
-        deletedAt: true, // Admin widzi pole, ale tylko dla aktywnych
+        deletedAt: true,
 
-        // --- AKTYWNE PRODUKTY ---
+        // --- PRODUKTY (główne) ---
         products: {
           where: { deletedAt: null },
           select: {
             id: true,
             name: true,
             price: true,
+            promoPrice: true, // DODANE
+            promoStartDate: true, // DODANE
+            promoEndDate: true, // DODANE
+            lowestPrice: true, // DODANE
             description: true,
             description2: true,
             additionalInfo: true,
@@ -70,7 +74,7 @@ export async function GET(request) {
           },
         },
 
-        // --- AKTYWNE PODKATEGORIE (1 poziom) ---
+        // --- PODKATEGORIE (1 poziom) ---
         subcategories: {
           where: { deletedAt: null },
           select: {
@@ -82,13 +86,17 @@ export async function GET(request) {
             deletedAt: true,
             description: true,
 
-            // Aktywne produkty w podkategorii
+            // Produkty w podkategorii – z promocją
             products: {
               where: { deletedAt: null },
               select: {
                 id: true,
                 name: true,
                 price: true,
+                promoPrice: true, // DODANE
+                promoStartDate: true, // DODANE
+                promoEndDate: true, // DODANE
+                lowestPrice: true, // DODANE
                 description: true,
                 description2: true,
                 additionalInfo: true,
@@ -105,12 +113,12 @@ export async function GET(request) {
     });
 
     return NextResponse.json({
-      message: "Kategorie (admin) – tylko aktywne",
+      message: "Kategorie (admin) – tylko aktywne + ceny promocyjne",
       parentId,
       categories,
     });
   } catch (error) {
-    console.error("Błąd GET /api/admin/categories:", error);
+    console.error("Błąd GET /api/get-category:", error);
     return NextResponse.json(
       { error: "Błąd serwera", details: error.message },
       { status: 500 }

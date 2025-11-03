@@ -42,16 +42,6 @@ export async function generateMetadata({ params }) {
   return {
     title: fullTitle,
     description: fullDescription,
-    openGraph: {
-      title: fullTitle,
-      description: fullDescription,
-      type: "website",
-      locale: "pl_PL",
-      url: `https://pantofle-karpaty.pl/kategorie/${
-        category.parent?.slug || ""
-      }/${categorySlug}`.replace(/\/+/g, "/"),
-      siteName: "Pantofle Karpaty",
-    },
     alternates: {
       canonical: `/kategorie/${
         category.parent?.slug ? `${category.parent.slug}/` : ""
@@ -86,6 +76,7 @@ export default async function CategorySlug({ params }) {
           images: true,
           price: true,
           lowestPrice: true,
+          promoPrice: true,
         },
       },
     },
@@ -154,6 +145,7 @@ export default async function CategorySlug({ params }) {
               href={`${basePath}/${product.slug}`}
               price={product.price}
               lowestPrice={product.lowestPrice}
+              promoPrice={product.promoPrice}
             />
           ))
         ) : (

@@ -109,6 +109,9 @@ export async function PUT(request, { params }) {
     const categoryId = formData.get("categoryId");
     let imagesToRemove = formData.get("imagesToRemove");
     const imagesToAdd = formData.getAll("imagesToAdd");
+    const promoPrice = formData.get("promoPrice");
+    const promoStartDate = formData.get("promoStartDate") || null;
+    const promoEndDate = formData.get("promoEndDate") || null;
 
     // === WALIDACJA SLUG (KLUCZOWA ZMIANA!) ===
     const existingActiveProduct = await prisma.product.findFirst({
@@ -140,6 +143,24 @@ export async function PUT(request, { params }) {
         { error: "Cena musi być dodatnią liczbą" },
         { status: 400 }
       );
+    }
+
+    // === WALIDACJA PROMO PRICE ===
+    let parsedPromoPrice = null;
+    if (promoPrice !== null && promoPrice !== "") {
+      parsedPromoPrice = parseFloat(promoPrice);
+      if (isNaN(parsedPromoPrice) || parsedPromoPrice <= 0) {
+        return NextResponse.json(
+          { error: "Cena promocyjna musi być dodatnią liczbą" },
+          { status: 400 }
+        );
+      }
+      if (parsedPromoPrice >= parsedPrice) {
+        return NextResponse.json(
+          { error: "Cena promocyjna musi być niższa niż regularna" },
+          { status: 400 }
+        );
+      }
     }
 
     if (categoryId) {
@@ -224,6 +245,9 @@ export async function PUT(request, { params }) {
         name,
         slug,
         price: parsedPrice,
+        promoPrice: parsedPromoPrice,
+        promoStartDate: promoStartDate ? new Date(promoStartDate) : null,
+        promoEndDate: promoEndDate ? new Date(promoEndDate) : null,
         description,
         description2,
         additionalInfo,

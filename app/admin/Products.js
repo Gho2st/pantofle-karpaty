@@ -33,6 +33,7 @@ export default function Products() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false); // FILTR
 
+  // Auto-slug
   useEffect(() => {
     if (newProduct.name) {
       setNewProduct((prev) => ({ ...prev, slug: generateSlug(prev.name) }));
@@ -97,6 +98,7 @@ export default function Products() {
 
       await handleAddProduct(selectedCategory.id, formData);
 
+      // Reset formularza
       setNewProduct({
         name: "",
         slug: "",
@@ -110,7 +112,7 @@ export default function Products() {
       setShowAddForm(false);
       toast.success("Produkt dodany!");
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.message || "Błąd podczas dodawania");
     } finally {
       setIsAdding(false);
     }
@@ -149,24 +151,72 @@ export default function Products() {
 
       toast.success("Produkt przywrócony!");
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.message || "Błąd przywracania");
     }
   };
 
-  // FILTR: tylko aktywne lub wszystkie
+  // === FILTROWANIE PRODUKTÓW ===
   const filteredProducts =
     selectedCategory?.products?.filter((p) =>
       showDeleted ? true : !p.deletedAt
     ) || [];
 
+  // === KOMPONENT CENY Z PROMOCJĄ ===
+  const renderPrice = (product) => {
+    const hasPromo =
+      product.promoPrice != null && product.promoPrice < product.price;
+    const displayPrice = hasPromo ? product.promoPrice : product.price;
+    const hasLowestPrice =
+      product.lowestPrice != null && product.lowestPrice < displayPrice;
+
+    return (
+      <div className="space-y-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Przekreślona cena */}
+          {hasPromo && (
+            <span className="text-sm line-through text-gray-500">
+              {product.price.toFixed(2)} PLN
+            </span>
+          )}
+
+          {/* Aktualna cena */}
+          <span
+            className={`font-semibold ${
+              hasPromo ? "text-red-600" : "text-gray-800"
+            }`}
+          >
+            {displayPrice.toFixed(2)} PLN
+          </span>
+
+          {/* Badge PROMOCJA */}
+          {hasPromo && (
+            <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded">
+              PROMOCJA
+            </span>
+          )}
+        </div>
+
+        {/* Najniższa cena z 30 dni */}
+        {hasLowestPrice && (
+          <div className="text-xs text-gray-500">
+            Najniższa z 30 dni:{" "}
+            <span className="font-bold text-red-600">
+              {product.lowestPrice.toFixed(2)} PLN
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="mt-6">
+      {/* NAGŁÓWEK + FILTR */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold text-gray-800">
           Produkty w {selectedCategory?.name || "Kategorii"}
         </h2>
 
-        {/* FILTR */}
         <button
           onClick={() => setShowDeleted((prev) => !prev)}
           className={`px-4 py-2 rounded-md text-sm font-medium transition ${
@@ -179,6 +229,7 @@ export default function Products() {
         </button>
       </div>
 
+      {/* PRZYCISK DODAJ */}
       {!showAddForm && (
         <button
           onClick={() => setShowAddForm(true)}
@@ -188,6 +239,7 @@ export default function Products() {
         </button>
       )}
 
+      {/* FORMULARZ DODAWANIA */}
       {showAddForm && (
         <form
           onSubmit={handleAddProductSubmit}
@@ -408,6 +460,7 @@ export default function Products() {
         </form>
       )}
 
+      {/* LISTA PRODUKTÓW */}
       <h3 className="text-lg font-semibold text-gray-800 mb-4">Produkty</h3>
 
       {filteredProducts.length === 0 ? (
@@ -438,10 +491,11 @@ export default function Products() {
                   <span className="ml-2 text-sm text-red-600">[USUNIĘTY]</span>
                 )}
               </h4>
-              <p className="text-gray-600">
-                Cena: {product.price?.toFixed(2) || "Brak"} PLN
-              </p>
 
+              {/* CENA Z PROMOCJĄ */}
+              <div className="text-gray-600 mt-1">{renderPrice(product)}</div>
+
+              {/* AKCJE */}
               <div className="flex gap-2 mt-4">
                 <button
                   onClick={() =>
@@ -478,6 +532,7 @@ export default function Products() {
         </div>
       )}
 
+      {/* MODAL EDYCJI */}
       <ProductFormModal />
     </div>
   );

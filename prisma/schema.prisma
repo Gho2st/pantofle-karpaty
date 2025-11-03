@@ -65,6 +65,9 @@ model Product {
   category        Category  @relation(fields: [categoryId], references: [id])
   deletedAt       DateTime?
   lowestPrice     Float?
+  promoPrice      Float?   // cena promocyjna
+  promoStartDate  DateTime? 
+  promoEndDate    DateTime? 
   @@unique([slug, deletedAt])  // KLUCZ: unikalny TYLKO wśród aktywnych!
 }
 

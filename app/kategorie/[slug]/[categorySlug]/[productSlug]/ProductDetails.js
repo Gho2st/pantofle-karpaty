@@ -17,6 +17,7 @@ export default function ProductDetails({ product }) {
   const [quantity, setQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
   const [showCartLink, setShowCartLink] = useState(false);
+  console.log(product);
 
   const images = product.images || [];
   const category = product.category;
@@ -139,19 +140,35 @@ export default function ProductDetails({ product }) {
             {product.name}
           </h1>
 
-          {/* CENA + NAJNIŻSZA Z 30 DNI */}
+          {/* CENA + PROMOCJA + NAJNIŻSZA CENA Z 30 DNI */}
           <div className="mb-6">
-            <span className="text-3xl font-bold text-primary">
-              {product.price.toFixed(2)} PLN
-            </span>
+            {/* CENA PROMOCYJNA (jeśli aktywna i nie minęła) */}
+            {product.promoPrice !== null &&
+            product.promoPrice < product.price &&
+            (!product.promoEndDate ||
+              new Date(product.promoEndDate) > new Date()) ? (
+              <div className="flex items-baseline gap-3">
+                <span className="text-3xl font-bold text-red-600">
+                  {product.promoPrice.toFixed(2)} PLN
+                </span>
+                <span className="text-xl line-through text-gray-500">
+                  {product.price.toFixed(2)} PLN
+                </span>
+              </div>
+            ) : (
+              <span className="text-3xl font-bold text-primary">
+                {product.price.toFixed(2)} PLN
+              </span>
+            )}
 
+            {/* NAJNIŻSZA CENA Z 30 DNI */}
             {product.lowestPrice && (
               <div className="text-sm text-gray-500 mt-1">
                 Najniższa cena z 30 dni:{" "}
                 <span
                   className={`font-bold ${
-                    product.lowestPrice < product.price
-                      ? "text-gray-600"
+                    product.lowestPrice < (product.promoPrice ?? product.price)
+                      ? "text-red-600"
                       : "text-gray-700"
                   }`}
                 >

@@ -119,6 +119,7 @@ export default async function ProductSlug({ params }) {
       lowestPrice: true,
       description: true,
       description2: true,
+      promoPrice: true,
       additionalInfo: true,
       sizes: true,
       images: true,

@@ -18,6 +18,7 @@ export default function ProductFormModal() {
         ...editingProduct,
         imagesToAdd: [],
         imagesToRemove: [],
+        promoPrice: editingProduct.promoPrice || null,
       });
     } else {
       setProductData(null);
@@ -109,8 +110,21 @@ export default function ProductFormModal() {
       isNaN(parseFloat(productData.price)) ||
       parseFloat(productData.price) <= 0
     ) {
-      toast.error("Cena musi być dodatnią liczbą");
+      toast.error("Cena regularna musi być dodatnią liczbą");
       return;
+    }
+
+    // Walidacja ceny promocyjnej
+    if (productData.promoPrice !== null) {
+      const promo = parseFloat(productData.promoPrice);
+      if (isNaN(promo) || promo <= 0) {
+        toast.error("Cena promocyjna musi być dodatnią liczbą");
+        return;
+      }
+      if (promo >= parseFloat(productData.price)) {
+        toast.error("Cena promocyjna musi być niższa niż regularna");
+        return;
+      }
     }
     if (!productData.id || isNaN(parseInt(productData.id))) {
       console.error("Nieprawidłowe ID produktu:", productData.id);
@@ -167,20 +181,117 @@ export default function ProductFormModal() {
               className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Cena (PLN)
-            </label>
-            <input
-              type="number"
-              name="price"
-              value={productData.price || ""}
-              onChange={handleChange}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-              min="0"
-              step="0.01"
-              required
-            />
+          {/* CENA + PROMOCJA */}
+          <div className="space-y-4">
+            {/* Cena regularna */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cena regularna (PLN)
+              </label>
+              <input
+                type="number"
+                name="price"
+                value={productData.price || ""}
+                onChange={handleChange}
+                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+                min="0"
+                step="0.01"
+                required
+              />
+            </div>
+
+            {/* Włącz promocję */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="enablePromo"
+                checked={
+                  productData.promoPrice !== null &&
+                  productData.promoPrice !== undefined
+                }
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setProductData((prev) => ({ ...prev, promoPrice: "" }));
+                  } else {
+                    setProductData((prev) => ({ ...prev, promoPrice: null }));
+                  }
+                }}
+                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+              />
+              <label
+                htmlFor="enablePromo"
+                className="text-sm font-medium text-gray-700 cursor-pointer"
+              >
+                Włącz cenę promocyjną
+              </label>
+            </div>
+
+            {/* Pole cena promocyjna – tylko jeśli włączona */}
+            {productData.promoPrice !== null && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cena promocyjna (PLN) <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="number"
+                  name="promoPrice"
+                  value={productData.promoPrice || ""}
+                  onChange={handleChange}
+                  className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 transition duration-200 ${
+                    productData.promoPrice >= productData.price
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-gray-300 focus:ring-blue-500"
+                  }`}
+                  min="0"
+                  step="0.01"
+                  placeholder="musi być niższa niż cena regularna"
+                  required
+                />
+                {productData.promoPrice >= productData.price &&
+                  productData.promoPrice > 0 && (
+                    <p className="text-red-600 text-xs mt-1">
+                      Cena promocyjna musi być niższa niż regularna!
+                    </p>
+                  )}
+              </div>
+            )}
+
+            {productData.promoPrice !== null && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Promocja od
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="promoStartDate"
+                    value={
+                      productData.promoStartDate
+                        ? productData.promoStartDate.slice(0, 16)
+                        : ""
+                    }
+                    onChange={handleChange}
+                    className="w-full p-3 border border-gray-300 rounded-md"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Promocja do
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="promoEndDate"
+                    value={
+                      productData.promoEndDate
+                        ? productData.promoEndDate.slice(0, 16)
+                        : ""
+                    }
+                    onChange={handleChange}
+                    className="w-full p-3 border border-gray-300 rounded-md"
+                  />
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
