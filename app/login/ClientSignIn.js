@@ -1,3 +1,4 @@
+// app/login/ClientSignIn.jsx
 "use client";
 
 import { signIn } from "next-auth/react";
@@ -33,23 +34,34 @@ export default function ClientSignIn({ providers }) {
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
 
-  // Wykrywanie WebView dla opcjonalnej wiadomości
-  const isIOS = isClient && /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const isInMessenger =
-    isClient && /fbav|fb_iab|messenger/i.test(navigator.userAgent);
-  const isInWebView = isIOS && isInMessenger;
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const currentUrl = window.location.href;
+
+    // Wykrywamy iOS + WebView (Messenger, LinkedIn, Instagram, etc.)
+    const isIOS = /iphone|ipad|ipod/.test(userAgent);
+    const isInAppBrowser =
+      userAgent.includes("fban") || // Facebook
+      userAgent.includes("fbav") || // Messenger
+      userAgent.includes("linkedin") ||
+      userAgent.includes("instagram") ||
+      userAgent.includes("snapchat");
+
+    if (isIOS && isInAppBrowser) {
+      // PRZEKIERUJ DO SAFARI
+      const safariUrl = "x-safari-" + currentUrl;
+      window.location.href = safariUrl;
+      return;
+    }
+  }, []);
 
   if (!providers?.google) {
     return <p className="text-red-500">Brak Google.</p>;
   }
 
+  // Normalny przycisk (jeśli nie w WebView)
   return (
     <div className="space-y-4">
-      {/* Teraz jest tylko jeden przycisk. 
-        `signIn` zadziała wewnątrz WebView dzięki `checks: ["none"]` w NextAuth.
-      */}
       <button
         onClick={() => signIn("google", { callbackUrl: "/", redirect: true })}
         className="w-full flex items-center justify-center px-4 py-2.5 text-base font-medium rounded-lg shadow-sm transition-all bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
@@ -57,13 +69,6 @@ export default function ClientSignIn({ providers }) {
         <GoogleIcon />
         Zaloguj się przez Google
       </button>
-
-      {/* Opcjonalna wiadomość dla użytkowników w Messengerze */}
-      {isInWebView && (
-        <p className="text-xs text-slate-500 text-center mt-2">
-          Logowanie odbywa się w przeglądarce aplikacji Messenger.
-        </p>
-      )}
     </div>
   );
 }
