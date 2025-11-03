@@ -1,4 +1,3 @@
-// app/login/ClientSignIn.jsx
 "use client";
 
 import { signIn } from "next-auth/react";
@@ -10,6 +9,7 @@ const GoogleIcon = () => (
     viewBox="0 0 48 48"
     xmlns="http://www.w3.org/2000/svg"
   >
+    {/* ... (kod SVG bez zmian) ... */}
     <path
       fill="#FFC107"
       d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"
@@ -30,36 +30,39 @@ const GoogleIcon = () => (
 );
 
 export default function ClientSignIn({ providers }) {
-  const [isClient, setIsClient] = useState(false);
+  // Stan, aby pokazać przycisk tylko wtedy, gdy nie przekierowujemy
+  const [showLoginButton, setShowLoginButton] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
-
-    const userAgent = window.navigator.userAgent.toLowerCase();
+    const userAgent = window.navigator.userAgent;
     const currentUrl = window.location.href;
 
-    // Wykrywamy iOS + WebView (Messenger, LinkedIn, Instagram, etc.)
-    const isIOS = /iphone|ipad|ipod/.test(userAgent);
-    const isInAppBrowser =
-      userAgent.includes("fban") || // Facebook
-      userAgent.includes("fbav") || // Messenger
-      userAgent.includes("linkedin") ||
-      userAgent.includes("instagram") ||
-      userAgent.includes("snapchat");
+    // Detekcja iOS (iPhone, iPad, iPod)
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+    // Detekcja Messengera
+    const isInMessenger = /fbav|fb_iab|messenger/i.test(userAgent);
 
-    if (isIOS && isInAppBrowser) {
-      // PRZEKIERUJ DO SAFARI
-      const safariUrl = "x-safari-" + currentUrl;
-      window.location.href = safariUrl;
-      return;
+    if (isIOS && isInMessenger) {
+      // ✅ Jesteśmy w Messengerze na iOS. Próbujemy uciec do Safari.
+      // Nie pokazujemy przycisku, bo strona zaraz zniknie.
+      setShowLoginButton(false);
+      window.location.href = `x-safari-${currentUrl}`;
+      return; // Kończymy działanie skryptu
     }
-  }, []);
 
-  if (!providers?.google) {
-    return <p className="text-red-500">Brak Google.</p>;
+    // ⛔ Jeśli nie jesteśmy w Messengerze na iOS (np. Android, PC, lub już w Safari),
+    // po prostu pokaż normalny przycisk logowania.
+    setShowLoginButton(true);
+  }, []); // Uruchom tylko raz przy załadowaniu komponentu
+
+  // Nie renderuj niczego, dopóki nie skończymy sprawdzania
+  // lub jeśli nie ma dostawcy Google.
+  if (!showLoginButton || !providers?.google) {
+    // Można tu wstawić spinner ładowania, jeśli chcemy
+    return null;
   }
 
-  // Normalny przycisk (jeśli nie w WebView)
+  // Ten kod renderuje się tylko wtedy, gdy showLoginButton === true
   return (
     <div className="space-y-4">
       <button
