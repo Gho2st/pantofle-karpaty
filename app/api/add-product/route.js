@@ -35,6 +35,35 @@ async function uploadFileToS3(fileBuffer, fileName, contentType) {
   return `https://${BUCKET_NAME}.s3.eu-central-1.amazonaws.com/products/${uniqueFileName}`;
 }
 
+// === WALIDACJA PLIKÓW ===
+const ALLOWED_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/jpg",
+];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+function validateFile(file) {
+  if (!(file instanceof File)) {
+    throw new Error("Nieprawidłowy plik");
+  }
+
+  if (file.size === 0) {
+    throw new Error(`Plik "${file.name}" jest pusty`);
+  }
+
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error(`Plik "${file.name}" przekracza limit 5MB`);
+  }
+
+  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    throw new Error(
+      `Nieobsługiwany typ pliku: ${file.type}. Dozwolone: JPEG, PNG, WebP`
+    );
+  }
+}
+
 function generateSlug(name) {
   if (!name) return "";
   return name
@@ -109,16 +138,30 @@ export async function POST(request) {
 
     validateSizes(sizes);
 
-    // === UPLOAD ZDJĘĆ ===
+    // === WALIDACJA I UPLOAD ZDJĘĆ ===
+    if (!files || files.length === 0) {
+      return NextResponse.json(
+        { error: "Musisz dodać przynajmniej jedno zdjęcie produktu" },
+        { status: 400 }
+      );
+    }
+
     const uploadPromises = files.map(async (file) => {
-      if (file instanceof File) {
+      try {
+        validateFile(file);
         const buffer = Buffer.from(await file.arrayBuffer());
         return await uploadFileToS3(buffer, file.name, file.type);
+      } catch (err) {
+        throw new Error(`Błąd pliku "${file.name}": ${err.message}`);
       }
-      return null;
     });
 
-    const imageUrls = (await Promise.all(uploadPromises)).filter((url) => url);
+    let imageUrls;
+    try {
+      imageUrls = await Promise.all(uploadPromises);
+    } catch (err) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
 
     // === TWORZENIE PRODUKTU ===
     const product = await prisma.product.create({
