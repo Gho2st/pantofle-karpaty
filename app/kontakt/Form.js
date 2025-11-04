@@ -1,11 +1,11 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
-export default function Form() {
+export default function ContactForm() {
   const [formData, setFormData] = useState({
     name: "",
-    text: "",
     email: "",
+    text: "",
   });
 
   const [touched, setTouched] = useState({
@@ -16,9 +16,9 @@ export default function Form() {
 
   const [isSending, setIsSending] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
-  const [formError, setFormError] = useState(null);
+  const [formError, setFormError] = useState("");
 
-  // Walidacja pojedynczego pola
+  // Walidacja pola
   const validateField = (name, value) => {
     switch (name) {
       case "name":
@@ -32,19 +32,13 @@ export default function Form() {
     }
   };
 
-  // Sprawdzenie, czy pole ma błąd (i czy było dotknięte)
-  const hasError = (field) => {
-    return touched[field] && !validateField(field, formData[field]);
-  };
+  const hasError = (field) =>
+    touched[field] && !validateField(field, formData[field]);
 
-  // Walidacja całego formularza
-  const validateForm = () => {
-    return (
-      validateField("name", formData.name) &&
-      validateField("email", formData.email) &&
-      validateField("text", formData.text)
-    );
-  };
+  const validateForm = () =>
+    validateField("name", formData.name) &&
+    validateField("email", formData.email) &&
+    validateField("text", formData.text);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -56,25 +50,24 @@ export default function Form() {
     setTouched((prev) => ({ ...prev, [name]: true }));
   };
 
-  const sendMail = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (isSending) return;
 
-    // Oznacz wszystkie pola jako dotknięte przy submit
     setTouched({ name: true, email: true, text: true });
 
     if (!validateForm()) {
-      setFormError("Proszę uzupełnij poprawnie wszystkie wymagane pola.");
+      setFormError("Proszę uzupełnić wszystkie pola poprawnie.");
       return;
     }
 
-    setFormError(null);
+    setFormError("");
     setIsSending(true);
 
     try {
       const response = await fetch("/api/sendEmail", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
@@ -83,114 +76,142 @@ export default function Form() {
         setFormData({ name: "", email: "", text: "" });
         setTouched({ name: false, email: false, text: false });
       } else {
-        const errorData = await response.json();
-        setFormError(`Błąd: ${errorData.message}`);
+        const error = await response.json();
+        setFormError(error.message || "Wystąpił błąd podczas wysyłania.");
       }
-    } catch (error) {
-      setFormError("Wystąpił nieoczekiwany błąd. Spróbuj ponownie.");
+    } catch {
+      setFormError("Brak połączenia. Spróbuj ponownie później.");
     } finally {
       setIsSending(false);
     }
   };
 
+  if (formSubmitted) {
+    return (
+      <section className="py-16 px-6 max-w-7xl mx-auto text-center">
+        <h3 className="text-3xl font-bold text-gray-900 mb-4">
+          Dziękujemy za wiadomość!
+        </h3>
+        <p className="text-lg text-gray-700 max-w-xl mx-auto">
+          Odezwiemy się tak szybko, jak to możliwe.
+        </p>
+      </section>
+    );
+  }
+
   return (
-    <>
-      {!formSubmitted ? (
-        <div className="flex flex-col pt-4 max-w-7xl mx-auto mt-10 px-[6%] mb-10">
-          <h2 className="text-2xl xl:text-3xl font-bold mb-2">
-            Zostaw Wiadomość
-          </h2>
-          <p className="mb-4 text-xl">
-            Wypełnij formularz poniżej, a my wrócimy do Ciebie z odpowiedzią jak
-            najszybciej to możliwe!
-          </p>
-          {formError && <p className="text-red-600 mb-4">{formError}</p>}
+    <section className="py-12 px-6 max-w-7xl mx-auto">
+      <div className="text-center mb-10">
+        <h2 className="text-3xl xl:text-4xl font-bold text-gray-900 mb-3">
+          Zostaw wiadomość
+        </h2>
+        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          Wypełnij formularz poniżej – odpowiemy najszybciej, jak to możliwe!
+        </p>
+      </div>
 
-          <form onSubmit={sendMail} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {[
-                {
-                  label: "Imię i nazwisko",
-                  type: "text",
-                  name: "name",
-                  placeholder: "Imię i nazwisko",
-                },
-                {
-                  label: "Adres e-mail",
-                  type: "email",
-                  name: "email",
-                  placeholder: "email@domena.pl",
-                },
-              ].map((field) => (
-                <div key={field.name} className="relative">
-                  <input
-                    type={field.type}
-                    name={field.name}
-                    placeholder={field.placeholder}
-                    value={formData[field.name]}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full p-4 text-base rounded-md shadow-sm transition-colors ${
-                      hasError(field.name)
-                        ? "border border-red-500 focus:border-red-500"
-                        : "border border-gray-200 focus:border-gray-400"
-                    } focus:outline-none`}
-                  />
-                  {hasError(field.name) && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {field.name === "name" && "Podaj imię i nazwisko"}
-                      {field.name === "email" && "Podaj poprawny adres e-mail"}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
+      {/* Kontakt w ładnym bloku */}
+      <div className="flex flex-col sm:flex-row justify-center items-center gap-6 mb-8 text-gray-700 text-lg font-medium">
+        <a
+          href="tel:+48535479000"
+          className="flex items-center gap-2 hover:text-[#ff5353] transition-colors"
+        >
+          <span className="text-2xl">📞</span>
+          <span>535 479 000</span>
+        </a>
+        <span className="hidden sm:block text-gray-400">|</span>
+        <a
+          href="mailto:mwidel@pantofle-karpaty.pl"
+          className="flex items-center gap-2 hover:text-[#ff5353] transition-colors"
+        >
+          <span className="text-2xl">✉️</span>
+          <span>mwidel@pantofle-karpaty.pl</span>
+        </a>
+      </div>
 
-            <div className="relative">
-              <label htmlFor="text" className="block text-black mb-1">
-                Wiadomość:
-              </label>
-              <textarea
-                id="text"
-                name="text"
-                placeholder="Napisz swoją wiadomość"
-                value={formData.text}
+      {formError && (
+        <p className="text-red-600 text-center font-medium mb-6">{formError}</p>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {[
+            {
+              label: "Imię i nazwisko",
+              name: "name",
+              type: "text",
+              placeholder: "Jan Kowalski",
+            },
+            {
+              label: "Adres e-mail",
+              name: "email",
+              type: "email",
+              placeholder: "jan@domena.pl",
+            },
+          ].map((field) => (
+            <div key={field.name}>
+              <input
+                type={field.type}
+                name={field.name}
+                placeholder={field.placeholder}
+                value={formData[field.name]}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                className={`w-full h-[125px] p-4 text-base rounded-md shadow-sm mt-2 resize-none transition-colors ${
-                  hasError("text")
-                    ? "border border-red-500 focus:border-red-500"
-                    : "border border-gray-200 focus:border-gray-400"
-                } focus:outline-none`}
+                className={`w-full p-4 rounded-lg border text-base transition-all focus:outline-none focus:ring-2 focus:ring-[#ff5353] ${
+                  hasError(field.name)
+                    ? "border-red-500 focus:ring-red-500"
+                    : "border-gray-300 focus:border-[#ff5353]"
+                }`}
               />
-              {hasError("text") && (
-                <p className="text-red-500 text-sm mt-1">
-                  Wiadomość nie może być pusta
+              {hasError(field.name) && (
+                <p className="text-red-500 text-sm mt-1.5 pl-1">
+                  {field.name === "name"
+                    ? "Podaj imię i nazwisko"
+                    : "Podaj poprawny adres e-mail"}
                 </p>
               )}
             </div>
+          ))}
+        </div>
 
-            <div className="flex justify-center pt-4">
-              <button
-                type="submit"
-                disabled={isSending}
-                className="px-6 py-3 rounded-full bg-[#ff5353] text-white font-semibold text-xl shadow-md transition-transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSending ? "Wysyłanie..." : "Wyślij wiadomość!"}
-              </button>
-            </div>
-          </form>
+        <div>
+          <label
+            htmlFor="text"
+            className="block text-gray-800 font-medium mb-2"
+          >
+            Twoja wiadomość
+          </label>
+          <textarea
+            id="text"
+            name="text"
+            rows={5}
+            placeholder="Napisz, w czym możemy pomóc..."
+            value={formData.text}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            className={`w-full p-4 rounded-lg border text-base resize-none transition-all focus:outline-none focus:ring-2 focus:ring-[#ff5353] ${
+              hasError("text")
+                ? "border-red-500 focus:ring-red-500"
+                : "border-gray-300 focus:border-[#ff5353]"
+            }`}
+          />
+          {hasError("text") && (
+            <p className="text-red-500 text-sm mt-1.5 pl-1">
+              Wiadomość nie może być pusta
+            </p>
+          )}
         </div>
-      ) : (
-        <div className="text-center py-10">
-          <h3 className="text-2xl font-bold mt-6 text-black">
-            Dziękuję za przesłanie formularza!
-          </h3>
-          <p className="text-black mt-4 max-w-xl mx-auto">
-            Postaramy się odpowiedzieć tak szybko, jak to możliwe.
-          </p>
+
+        <div className="text-center pt-4">
+          <button
+            type="submit"
+            disabled={isSending}
+            className="px-8 py-3.5 bg-[#ff5353] text-white font-bold text-lg rounded-full shadow-lg hover:bg-[#ff4444] hover:scale-105 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
+          >
+            {isSending ? "Wysyłanie..." : "Wyślij wiadomość"}
+          </button>
         </div>
-      )}
-    </>
+      </form>
+    </section>
   );
 }
