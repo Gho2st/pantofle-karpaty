@@ -1,3 +1,49 @@
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route";
+import { NextResponse } from "next/server";
+import prisma from "@/app/lib/prisma";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { v4 as uuidv4 } from "uuid";
+
+function validateSizes(sizes) {
+  if (!sizes) return true; // sizes jest opcjonalne
+  return true;
+}
+
+const s3Client = new S3Client({
+  region: "eu-central-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ID,
+    secretAccessKey: process.env.AWS_SECRET,
+  },
+});
+
+const BUCKET_NAME = "pantofle-karpaty";
+
+async function uploadFileToS3(fileBuffer, fileName, contentType) {
+  const uniqueFileName = `${uuidv4()}-${fileName}`; // Unikalna nazwa pliku
+  const params = {
+    Bucket: BUCKET_NAME,
+    Key: `products/${uniqueFileName}`, // Folder 'products' w buckecie
+    Body: fileBuffer,
+    ContentType: contentType || "application/octet-stream",
+  };
+
+  const command = new PutObjectCommand(params);
+  await s3Client.send(command);
+
+  return `https://${BUCKET_NAME}.s3.eu-central-1.amazonaws.com/products/${uniqueFileName}`;
+}
+
+function generateSlug(name) {
+  if (!name) return "";
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "") // Usuń znaki specjalne
+    .replace(/\s+/g, "-") // Zamień spacje na myślniki
+    .replace(/-+/g, "-"); // Usuń wielokrotne myślniki
+}
 export async function POST(request) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "ADMIN") {
