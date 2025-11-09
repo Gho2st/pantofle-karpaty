@@ -60,10 +60,10 @@ export async function GET(request) {
             id: true,
             name: true,
             price: true,
-            promoPrice: true, // DODANE
-            promoStartDate: true, // DODANE
-            promoEndDate: true, // DODANE
-            lowestPrice: true, // DODANE
+            promoPrice: true,
+            promoStartDate: true,
+            promoEndDate: true,
+            lowestPrice: true,
             description: true,
             description2: true,
             additionalInfo: true,
@@ -93,10 +93,10 @@ export async function GET(request) {
                 id: true,
                 name: true,
                 price: true,
-                promoPrice: true, // DODANE
-                promoStartDate: true, // DODANE
-                promoEndDate: true, // DODANE
-                lowestPrice: true, // DODANE
+                promoPrice: true,
+                promoStartDate: true,
+                promoEndDate: true,
+                lowestPrice: true,
                 description: true,
                 description2: true,
                 additionalInfo: true,
@@ -112,10 +112,63 @@ export async function GET(request) {
       orderBy: { id: "asc" },
     });
 
+    // --- FUNKCJA: Parsowanie pól Json (sizes, images) ---
+    const parseJsonFields = (data) => {
+      if (Array.isArray(data)) {
+        return data.map(parseJsonFields);
+      }
+      if (data && typeof data === "object") {
+        const parsed = { ...data };
+
+        // Parsuj sizes
+        if (parsed.sizes != null) {
+          if (typeof parsed.sizes === "string") {
+            try {
+              parsed.sizes = JSON.parse(parsed.sizes);
+            } catch (e) {
+              console.error("Błąd parsowania sizes:", e, parsed.sizes);
+              parsed.sizes = [];
+            }
+          } else if (!Array.isArray(parsed.sizes)) {
+            parsed.sizes = [];
+          }
+        } else {
+          parsed.sizes = [];
+        }
+
+        // Parsuj images
+        if (parsed.images != null) {
+          if (typeof parsed.images === "string") {
+            try {
+              parsed.images = JSON.parse(parsed.images);
+            } catch (e) {
+              console.error("Błąd parsowania images:", e, parsed.images);
+              parsed.images = [];
+            }
+          } else if (!Array.isArray(parsed.images)) {
+            parsed.images = [];
+          }
+        } else {
+          parsed.images = [];
+        }
+
+        // Rekurencja dla products i subcategories
+        if (parsed.products) parsed.products = parseJsonFields(parsed.products);
+        if (parsed.subcategories)
+          parsed.subcategories = parseJsonFields(parsed.subcategories);
+
+        return parsed;
+      }
+      return data;
+    };
+
+    // Zastosuj parsowanie do wszystkich danych
+    const parsedCategories = parseJsonFields(categories);
+
     return NextResponse.json({
       message: "Kategorie (admin) – tylko aktywne + ceny promocyjne",
       parentId,
-      categories,
+      categories: parsedCategories,
     });
   } catch (error) {
     console.error("Błąd GET /api/get-category:", error);

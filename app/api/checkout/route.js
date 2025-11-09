@@ -37,7 +37,51 @@ export async function POST(req) {
       }
     }
 
+    // === TRANSACTION: SPRAWDŹ STOCK + UTWÓRZ ZAMÓWIENIE + ODEJMIJ STOCK ===
     const { createdOrder } = await prisma.$transaction(async (tx) => {
+      // 1. SPRAWDŹ STOCK PRZED ZAMÓWIENIEM
+      for (const item of cartItems) {
+        const product = await tx.product.findUnique({
+          where: { id: item.productId },
+        });
+
+        if (!product || product.sizes === null || product.sizes === undefined) {
+          throw new Error(
+            `Produkt o ID ${item.productId} nie istnieje lub brak danych o rozmiarach`
+          );
+        }
+
+        // POPRAWNE PARSOWANIE SIZES (string lub obiekt)
+        let sizes;
+        try {
+          sizes =
+            typeof product.sizes === "string"
+              ? JSON.parse(product.sizes)
+              : product.sizes;
+        } catch (e) {
+          throw new Error(
+            `Nieprawidłowy format danych sizes dla produktu ${product.name}`
+          );
+        }
+
+        if (!Array.isArray(sizes)) {
+          throw new Error(
+            `Dane sizes nie są tablicą dla produktu ${product.name}`
+          );
+        }
+
+        const sizeData = sizes.find((s) => s.size === item.size);
+
+        if (!sizeData || sizeData.stock < item.quantity) {
+          throw new Error(
+            `Brak wystarczającej ilości produktu "${product.name}" (rozmiar: ${
+              item.size
+            }). Dostępne: ${sizeData?.stock || 0}, potrzebne: ${item.quantity}`
+          );
+        }
+      }
+
+      // 2. UTWÓRZ ZAMÓWIENIE
       const order = await tx.order.create({
         data: {
           user: userId ? { connect: { id: userId } } : undefined,
@@ -66,14 +110,42 @@ export async function POST(req) {
               size: item.size,
               quantity: item.quantity,
               price: item.product.price,
-              promoPrice: item.product.promoPrice, // ← ZAPISZ CENĘ PO PROMOCJI
-              promoEndDate: item.product.promoEndDate, // ← ZAPISZ DATĘ
+              promoPrice: item.product.promoPrice,
+              promoEndDate: item.product.promoEndDate,
             })),
           },
         },
       });
 
-      // Zwiększ usedCount
+      // 3. ODEJMIJ STOCK
+      for (const item of cartItems) {
+        const product = await tx.product.findUnique({
+          where: { id: item.productId },
+        });
+
+        let sizes;
+        try {
+          sizes =
+            typeof product.sizes === "string"
+              ? JSON.parse(product.sizes)
+              : product.sizes;
+        } catch (e) {
+          throw new Error(
+            `Błąd parsowania sizes przy odjęciu stocku dla ${product.name}`
+          );
+        }
+
+        const sizeIndex = sizes.findIndex((s) => s.size === item.size);
+        if (sizeIndex !== -1) {
+          sizes[sizeIndex].stock -= item.quantity;
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { sizes: JSON.stringify(sizes) }, // ZAWSZE ZAPISUJ JAKO STRING
+          });
+        }
+      }
+
+      // 4. ZWIĘKSZ usedCount KODU RABATOWEGO
       if (discountCode) {
         await tx.discountCode.update({
           where: { code: discountCode },
@@ -84,18 +156,20 @@ export async function POST(req) {
       return { createdOrder: order };
     });
 
+    // === STRIPE LUB PRZEKIEROWANIE ===
     if (paymentMethod === "stripe") {
       const amountInCents = Math.round(
         parseFloat(createdOrder.totalAmount) * 100
       );
-      const session = await stripe.checkout.sessions.create({
+
+      const stripeSession = await stripe.checkout.sessions.create({
         payment_method_types: ["card", "blik", "p24"],
         mode: "payment",
         currency: "pln",
         customer_email: formData.email,
         metadata: { orderId: createdOrder.id.toString() },
         success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/zamowienie/${createdOrder.id}`,
-        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/zamowienie`,
+        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/koszyk`,
         line_items: [
           {
             price_data: {
@@ -110,10 +184,10 @@ export async function POST(req) {
 
       await prisma.order.update({
         where: { id: createdOrder.id },
-        data: { paymentId: session.id },
+        data: { paymentId: stripeSession.id },
       });
 
-      return NextResponse.json({ redirectUrl: session.url });
+      return NextResponse.json({ redirectUrl: stripeSession.url });
     }
 
     return NextResponse.json({
@@ -121,6 +195,9 @@ export async function POST(req) {
     });
   } catch (error) {
     console.error("Checkout error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Wystąpił błąd podczas składania zamówienia" },
+      { status: 500 }
+    );
   }
 }
