@@ -92,7 +92,7 @@ export async function POST(req) {
         currency: "pln",
         customer_email: formData.email,
         metadata: { orderId: createdOrder.id.toString() },
-        success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/success?orderId=${createdOrder.id}`,
+        success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/zamowienie/${createdOrder.id}`,
         cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/zamowienie`,
         line_items: [
           {
