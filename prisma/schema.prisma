@@ -120,12 +120,14 @@ model OrderItem {
   id         Int     @id @default(autoincrement())
   orderId    Int
   productId  Int
-  name      String // Nazwa produktu w momencie zakupu
+  name       String // Nazwa produktu w momencie zakupu
   size       String
   quantity   Int
   price      Float // <--- Cena w momencie zakupu
   order      Order   @relation("OrderItems", fields: [orderId], references: [id])
   product    Product @relation("ProductOrderItems", fields: [productId], references: [id])
+  promoPrice    Float? // cena promocyjna (jeśli była)
+  promoEndDate  DateTime? // data końca promocji
 }
 
 model DiscountCode {

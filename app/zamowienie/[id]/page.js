@@ -1,8 +1,10 @@
+// app/potwierdzenie/[id]/page.js
 import { notFound } from "next/navigation";
 import prisma from "@/app/lib/prisma";
 import Stripe from "stripe";
 import StripeStatus from "./StripeStatus";
 import TraditionalPaymentInstructions from "../TraditionalPaymentInstructions";
+import OrderSummary from "./OrderSummary"; // DODAJ
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
@@ -22,15 +24,11 @@ export async function generateMetadata({ params }) {
   return {
     title: `Zamówienie #${orderId} – Potwierdzenie | Pantofle Karpaty`,
     description: `Twoje zamówienie #${orderId} zostało przyjęte. Sprawdź szczegóły i status płatności.`,
-
-    alternates: {
-      canonical: `/potwierdzenie/${orderId}`, // TYLKO Z PARAMS.ID
-    },
-    robots: "noindex, nofollow", // Prywatna strona
+    alternates: { canonical: `/potwierdzenie/${orderId}` },
+    robots: "noindex, nofollow",
   };
 }
 
-// === Pobierz zamówienie (tylko do renderowania) ===
 async function getOrder(id) {
   const orderId = parseInt(id, 10);
   if (isNaN(orderId)) notFound();
@@ -59,7 +57,6 @@ export default async function OrderConfirmationPage({ params, searchParams }) {
   ) {
     try {
       const session = await stripe.checkout.sessions.retrieve(sessionId);
-
       if (session.payment_status === "paid") {
         await prisma.order.update({
           where: { id: order.id },
@@ -74,7 +71,6 @@ export default async function OrderConfirmationPage({ params, searchParams }) {
     } catch (error) {
       console.error("Błąd weryfikacji sesji Stripe:", error);
     }
-
     order = await getOrder(id);
   }
 
@@ -95,43 +91,8 @@ export default async function OrderConfirmationPage({ params, searchParams }) {
         )}
         {order.paymentMethod === "stripe" && <StripeStatus order={order} />}
 
-        {/* Podsumowanie – bez zmian */}
-        <div className="mt-10">
-          <h2 className="text-2xl font-semibold mb-4 border-b pb-2 text-gray-800">
-            Podsumowanie zamówienia
-          </h2>
-          <div className="space-y-4">
-            {order.items.map((item) => (
-              <div
-                key={item.id}
-                className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 border-b last:border-b-0"
-              >
-                <div className="flex-1">
-                  <p className="font-semibold text-gray-900">{item.name}</p>
-                  <p className="text-sm text-gray-600">
-                    Rozmiar: <strong>{item.size}</strong> | Ilość:{" "}
-                    <strong>{item.quantity}</strong> x {item.price.toFixed(2)}{" "}
-                    PLN
-                  </p>
-                </div>
-                <p className="font-semibold text-gray-800 mt-2 sm:mt-0">
-                  {(item.price * item.quantity).toFixed(2)} PLN
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t pt-4 mt-6 space-y-2">
-            <div className="flex justify-between text-gray-700">
-              <span>Dostawa ({order.deliveryMethod})</span>
-              <span>{order.deliveryCost.toFixed(2)} PLN</span>
-            </div>
-            <div className="flex justify-between text-xl font-bold text-gray-900">
-              <span>Łącznie</span>
-              <span>{order.totalAmount.toFixed(2)} PLN</span>
-            </div>
-          </div>
-        </div>
+        {/* NOWE PODSUMOWANIE */}
+        <OrderSummary order={order} />
 
         {/* Adres dostawy */}
         <div className="mt-10">

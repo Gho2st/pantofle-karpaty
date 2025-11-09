@@ -66,6 +66,8 @@ export async function POST(req) {
               size: item.size,
               quantity: item.quantity,
               price: item.product.price,
+              promoPrice: item.product.promoPrice, // ← ZAPISZ CENĘ PO PROMOCJI
+              promoEndDate: item.product.promoEndDate, // ← ZAPISZ DATĘ
             })),
           },
         },
@@ -115,7 +117,7 @@ export async function POST(req) {
     }
 
     return NextResponse.json({
-      redirectUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/success?orderId=${createdOrder.id}`,
+      redirectUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/zamowienie/${createdOrder.id}`,
     });
   } catch (error) {
     console.error("Checkout error:", error);
