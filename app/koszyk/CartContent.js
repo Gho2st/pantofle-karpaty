@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { useCart } from "@/app/context/cartContext";
 import { ToastContainer, toast } from "react-toastify";
@@ -20,13 +20,13 @@ import QuantityInput from "./QuantityInput";
 export default function CartContent() {
   const {
     cartItems,
-    loading,
     updateQuantity,
     removeFromCart,
     checkAvailability,
     availabilityErrors,
     setAvailabilityErrors,
     availableQuantities,
+    getCurrentPrice, // ← DODANE
   } = useCart();
 
   const [deliveryMethod, setDeliveryMethod] = useState("paczkomat");
@@ -34,13 +34,15 @@ export default function CartContent() {
   const [isAvailable, setIsAvailable] = useState(true);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-  // === Kod rabatowy ===
   const [discountCode, setDiscountCode] = useState("");
-  const [appliedDiscount, setAppliedDiscount] = useState(null); // { code, type, value, message }
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
   const [isApplyingCode, setIsApplyingCode] = useState(false);
 
+  const hasCheckedAvailability = useRef(false);
+
   useEffect(() => {
-    if (cartItems.length > 0 && !loading) {
+    if (cartItems.length > 0 && !hasCheckedAvailability.current) {
+      hasCheckedAvailability.current = true;
       const verifyStock = async () => {
         setIsCheckingAvailability(true);
         const available = await checkAvailability();
@@ -51,17 +53,15 @@ export default function CartContent() {
     } else if (cartItems.length === 0) {
       setIsAvailable(true);
       setAvailabilityErrors([]);
-      setAppliedDiscount(null); // Reset przy pustym koszyku
+      setAppliedDiscount(null);
+      hasCheckedAvailability.current = false;
     }
-  }, [cartItems, checkAvailability, setAvailabilityErrors, loading]);
+  }, [cartItems, checkAvailability]);
 
   const handleFinalizeOrder = async (e) => {
     e.preventDefault();
     if (!isAvailable) {
-      toast.error(
-        "Nie można sfinalizować zamówienia: niektóre produkty są niedostępne",
-        { position: "bottom-right", autoClose: 3000 }
-      );
+      toast.error("Niektóre produkty są niedostępne");
       return;
     }
 
@@ -79,7 +79,10 @@ export default function CartContent() {
 
   const calculateSubtotal = () => {
     return cartItems
-      .reduce((sum, item) => sum + item.product.price * item.quantity, 0)
+      .reduce(
+        (sum, item) => sum + getCurrentPrice(item.product) * item.quantity,
+        0
+      )
       .toFixed(2);
   };
 
@@ -95,7 +98,7 @@ export default function CartContent() {
     if (appliedDiscount.type === "percentage") {
       return (subtotal * appliedDiscount.value) / 100;
     }
-    return Math.min(appliedDiscount.value, subtotal); // nie więcej niż subtotal
+    return Math.min(appliedDiscount.value, subtotal);
   };
 
   const calculateTotal = () => {
@@ -118,7 +121,6 @@ export default function CartContent() {
     return 0;
   };
 
-  // === Aplikowanie kodu rabatowego ===
   const applyDiscountCode = async () => {
     if (!discountCode.trim()) {
       toast.error("Wpisz kod rabatowy");
@@ -147,7 +149,7 @@ export default function CartContent() {
         });
         toast.success(`Zastosowano kod: ${discountCode.toUpperCase()}`);
       } else {
-        toast.error(data.error || "Nieprawidłowy kod rabatowy");
+        toast.error(data.error || "Nieprawidłowy kod");
         setAppliedDiscount(null);
       }
     } catch (err) {
@@ -161,17 +163,8 @@ export default function CartContent() {
 
   const removeDiscount = () => {
     setAppliedDiscount(null);
-    toast.info("Kod rabatowy usunięty");
+    toast.info("Kod usunięty");
   };
-
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto my-16 lg:my-24 px-4">
-        <h1 className="text-3xl font-bold mb-8">Twój Koszyk</h1>
-        <CartSkeleton />
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-7xl mx-auto my-16 lg:my-24 px-4 relative">
@@ -186,8 +179,7 @@ export default function CartContent() {
             Twój koszyk jest pusty
           </h2>
           <p className="mt-2 text-gray-600">
-            Czeka na coś wyjątkowego! Odkryj naszą ofertę i dodaj produkty,
-            które pokochasz!
+            Czeka na coś wyjątkowego! Odkryj naszą ofertę i dodaj produkty.
           </p>
           <div className="mt-12">
             <h3 className="text-2xl font-semibold mb-6">Może coś z tego?</h3>
@@ -196,14 +188,13 @@ export default function CartContent() {
         </div>
       ) : (
         <div className="lg:grid lg:grid-cols-3 lg:gap-8">
-          {/* Lewa kolumna */}
           <div className="lg:col-span-2 space-y-6">
             {availabilityErrors.length > 0 && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg shadow-md flex items-start space-x-3">
                 <AlertCircle className="w-6 h-6 text-red-600 shrink-0 mt-1" />
                 <div>
                   <h2 className="text-lg font-semibold text-red-800 mb-2">
-                    Problemy z dostępnością produktów
+                    Problemy z dostępnością
                   </h2>
                   <ul className="list-disc list-inside text-red-700 space-y-1">
                     {availabilityErrors.map((error, index) => (
@@ -217,7 +208,7 @@ export default function CartContent() {
                     ))}
                   </ul>
                   <p className="mt-2 text-sm text-red-600">
-                    Zmień ilość lub usuń produkty, aby kontynuować.
+                    Zmień ilość lub usuń produkty.
                   </p>
                 </div>
               </div>
@@ -254,9 +245,12 @@ export default function CartContent() {
                     <p className="text-sm text-gray-600">
                       Rozmiar: {item.size}
                     </p>
+
+                    {/* POPRAWIONE: Używa getCurrentPrice */}
                     <p className="text-sm text-gray-500">
-                      Cena: {item.product.price.toFixed(2)} PLN
+                      Cena: {getCurrentPrice(item.product).toFixed(2)} PLN
                     </p>
+
                     <div className="flex items-center gap-2 mt-2">
                       <label className="text-sm text-gray-600">Ilość:</label>
                       <QuantityInput
@@ -280,13 +274,17 @@ export default function CartContent() {
                   </div>
 
                   <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto mt-2 sm:mt-0">
+                    {/* POPRAWIONE: Używa getCurrentPrice */}
                     <p className="text-lg font-medium text-gray-800">
-                      {(item.product.price * item.quantity).toFixed(2)} PLN
+                      {(getCurrentPrice(item.product) * item.quantity).toFixed(
+                        2
+                      )}{" "}
+                      PLN
                     </p>
                     <button
                       onClick={() => removeFromCart(item.id)}
                       className="mt-0 sm:mt-2 text-gray-500 hover:text-red-600 transition-colors p-0.5"
-                      title="Usuń produkt"
+                      title="Usuń"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
@@ -295,7 +293,6 @@ export default function CartContent() {
               ))}
             </div>
 
-            {/* Metoda dostawy */}
             <div className="p-6 bg-white rounded-lg shadow-md">
               <h2 className="text-xl font-semibold mb-4">Metoda dostawy</h2>
               <div className="space-y-3">
@@ -351,12 +348,9 @@ export default function CartContent() {
             </div>
           </div>
 
-          {/* Prawa kolumna – Podsumowanie */}
           <div className="lg:col-span-1 mt-6 lg:mt-0 lg:sticky lg:top-24 h-fit">
             <div className="p-6 bg-white rounded-lg shadow-lg">
-              <h2 className="text-2xl font-semibold mb-6">
-                Podsumowanie zamówienia
-              </h2>
+              <h2 className="text-2xl font-semibold mb-6">Podsumowanie</h2>
 
               {parseFloat(calculateSubtotal()) >= 200 ? (
                 <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md flex items-center space-x-2">
@@ -384,7 +378,6 @@ export default function CartContent() {
                   </span>
                 </div>
 
-                {/* Kod rabatowy */}
                 {!appliedDiscount ? (
                   <div className="flex gap-2 mt-3">
                     <input
@@ -400,7 +393,7 @@ export default function CartContent() {
                     <button
                       onClick={applyDiscountCode}
                       disabled={isApplyingCode}
-                      className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 disabled:opacity-50"
                     >
                       {isApplyingCode ? (
                         <Loader2 className="w-4 h-4 animate-spin" />

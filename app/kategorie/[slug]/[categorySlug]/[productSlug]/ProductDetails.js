@@ -12,7 +12,7 @@ import "swiper/css/navigation";
 import "swiper/css/pagination";
 
 export default function ProductDetails({ product }) {
-  const { addToCart } = useCart();
+  const { addToCart, getCurrentPrice } = useCart();
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
@@ -21,16 +21,9 @@ export default function ProductDetails({ product }) {
   const images = product.images || [];
   const category = product.category;
 
-  // === CENA PROMOCYJNA ===
-  const isPromoActive =
-    product.promoPrice !== null &&
-    product.promoPrice < product.price &&
-    (!product.promoEndDate || new Date(product.promoEndDate) > new Date());
+  const currentPrice = product ? getCurrentPrice(product) : null;
+  const isPromoActive = product ? currentPrice < product.price : false;
 
-  const displayPrice = isPromoActive ? product.promoPrice : product.price;
-  const originalPrice = product.price;
-
-  // === BREADCRUMB ===
   const buildCategoryPath = (cat) => {
     if (!cat) return [];
     const path = [];
@@ -52,23 +45,17 @@ export default function ProductDetails({ product }) {
     { name: product.name, href: null },
   ];
 
-  // === DODAJ DO KOSZYKA Z CENĄ PROMOCYJNĄ ===
   const handleAddToCart = async (e) => {
     e.preventDefault();
     if (!selectedSize) return toast.error("Wybierz rozmiar");
 
-    const priceToUse = isPromoActive ? product.promoPrice : product.price;
-
     try {
-      await addToCart(product.id, selectedSize, quantity, {
-        ...product,
-        price: priceToUse, // ← PRZEKAŻ CENĘ PROMOCYJNĄ!
-      });
+      await addToCart(product.id, selectedSize, quantity);
       setIsAdded(true);
       setShowCartLink(true);
       setTimeout(() => setIsAdded(false), 2000);
     } catch {
-      toast.error("Błąd serwera");
+      toast.error("Błąd dodawania");
     }
   };
 
@@ -77,7 +64,6 @@ export default function ProductDetails({ product }) {
 
   return (
     <div className="max-w-7xl mx-auto my-12 md:my-24 px-4">
-      {/* BREADCRUMB */}
       <nav className="text-sm text-center md:text-left text-gray-600 mb-8 xl:mb-12">
         {breadcrumb.map((item, i) => (
           <span key={i}>
@@ -99,14 +85,12 @@ export default function ProductDetails({ product }) {
       </nav>
 
       <div className="flex flex-col md:flex-row gap-8 md:gap-16">
-        {/* GALERIA */}
         <div className="w-full md:w-1/3">
           <Swiper
             modules={[Zoom, Navigation, Pagination]}
             navigation
             pagination={{ clickable: true }}
             zoom
-            className="product-gallery-swiper"
           >
             {images.length > 0 ? (
               images.map((image, i) => (
@@ -120,7 +104,7 @@ export default function ProductDetails({ product }) {
                       fill
                       sizes="(max-width: 768px) 90vw, 33vw"
                       style={{ objectFit: "cover" }}
-                      alt={`${product.name} ${i + 1}`}
+                      alt={product.name}
                       priority={i === 0}
                     />
                   </div>
@@ -140,26 +124,24 @@ export default function ProductDetails({ product }) {
           </Swiper>
         </div>
 
-        {/* SZCZEGÓŁY */}
         <div className="w-full md:w-2/3">
           <h1 className="text-3xl md:text-4xl uppercase mb-6">
             {product.name}
           </h1>
 
-          {/* CENA + PROMOCJA + NAJNIŻSZA CENA */}
           <div className="mb-6">
             {isPromoActive ? (
               <div className="flex items-baseline gap-3">
                 <span className="text-3xl font-bold text-red-600">
-                  {displayPrice.toFixed(2)} PLN
+                  {currentPrice.toFixed(2)} PLN
                 </span>
                 <span className="text-xl line-through text-gray-500">
-                  {originalPrice.toFixed(2)} PLN
+                  {product.price.toFixed(2)} PLN
                 </span>
               </div>
             ) : (
               <span className="text-3xl font-bold text-primary">
-                {displayPrice.toFixed(2)} PLN
+                {currentPrice.toFixed(2)} PLN
               </span>
             )}
 
@@ -168,7 +150,7 @@ export default function ProductDetails({ product }) {
                 Najniższa cena z 30 dni:{" "}
                 <span
                   className={`font-bold ${
-                    product.lowestPrice < displayPrice
+                    product.lowestPrice < currentPrice
                       ? "text-red-600"
                       : "text-gray-700"
                   }`}

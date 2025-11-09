@@ -13,14 +13,20 @@ export async function GET(request) {
     const cart = await prisma.cart.findMany({
       where: {
         userId: session.user.id,
-        product: { deletedAt: null }, // TYLKO AKTYWNE PRODUKTY
+        product: { deletedAt: null },
       },
-      include: {
+      select: {
+        id: true,
+        productId: true,
+        size: true,
+        quantity: true,
         product: {
           select: {
             id: true,
             name: true,
             price: true,
+            promoPrice: true,
+            promoEndDate: true,
             images: true,
           },
         },
@@ -31,7 +37,7 @@ export async function GET(request) {
     return NextResponse.json({ cart }, { status: 200 });
   } catch (error) {
     console.error("Błąd GET koszyka:", error);
-    return NextResponse.json({ error: "Błąd serwera" }, { status: 500 });
+    return NextResponse.json({ error: " | Błąd serwera" }, { status: 500 });
   }
 }
 

@@ -120,6 +120,7 @@ export default async function ProductSlug({ params }) {
       description: true,
       description2: true,
       promoPrice: true,
+      promoEndDate: true,
       additionalInfo: true,
       sizes: true,
       images: true,

@@ -25,7 +25,7 @@ export default function Collection() {
               src={category.image || "/pantofle/pantofle.jpg"}
               alt={category.name}
               label={category.name}
-              href={`/kategoria/${category.slug || category.name}`}
+              href={`/kategorie/${category.slug || category.name}`}
             />
           ))
         )}
