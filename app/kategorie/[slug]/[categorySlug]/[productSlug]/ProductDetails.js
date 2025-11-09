@@ -17,47 +17,53 @@ export default function ProductDetails({ product }) {
   const [quantity, setQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
   const [showCartLink, setShowCartLink] = useState(false);
-  console.log(product);
 
   const images = product.images || [];
   const category = product.category;
 
-  // BREADCRUMB – buduje pełną ścieżkę kategorii z rodzicami
+  // === CENA PROMOCYJNA ===
+  const isPromoActive =
+    product.promoPrice !== null &&
+    product.promoPrice < product.price &&
+    (!product.promoEndDate || new Date(product.promoEndDate) > new Date());
+
+  const displayPrice = isPromoActive ? product.promoPrice : product.price;
+  const originalPrice = product.price;
+
+  // === BREADCRUMB ===
   const buildCategoryPath = (cat) => {
     if (!cat) return [];
     const path = [];
     let current = cat;
-
-    // Zbieramy wszystkie kategorie od bieżącej do korzenia
     while (current) {
       const slugPath = current.parent
         ? `${current.parent.slug}/${current.slug}`
         : current.slug;
-
-      path.unshift({
-        name: current.name,
-        href: `/kategorie/${slugPath}`,
-      });
-
+      path.unshift({ name: current.name, href: `/kategorie/${slugPath}` });
       current = current.parent;
     }
-
     return path;
   };
 
   const categoryPath = buildCategoryPath(category);
-
   const breadcrumb = [
     { name: "Strona główna", href: "/" },
     ...categoryPath,
     { name: product.name, href: null },
   ];
 
+  // === DODAJ DO KOSZYKA Z CENĄ PROMOCYJNĄ ===
   const handleAddToCart = async (e) => {
     e.preventDefault();
     if (!selectedSize) return toast.error("Wybierz rozmiar");
+
+    const priceToUse = isPromoActive ? product.promoPrice : product.price;
+
     try {
-      await addToCart(product.id, selectedSize, quantity, product);
+      await addToCart(product.id, selectedSize, quantity, {
+        ...product,
+        price: priceToUse, // ← PRZEKAŻ CENĘ PROMOCYJNĄ!
+      });
       setIsAdded(true);
       setShowCartLink(true);
       setTimeout(() => setIsAdded(false), 2000);
@@ -140,34 +146,29 @@ export default function ProductDetails({ product }) {
             {product.name}
           </h1>
 
-          {/* CENA + PROMOCJA + NAJNIŻSZA CENA Z 30 DNI */}
+          {/* CENA + PROMOCJA + NAJNIŻSZA CENA */}
           <div className="mb-6">
-            {/* CENA PROMOCYJNA (jeśli aktywna i nie minęła) */}
-            {product.promoPrice !== null &&
-            product.promoPrice < product.price &&
-            (!product.promoEndDate ||
-              new Date(product.promoEndDate) > new Date()) ? (
+            {isPromoActive ? (
               <div className="flex items-baseline gap-3">
                 <span className="text-3xl font-bold text-red-600">
-                  {product.promoPrice.toFixed(2)} PLN
+                  {displayPrice.toFixed(2)} PLN
                 </span>
                 <span className="text-xl line-through text-gray-500">
-                  {product.price.toFixed(2)} PLN
+                  {originalPrice.toFixed(2)} PLN
                 </span>
               </div>
             ) : (
               <span className="text-3xl font-bold text-primary">
-                {product.price.toFixed(2)} PLN
+                {displayPrice.toFixed(2)} PLN
               </span>
             )}
 
-            {/* NAJNIŻSZA CENA Z 30 DNI */}
             {product.lowestPrice && (
               <div className="text-sm text-gray-500 mt-1">
                 Najniższa cena z 30 dni:{" "}
                 <span
                   className={`font-bold ${
-                    product.lowestPrice < (product.promoPrice ?? product.price)
+                    product.lowestPrice < displayPrice
                       ? "text-red-600"
                       : "text-gray-700"
                   }`}
@@ -196,7 +197,8 @@ export default function ProductDetails({ product }) {
                 </option>
                 {product.sizes?.map((s) => (
                   <option key={s.size} value={s.size} disabled={s.stock === 0}>
-                    Rozmiar {s.size} {s.stock === 0 ? "(Brak)" : "(dostępne)"}
+                    Rozmiar {s.size}{" "}
+                    {s.stock === 0 ? "(Brak)" : `(dostępne: ${s.stock})`}
                   </option>
                 ))}
               </select>
@@ -209,7 +211,7 @@ export default function ProductDetails({ product }) {
                 min="1"
                 max={stockForSelectedSize > 0 ? stockForSelectedSize : 1}
                 value={quantity}
-                onChange={(e) => setQuantity(parseInt(e.target.value))}
+                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
                 className="border border-gray-300 rounded-md p-2 w-full max-w-xs"
                 disabled={!selectedSize || stockForSelectedSize === 0}
                 required
