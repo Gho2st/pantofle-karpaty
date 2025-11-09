@@ -59,8 +59,10 @@ export default function ProductDetails({ product }) {
     }
   };
 
-  const stockForSelectedSize =
+  // Znajdź stan dla wybranego rozmiaru
+  const selectedSizeStock =
     product.sizes?.find((s) => s.size === selectedSize)?.stock || 0;
+  const isSizeAvailable = selectedSizeStock > 0;
 
   return (
     <div className="max-w-7xl mx-auto my-12 md:my-24 px-4">
@@ -179,8 +181,8 @@ export default function ProductDetails({ product }) {
                 </option>
                 {product.sizes?.map((s) => (
                   <option key={s.size} value={s.size} disabled={s.stock === 0}>
-                    Rozmiar {s.size}{" "}
-                    {s.stock === 0 ? "(Brak)" : `(dostępne: ${s.stock})`}
+                    Rozmiar {s.size}
+                    {s.stock === 0 && " (niedostępny)"}
                   </option>
                 ))}
               </select>
@@ -191,11 +193,11 @@ export default function ProductDetails({ product }) {
               <input
                 type="number"
                 min="1"
-                max={stockForSelectedSize > 0 ? stockForSelectedSize : 1}
+                max={isSizeAvailable ? selectedSizeStock : 1}
                 value={quantity}
                 onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
                 className="border border-gray-300 rounded-md p-2 w-full max-w-xs"
-                disabled={!selectedSize || stockForSelectedSize === 0}
+                disabled={!selectedSize || !isSizeAvailable}
                 required
               />
             </div>
@@ -208,9 +210,7 @@ export default function ProductDetails({ product }) {
                     ? "bg-green-600"
                     : "bg-red-600 hover:bg-red-700 disabled:bg-gray-400"
                 }`}
-                disabled={
-                  isAdded || !selectedSize || stockForSelectedSize === 0
-                }
+                disabled={isAdded || !selectedSize || !isSizeAvailable}
               >
                 {isAdded ? "Dodano!" : "Dodaj do koszyka"}
               </button>

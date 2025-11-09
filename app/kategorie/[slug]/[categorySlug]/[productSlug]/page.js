@@ -3,6 +3,20 @@ import prisma from "@/app/lib/prisma";
 import { notFound } from "next/navigation";
 import ProductDetails from "./ProductDetails";
 
+// === FUNKCJA: Parsowanie JSON → tablica (bezpieczna) ===
+function parseJsonField(field) {
+  if (typeof field === "string") {
+    try {
+      const parsed = JSON.parse(field);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      console.error("Błąd parsowania JSON:", e, field);
+      return [];
+    }
+  }
+  return Array.isArray(field) ? field : [];
+}
+
 // === DYNAMICZNE METADATA + JSON-LD ===
 export async function generateMetadata({ params }) {
   const { productSlug } = await params;
@@ -40,10 +54,12 @@ export async function generateMetadata({ params }) {
     return { title: "Produkt nie znaleziony | Pantofle Karpaty" };
   }
 
+  // Napraw images (dla metadata)
+  product.images = parseJsonField(product.images);
+
   const parent = product.category.parent;
   const category = product.category;
 
-  // BREADCRUMB do OG
   const breadcrumb = [
     "Strona główna",
     parent?.name,
@@ -59,7 +75,7 @@ export async function generateMetadata({ params }) {
     `Ręcznie robione ${product.name.toLowerCase()} z wełny – ciepłe, wygodne i trwałe. Idealne na prezent.`;
   const description = `${baseDesc} Pantofle Karpaty – tradycja z Bieszczad.`;
 
-  const image = product.images?.[0];
+  const image = product.images[0];
 
   return {
     title,
@@ -67,8 +83,6 @@ export async function generateMetadata({ params }) {
     alternates: {
       canonical: `${productSlug}`,
     },
-
-    // JSON-LD: Product (schema.org)
     other: {
       "script:ld+json": JSON.stringify({
         "@context": "https://schema.org",
@@ -82,7 +96,6 @@ export async function generateMetadata({ params }) {
           priceCurrency: "PLN",
           price: product.lowestPrice || product.price,
           availability: "https://schema.org/InStock",
-          // url: `${productSlug}`,
         },
         breadcrumb: {
           "@type": "BreadcrumbList",
@@ -97,6 +110,7 @@ export async function generateMetadata({ params }) {
   };
 }
 
+// === STRONA PRODUKTU ===
 export default async function ProductSlug({ params }) {
   const { productSlug } = await params;
 
@@ -138,6 +152,10 @@ export default async function ProductSlug({ params }) {
   });
 
   if (!product) notFound();
+
+  // NAPRAWA: Parsuj sizes i images
+  product.sizes = parseJsonField(product.sizes);
+  product.images = parseJsonField(product.images);
 
   return <ProductDetails product={product} />;
 }
