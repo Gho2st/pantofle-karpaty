@@ -6,48 +6,37 @@ import prisma from "../lib/prisma";
 
 export const metadata = {
   title: "Finalizacja zamówienia | Pantofle Karpaty",
-  description:
-    "Złóż zamówienie. Bezpieczne płatności, szybka dostawa. Pantofle Karpaty.",
-  alternates: {
-    canonical: "/zamowienie",
-  },
+  description: "Złóż zamówienie. Bezpieczne płatności, szybka dostawa.",
+  alternates: { canonical: "/zamowienie" },
   robots: "noindex, nofollow",
 };
 
-// === Pobierz dane użytkownika i adres główny ===
 async function getUserData(email) {
   if (!email) return { user: null, primaryAddress: null };
-
   try {
     const user = await prisma.user.findUnique({
       where: { email },
-      include: {
-        addresses: {
-          orderBy: { isPrimary: "desc" },
-        },
-      },
+      include: { addresses: { orderBy: { isPrimary: "desc" } } },
     });
-
     if (!user) return { user: null, primaryAddress: null };
-
     const primaryAddress =
-      user.addresses.find((addr) => addr.isPrimary) ||
-      user.addresses[0] ||
-      null;
-
+      user.addresses.find((a) => a.isPrimary) || user.addresses[0] || null;
     return { user, primaryAddress };
   } catch (error) {
-    console.error("Błąd podczas pobierania danych użytkownika:", error);
+    console.error("Błąd pobierania danych:", error);
     return { user: null, primaryAddress: null };
   }
 }
 
-export default async function CheckoutPage() {
-  // 1. Sesja
+export default async function CheckoutPage({ searchParams }) {
   const session = await getServerSession(authOptions);
-
-  // 2. Dane użytkownika
   const { user, primaryAddress } = await getUserData(session?.user?.email);
+
+  // POBIERZ RABAT Z URL
+  const discountCode = searchParams?.discountCode || null;
+  const discountValue = searchParams?.discountValue
+    ? parseFloat(searchParams.discountValue)
+    : 0;
 
   return (
     <div className="max-w-4xl mx-auto my-12 2xl:my-24 px-4">
@@ -55,19 +44,14 @@ export default async function CheckoutPage() {
         Finalizacja zamówienia
       </h1>
 
-      <Suspense
-        fallback={
-          <div className="bg-white p-6 rounded-lg shadow text-center text-gray-600">
-            Ładowanie formularza...
-          </div>
-        }
-      >
-        {/* PRZEKAŻ WSZYSTKO, CO POTRZEBA */}
+      <Suspense fallback={<div className="text-center py-6">Ładowanie...</div>}>
         <CheckoutForm
-          session={session} // <--- DODANE!
+          session={session}
           primaryAddress={primaryAddress}
           userName={user?.name || session?.user?.name || ""}
           userEmail={session?.user?.email || ""}
+          discountCode={discountCode}
+          discountValue={discountValue}
         />
       </Suspense>
     </div>

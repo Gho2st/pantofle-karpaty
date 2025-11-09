@@ -23,7 +23,12 @@ const splitName = (fullName = "") => {
   return { firstName, lastName };
 };
 
-export default function CheckoutForm({ primaryAddress, userName }) {
+export default function CheckoutForm({
+  primaryAddress,
+  userName,
+  discountCode: initialDiscountCode,
+  discountValue: initialDiscountValue,
+}) {
   const INPOST_TOKEN = process.env.NEXT_PUBLIC_INPOST_TOKEN;
 
   const { data: session, status: sessionStatus } = useSession();
@@ -54,7 +59,10 @@ export default function CheckoutForm({ primaryAddress, userName }) {
     searchParams.get("deliveryMethod") || "paczkomat"
   );
 
-  // Walidacja i błędy
+  // RABAT
+  const [discountCode] = useState(initialDiscountCode);
+  const [discountValue] = useState(initialDiscountValue);
+
   const [touchedFields, setTouchedFields] = useState({});
   const [errors, setErrors] = useState({});
   const formRef = useRef(null);
@@ -80,8 +88,8 @@ export default function CheckoutForm({ primaryAddress, userName }) {
   const calculateTotal = useCallback(() => {
     const subtotal = parseFloat(calculateSubtotal());
     const deliveryCost = calculateDeliveryCost();
-    return (subtotal + deliveryCost).toFixed(2);
-  }, [calculateSubtotal, calculateDeliveryCost]);
+    return (subtotal + deliveryCost - discountValue).toFixed(2);
+  }, [calculateSubtotal, calculateDeliveryCost, discountValue]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -117,7 +125,6 @@ export default function CheckoutForm({ primaryAddress, userName }) {
     }
   }, []);
 
-  // Walidacja pojedynczego pola
   const validateField = (name, value) => {
     const labels = {
       firstName: "Imię",
@@ -207,7 +214,6 @@ export default function CheckoutForm({ primaryAddress, userName }) {
     return "";
   };
 
-  // Walidacja wszystkich pól
   const validateAll = () => {
     const fieldsToValidate = [
       "email",
@@ -242,7 +248,6 @@ export default function CheckoutForm({ primaryAddress, userName }) {
 
     if (!validateAll()) {
       toast.error("Wypełnij poprawnie wszystkie wymagane pola.");
-      // Przewiń do pierwszego błędu
       setTimeout(() => {
         const firstError = document.querySelector(".text-red-600");
         if (firstError) {
@@ -268,6 +273,8 @@ export default function CheckoutForm({ primaryAddress, userName }) {
           deliveryCost,
           paymentMethod,
           deliveryMethod,
+          discountCode,
+          discountValue,
         }),
       });
 
@@ -295,6 +302,8 @@ export default function CheckoutForm({ primaryAddress, userName }) {
         calculateDeliveryCost={calculateDeliveryCost}
         calculateTotal={calculateTotal}
         isProcessing={isStripeProcessing}
+        discountCode={discountCode}
+        discountValue={discountValue}
       />
       {cartItems.length > 0 && (
         <form
@@ -315,7 +324,7 @@ export default function CheckoutForm({ primaryAddress, userName }) {
             touchedFields={touchedFields}
             setTouchedFields={setTouchedFields}
             validateField={validateField}
-            setErrors={setErrors} // <--- DODAJ TO
+            setErrors={setErrors}
           />
           <div className="mt-6">
             <PaymentMethodSelector
