@@ -1,4 +1,6 @@
+"use client";
 import React from "react";
+import { useCart } from "@/app/context/cartContext";
 
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center py-6">
@@ -10,13 +12,15 @@ const LoadingSpinner = () => (
 export default function CartSummary({
   cartItems,
   deliveryMethod,
-  calculateSubtotal,
+  calculateSubtotal, // ← teraz używa getCurrentPrice
   calculateDeliveryCost,
-  calculateTotal,
+  calculateTotal, // ← używa poprawnej sumy
   isProcessing,
   discountCode,
   discountValue = 0,
 }) {
+  const { getCurrentPrice } = useCart();
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
       <h2 className="text-xl font-semibold mb-4">Podsumowanie koszyka</h2>
@@ -27,14 +31,38 @@ export default function CartSummary({
         <p className="text-gray-600">Twój koszyk jest pusty.</p>
       ) : (
         <>
-          {cartItems.map((item) => (
-            <div key={item.id} className="flex justify-between mb-2 text-sm">
-              <span>
-                {item.product.name} (Rozm. {item.size}, Ilość: {item.quantity})
-              </span>
-              <span>{(item.product.price * item.quantity).toFixed(2)} PLN</span>
-            </div>
-          ))}
+          {cartItems.map((item) => {
+            const currentPrice = getCurrentPrice(item.product);
+            const itemTotal = currentPrice * item.quantity;
+            const isPromo = currentPrice < item.product.price;
+
+            return (
+              <div
+                key={`${item.product.id}-${item.size}`}
+                className="flex justify-between mb-2 text-sm"
+              >
+                <span>
+                  {item.product.name} (Rozm. {item.size}, Ilość: {item.quantity}
+                  )
+                  {isPromo && (
+                    <span className="text-red-600 text-xs ml-1 font-medium">
+                      {" "}
+                      (-
+                      {Math.round(
+                        ((item.product.price - currentPrice) /
+                          item.product.price) *
+                          100
+                      )}
+                      %)
+                    </span>
+                  )}
+                </span>
+                <span className={isPromo ? "text-red-600 font-medium" : ""}>
+                  {itemTotal.toFixed(2)} PLN
+                </span>
+              </div>
+            );
+          })}
 
           <div className="border-t pt-3 mt-4 space-y-2">
             <div className="flex justify-between text-gray-700">

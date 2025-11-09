@@ -32,10 +32,11 @@ export default async function CheckoutPage({ searchParams }) {
   const session = await getServerSession(authOptions);
   const { user, primaryAddress } = await getUserData(session?.user?.email);
 
+  const awaitedSearchParams = await searchParams;
   // POBIERZ RABAT Z URL
-  const discountCode = searchParams?.discountCode || null;
-  const discountValue = searchParams?.discountValue
-    ? parseFloat(searchParams.discountValue)
+  const discountCode = awaitedSearchParams?.discountCode || null;
+  const discountValue = awaitedSearchParams?.discountValue
+    ? parseFloat(awaitedSearchParams.discountValue)
     : 0;
 
   return (

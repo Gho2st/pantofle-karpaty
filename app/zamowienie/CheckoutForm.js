@@ -32,7 +32,12 @@ export default function CheckoutForm({
   const INPOST_TOKEN = process.env.NEXT_PUBLIC_INPOST_TOKEN;
 
   const { data: session, status: sessionStatus } = useSession();
-  const { cartItems, clearCart, loading: isCartLoading } = useCart();
+  const {
+    cartItems,
+    clearCart,
+    loading: isCartLoading,
+    getCurrentPrice,
+  } = useCart();
   const searchParams = useSearchParams();
 
   const [isStripeProcessing, setIsStripeProcessing] = useState(false);
@@ -60,8 +65,8 @@ export default function CheckoutForm({
   );
 
   // RABAT
-  const [discountCode] = useState(initialDiscountCode);
-  const [discountValue] = useState(initialDiscountValue);
+  const [discountCode] = useState(initialDiscountCode || "");
+  const [discountValue] = useState(initialDiscountValue || 0);
 
   const [touchedFields, setTouchedFields] = useState({});
   const [errors, setErrors] = useState({});
@@ -73,22 +78,27 @@ export default function CheckoutForm({
     }
   }, [session, formData.email]);
 
+  // UŻYWAMY getCurrentPrice Z KONTEXTU
   const calculateSubtotal = useCallback(() => {
     return cartItems
-      .reduce((sum, item) => sum + (item.product.price || 0) * item.quantity, 0)
+      .reduce((sum, item) => {
+        const currentPrice = getCurrentPrice(item.product);
+        return sum + currentPrice * item.quantity;
+      }, 0)
       .toFixed(2);
-  }, [cartItems]);
+  }, [cartItems, getCurrentPrice]);
 
   const calculateDeliveryCost = useCallback(() => {
     const subtotal = parseFloat(calculateSubtotal());
     if (subtotal >= 200) return 0;
     return deliveryMethod === "paczkomat" ? 13.99 : 15.99;
-  }, [cartItems, deliveryMethod, calculateSubtotal]);
+  }, [calculateSubtotal, deliveryMethod]);
 
   const calculateTotal = useCallback(() => {
     const subtotal = parseFloat(calculateSubtotal());
     const deliveryCost = calculateDeliveryCost();
-    return (subtotal + deliveryCost - discountValue).toFixed(2);
+    const discount = discountValue || 0;
+    return (subtotal + deliveryCost - discount).toFixed(2);
   }, [calculateSubtotal, calculateDeliveryCost, discountValue]);
 
   const handleInputChange = (e) => {
@@ -262,12 +272,18 @@ export default function CheckoutForm({
     const total = calculateTotal();
     const deliveryCost = calculateDeliveryCost();
 
+    // WYSYŁAMY RZECZYWISTE CENY (po promocji)
+    const itemsWithCurrentPrice = cartItems.map((item) => ({
+      ...item,
+      currentPrice: getCurrentPrice(item.product),
+    }));
+
     try {
       const response = await fetch("/api/checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application-json" },
         body: JSON.stringify({
-          cartItems,
+          cartItems: itemsWithCurrentPrice, // ← z ceną po promocji
           formData,
           total,
           deliveryCost,
