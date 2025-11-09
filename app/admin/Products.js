@@ -217,7 +217,7 @@ export default function Products() {
           Produkty w {selectedCategory?.name || "Kategorii"}
         </h2>
 
-        <button
+        {/* <button
           onClick={() => setShowDeleted((prev) => !prev)}
           className={`px-4 py-2 rounded-md text-sm font-medium transition ${
             showDeleted
@@ -226,7 +226,7 @@ export default function Products() {
           }`}
         >
           {showDeleted ? "Ukryj usunięte" : "Pokaż usunięte"}
-        </button>
+        </button> */}
       </div>
 
       {/* PRZYCISK DODAJ */}
