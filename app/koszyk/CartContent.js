@@ -10,6 +10,7 @@ import {
   Loader2,
   Trash2,
   ShoppingCart,
+  Tag,
 } from "lucide-react";
 import Collection from "../components/homepage/Collection";
 import LoadingOverlay from "./LoadingOverlay";
@@ -33,6 +34,11 @@ export default function CartContent() {
   const [isAvailable, setIsAvailable] = useState(true);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
+  // === Kod rabatowy ===
+  const [discountCode, setDiscountCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState(null); // { code, type, value, message }
+  const [isApplyingCode, setIsApplyingCode] = useState(false);
+
   useEffect(() => {
     if (cartItems.length > 0 && !loading) {
       const verifyStock = async () => {
@@ -45,6 +51,7 @@ export default function CartContent() {
     } else if (cartItems.length === 0) {
       setIsAvailable(true);
       setAvailabilityErrors([]);
+      setAppliedDiscount(null); // Reset przy pustym koszyku
     }
   }, [cartItems, checkAvailability, setAvailabilityErrors, loading]);
 
@@ -59,9 +66,15 @@ export default function CartContent() {
     }
 
     setIsRedirecting(true);
-    window.location.href = `/zamowienie?deliveryMethod=${deliveryMethod}&deliveryCost=${calculateDeliveryCost().toFixed(
-      2
-    )}`;
+    const params = new URLSearchParams({
+      deliveryMethod,
+      deliveryCost: calculateDeliveryCost().toFixed(2),
+    });
+    if (appliedDiscount) {
+      params.append("discountCode", appliedDiscount.code);
+      params.append("discountValue", calculateDiscountAmount().toFixed(2));
+    }
+    window.location.href = `/zamowienie?${params.toString()}`;
   };
 
   const calculateSubtotal = () => {
@@ -76,10 +89,20 @@ export default function CartContent() {
     return deliveryMethod === "paczkomat" ? 13.99 : 15.99;
   };
 
+  const calculateDiscountAmount = () => {
+    if (!appliedDiscount) return 0;
+    const subtotal = parseFloat(calculateSubtotal());
+    if (appliedDiscount.type === "percentage") {
+      return (subtotal * appliedDiscount.value) / 100;
+    }
+    return Math.min(appliedDiscount.value, subtotal); // nie więcej niż subtotal
+  };
+
   const calculateTotal = () => {
     const subtotal = parseFloat(calculateSubtotal());
     const deliveryCost = calculateDeliveryCost();
-    return (subtotal + deliveryCost).toFixed(2);
+    const discount = calculateDiscountAmount();
+    return (subtotal + deliveryCost - discount).toFixed(2);
   };
 
   const calculateRemainingForFreeDelivery = () => {
@@ -93,6 +116,52 @@ export default function CartContent() {
       return deliveryMethod === "paczkomat" ? 13.99 : 15.99;
     }
     return 0;
+  };
+
+  // === Aplikowanie kodu rabatowego ===
+  const applyDiscountCode = async () => {
+    if (!discountCode.trim()) {
+      toast.error("Wpisz kod rabatowy");
+      return;
+    }
+
+    setIsApplyingCode(true);
+    try {
+      const res = await fetch("/api/discounts/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: discountCode.toUpperCase().trim(),
+          subtotal: parseFloat(calculateSubtotal()),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.valid) {
+        setAppliedDiscount({
+          code: discountCode.toUpperCase().trim(),
+          type: data.type,
+          value: data.value,
+          message: data.message,
+        });
+        toast.success(`Zastosowano kod: ${discountCode.toUpperCase()}`);
+      } else {
+        toast.error(data.error || "Nieprawidłowy kod rabatowy");
+        setAppliedDiscount(null);
+      }
+    } catch (err) {
+      toast.error("Błąd połączenia");
+      setAppliedDiscount(null);
+    } finally {
+      setIsApplyingCode(false);
+      setDiscountCode("");
+    }
+  };
+
+  const removeDiscount = () => {
+    setAppliedDiscount(null);
+    toast.info("Kod rabatowy usunięty");
   };
 
   if (loading) {
@@ -216,7 +285,7 @@ export default function CartContent() {
                     </p>
                     <button
                       onClick={() => removeFromCart(item.id)}
-                      className="mt-0 sm:mt-2 text-gray-500 hover:text-red-600 transition-colors p-1"
+                      className="mt-0 sm:mt-2 text-gray-500 hover:text-red-600 transition-colors p-0.5"
                       title="Usuń produkt"
                     >
                       <Trash2 className="w-5 h-5" />
@@ -314,12 +383,72 @@ export default function CartContent() {
                     {calculateSubtotal()} PLN
                   </span>
                 </div>
+
+                {/* Kod rabatowy */}
+                {!appliedDiscount ? (
+                  <div className="flex gap-2 mt-3">
+                    <input
+                      type="text"
+                      value={discountCode}
+                      onChange={(e) => setDiscountCode(e.target.value)}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && applyDiscountCode()
+                      }
+                      placeholder="Kod rabatowy"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                    <button
+                      onClick={applyDiscountCode}
+                      disabled={isApplyingCode}
+                      className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      {isApplyingCode ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Tag className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <div>
+                        <p className="text-sm font-medium text-green-800">
+                          Kod: <strong>{appliedDiscount.code}</strong>
+                        </p>
+                        <p className="text-xs text-green-700">
+                          {appliedDiscount.type === "percentage"
+                            ? `-${appliedDiscount.value}%`
+                            : `-${appliedDiscount.value.toFixed(2)} PLN`}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={removeDiscount}
+                      className="text-red-600 hover:text-red-800 text-sm"
+                    >
+                      Usuń
+                    </button>
+                  </div>
+                )}
+
+                {appliedDiscount && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Rabat:</span>
+                    <span className="font-medium">
+                      -{calculateDiscountAmount().toFixed(2)} PLN
+                    </span>
+                  </div>
+                )}
+
                 <div className="flex justify-between text-gray-600">
                   <span>Koszt dostawy:</span>
                   <span className="font-medium text-gray-800">
                     {calculateDeliveryCost().toFixed(2)} PLN
                   </span>
                 </div>
+
                 {parseFloat(calculateSubtotal()) >= 200 && (
                   <div className="flex justify-between text-green-600">
                     <span>Oszczędność (dostawa):</span>

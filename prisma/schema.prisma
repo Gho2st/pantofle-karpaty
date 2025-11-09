@@ -125,3 +125,17 @@ model OrderItem {
   order      Order   @relation("OrderItems", fields: [orderId], references: [id])
   product    Product @relation("ProductOrderItems", fields: [productId], references: [id])
 }
+
+model DiscountCode {
+  id            Int       @id @default(autoincrement())
+  code          String    @unique
+  type          String    // "percentage" lub "fixed"
+  value         Float     // 10.00 dla 10 PLN, 15.00 dla 15%
+  minOrderValue Float?    // minimalna wartość zamówienia
+  maxUses       Int?      // maksymalna liczba użyć
+  usedCount     Int       @default(0)
+  validFrom     DateTime?
+  validTo       DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+}

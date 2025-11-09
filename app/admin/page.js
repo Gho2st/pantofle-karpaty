@@ -7,15 +7,29 @@ import { ToastContainer } from "react-toastify";
 import Users from "./Users";
 import Orders from "./Orders";
 import "react-toastify/dist/ReactToastify.css";
-import { Menu, X } from "lucide-react"; // Import ikon
+import { Menu, X } from "lucide-react";
+import DiscountCodes from "./DiscountCodes";
 
 export default function Admin() {
   const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeView, setActiveView] = useState("categories"); // Domyślny widok
+  const [activeView, setActiveView] = useState(null); // ← ŻADEN domyślny widok
 
   // Funkcja do renderowania aktywnego widoku
   const renderActiveView = () => {
+    if (!activeView) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-center p-8">
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">
+            Witaj w Panelu Admina
+          </h1>
+          <p className="text-gray-600 max-w-md">
+            Wybierz jedną z opcji z menu po lewej, aby rozpocząć zarządzanie.
+          </p>
+        </div>
+      );
+    }
+
     switch (activeView) {
       case "categories":
         return <Category />;
@@ -23,10 +37,20 @@ export default function Admin() {
         return <Users />;
       case "orders":
         return <Orders />;
+      case "discounts":
+        return <DiscountCodes />;
       default:
-        return <Category />;
+        return null;
     }
   };
+
+  // Klasa dla aktywnych przycisków w menu
+  const menuItemClass = (view) =>
+    `block py-2 px-4 rounded transition-colors w-full text-left ${
+      activeView === view
+        ? "bg-blue-100 text-blue-700 font-medium"
+        : "text-gray-700 hover:bg-gray-200"
+    }`;
 
   if (status === "loading") {
     return (
@@ -77,42 +101,46 @@ export default function Admin() {
               <X size={24} />
             </button>
           </div>
-          <nav className="mt-6">
-            <ul>
-              <li>
-                <button
-                  onClick={() => {
-                    setActiveView("orders");
-                    setSidebarOpen(false); // Zamknij sidebar na mobilce po kliknięciu
-                  }}
-                  className="block py-2 px-4 text-gray-700 hover:bg-gray-200 rounded"
-                >
-                  Zamówienia
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    setActiveView("users");
-                    setSidebarOpen(false); // Zamknij sidebar na mobilce po kliknięciu
-                  }}
-                  className="block py-2 px-4 text-gray-700 hover:bg-gray-200 rounded"
-                >
-                  Uzytkownicy
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    setActiveView("categories");
-                    setSidebarOpen(false); // Zamknij sidebar na mobilce po kliknięciu
-                  }}
-                  className="block py-2 px-4 text-gray-700 hover:bg-gray-200 rounded"
-                >
-                  Kategorie
-                </button>
-              </li>
-            </ul>
+          <nav className="mt-6 space-y-1">
+            <button
+              onClick={() => {
+                setActiveView("orders");
+                setSidebarOpen(false);
+              }}
+              className={menuItemClass("orders")}
+            >
+              Zamówienia
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveView("users");
+                setSidebarOpen(false);
+              }}
+              className={menuItemClass("users")}
+            >
+              Użytkownicy
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveView("categories");
+                setSidebarOpen(false);
+              }}
+              className={menuItemClass("categories")}
+            >
+              Kategorie
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveView("discounts");
+                setSidebarOpen(false);
+              }}
+              className={menuItemClass("discounts")}
+            >
+              Kody rabatowe
+            </button>
           </nav>
         </div>
       </div>
@@ -132,8 +160,10 @@ export default function Admin() {
           </div>
         </header>
 
-        {/* Poprawiony padding dla responsywności */}
-        <div className="my-10 px-4 sm:px-6 lg:px-8">{renderActiveView()}</div>
+        {/* Treść główna */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+          {renderActiveView()}
+        </main>
       </div>
 
       <ToastContainer position="bottom-right" autoClose={3000} />
