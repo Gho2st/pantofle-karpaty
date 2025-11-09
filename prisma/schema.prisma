@@ -19,8 +19,6 @@ model User {
   cart        Cart[]    @relation("UserCart")
   orders      Order[]   @relation("UserOrders")
   addresses   Address[] @relation("UserAddresses")
-  discountCode   String?   // np. "BLACKFRIDAY"
-  discountAmount Float     @default(0)  // kwota rabatu (np. 15.00)
 }
 
 model Address {
@@ -103,6 +101,8 @@ model Order {
   phone       String
   paczkomat   String?   // Opcjonalny kod paczkomatu
   totalAmount Float
+  discountCode   String?
+  discountAmount Float       @default(0)
   isGuest     Boolean   @default(false)
   items       OrderItem[] @relation("OrderItems")
   user        User?     @relation("UserOrders", fields: [userId], references: [id])
