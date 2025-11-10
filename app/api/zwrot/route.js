@@ -52,7 +52,7 @@ function createReturnEmailTemplate(data) {
         <div style="margin-top: 24px; padding: 16px; background: #fef3c7; border-radius: 8px; font-size: 14px;">
           <p style="margin: 0; color: #92400e;">
             <strong>Uwaga:</strong> Przygotuj etykietę zwrotną InPost na paczkomat: <strong>${data.paczkomat.pointId}</strong><br />
-            Wyślij ją na e-mail klienta: <strong>${data.email.email}</strong>
+            Wyślij ją na e-mail klienta: <strong>${data.email}</strong>
           </p>
         </div>
         <hr style="border: 1px dashed #d1d5db; margin: 24px 0;">

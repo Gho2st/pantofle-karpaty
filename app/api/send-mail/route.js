@@ -58,12 +58,14 @@ export async function POST(request) {
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || "smtp.gmail.com",
       port: parseInt(process.env.SMTP_PORT) || 465,
-      secure: true, // ← ZAWSZE true dla portu 465
+      secure: process.env.SMTP_SECURE === "true" || true,
       auth: {
         user: process.env.NODEMAILER_EMAIL,
         pass: process.env.NODEMAILER_PW,
       },
-      // DODAJ TIMEOUT
+      // DODAJ TIMEOUT I POOL
+      pool: true,
+      maxConnections: 1,
       connectionTimeout: 10000,
       socketTimeout: 10000,
     });
