@@ -47,15 +47,15 @@ const SizeChart = () => {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-gray-100">
-                <th className="p-3">Rozmiar EU</th>
-                <th className="p-3">Długość wkładki (cm)</th>
+                <th className="p-1">Rozmiar EU</th>
+                <th className="p-1">Długość wkładki (cm)</th>
               </tr>
             </thead>
             <tbody>
               {sizes.map((size) => (
                 <tr key={size.eu} className="border-t">
-                  <td className="p-3">{size.eu}</td>
-                  <td className="p-3">{size.insole}</td>
+                  <td className="p-1">{size.eu}</td>
+                  <td className="p-1">{size.insole}</td>
                 </tr>
               ))}
             </tbody>

@@ -10,6 +10,7 @@ import "swiper/css";
 import "swiper/css/zoom";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
+import SizeChart from "@/app/components/Sizes";
 
 export default function ProductDetails({ product }) {
   const { addToCart, getCurrentPrice } = useCart();
@@ -231,6 +232,7 @@ export default function ProductDetails({ product }) {
           {product.additionalInfo && (
             <p className="mt-10 text-gray-700">{product.additionalInfo}</p>
           )}
+          <SizeChart />
         </div>
       </div>
     </div>
