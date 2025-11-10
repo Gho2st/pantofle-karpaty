@@ -49,7 +49,7 @@ export async function POST(request) {
       );
     }
 
-    // Konfiguracja transporteru SMTP
+    // Konfiguracja transporteru SMTPs
     const transporter = nodemailer.createTransport({
       service: process.env.SMTP_SERVICE || "gmail",
       host: process.env.SMTP_HOST || "smtp.gmail.com",
