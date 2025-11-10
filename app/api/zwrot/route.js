@@ -1,19 +1,31 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 
-// === WALIDACJA POLA E-MAIL ===
+// === WALIDACJA E-MAIL ===
 function isValidEmail(email) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }
 
-// === WALIDACJA WSZYSTKICH PÓL ===
-function validateReturnFields(fields) {
-  const required = ["name", "email", "orderNumber", "product", "reason"];
-  return required.every((key) => fields[key] && fields[key].trim() !== "");
+// === WALIDACJA PÓL (w tym paczkomat) ===
+function validateReturnFields(data) {
+  const required = [
+    "name",
+    "email",
+    "orderNumber",
+    "product",
+    "reason",
+    "paczkomat",
+  ];
+  return required.every((key) => {
+    if (key === "paczkomat") {
+      return data.paczkomat && data.paczkomat.name && data.paczkomat.pointId;
+    }
+    return data[key] && data[key].toString().trim() !== "";
+  });
 }
 
-// === SZABLON E-MAILA DLA SKLEPU (zgłoszenie zwrotu) ===
+// === SZABLON E-MAILA DLA SKLEPU ===
 function createReturnEmailTemplate(data) {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; background: #f9f9f9; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
@@ -30,11 +42,15 @@ function createReturnEmailTemplate(data) {
           <tr><td style="padding: 8px 0;"><strong>Numer zamówienia:</strong></td><td><strong>#${data.orderNumber}</strong></td></tr>
           <tr><td style="padding: 8px 0;"><strong>Produkt do zwrotu:</strong></td><td>${data.product}</td></tr>
           <tr><td style="padding: 8px 0;"><strong>Powód zwrotu:</strong></td><td>${data.reason}</td></tr>
+          <tr><td style="padding: 8px 0; vertical-align: top;"><strong>Paczkomat zwrotny:</strong></td>
+              <td><strong>${data.paczkomat.name}</strong> (${data.paczkomat.pointId})<br />
+                  <small style="color: #6b7280;">${data.paczkomat.address}</small></td></tr>
         </table>
 
         <div style="margin-top: 24px; padding: 16px; background: #fef3c7; border-radius: 8px; font-size: 14px;">
           <p style="margin: 0; color: #92400e;">
-            <strong>Uwaga:</strong> Przygotuj etykietę zwrotną InPost i wyślij ją na e-mail klienta: <strong>${data.email}</strong>
+            <strong>Uwaga:</strong> Przygotuj etykietę zwrotną InPost na paczkomat: <strong>${data.paczkomat.pointId}</strong><br />
+            Wyślij ją na e-mail klienta: <strong>${data.email}</strong>
           </p>
         </div>
 
@@ -48,7 +64,7 @@ function createReturnEmailTemplate(data) {
   `;
 }
 
-// === SZABLON E-MAILA DLA KLIENTA (potwierdzenie zgłoszenia) ===
+// === SZABLON E-MAILA DLA KLIENTA ===
 function createClientConfirmationTemplate(data) {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; background: #f9f9f9; padding: 20px; border-radius: 12px;">
@@ -63,19 +79,22 @@ function createClientConfirmationTemplate(data) {
         <ul style="font-size: 15px; line-height: 1.6;">
           <li><strong>Produkt:</strong> ${data.product}</li>
           <li><strong>Powód:</strong> ${data.reason}</li>
+          <li><strong>Paczkomat zwrotny:</strong> <strong>${data.paczkomat.name}</strong> (${data.paczkomat.pointId})</li>
         </ul>
 
         <div style="background: #ecfdf5; padding: 16px; border-radius: 8px; margin: 16px 0; border: 1px solid #a7f3d0;">
           <p style="margin: 0; color: #065f46; font-size: 15px;">
-            <strong>W ciągu 24h</strong> prześlemy Ci <strong>gotową etykietę zwrotną</strong> na adres: <strong>${data.email}</strong>
+            <strong>W ciągu 24h</strong> prześlemy Ci <strong>gotową etykietę zwrotną</strong> na adres: <strong>${data.email}</strong><br />
+            Etykieta będzie adresowana na paczkomat: <strong>${data.paczkomat.pointId}</strong>
           </p>
         </div>
 
         <p><strong>Co dalej?</strong><br />
-        1. Wydrukuj etykietę<br />
-        2. Spakuj produkt z paragonem<br />
-        3. Nadaj w Paczkomacie<br />
-        4. Otrzymasz zwrot pieniędzy (minus 13,99 zł za przesyłkę zwrotną)</p>
+        1. Oczekuj etykiety na maila<br />
+        2. Wydrukuj etykietę<br />
+        3. Spakuj produkt z paragonem<br />
+        4. Nadaj w paczkomacie <strong>${data.paczkomat.pointId}</strong><br />
+        5. Otrzymasz zwrot pieniędzy (minus 13,99 zł za przesyłkę)</p>
 
         <p style="font-size: 14px; color: #6b7280;">
           W razie pytań – pisz: <a href="mailto:mwidel@pantofle-karpaty.pl" style="color: #1e40af;">mwidel@pantofle-karpaty.pl</a>
@@ -85,38 +104,59 @@ function createClientConfirmationTemplate(data) {
   `;
 }
 
-// === GŁÓWNY ENDPOINT ===
+// === GŁÓWNA FUNKCJA API ===
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { name, email, orderNumber, product, reason, acceptPolicy } = body;
+    const {
+      name,
+      email,
+      orderNumber,
+      product,
+      reason,
+      acceptPolicy,
+      paczkomat,
+    } = body;
 
-    // === 1. Walidacja danych ===
+    // === 1. Walidacja akceptacji polityki ===
     if (!acceptPolicy) {
       return NextResponse.json(
-        { message: "Musisz zaakceptować politykę zwrotów" },
+        { message: "Musisz zaakceptować politykę zwrotów." },
         { status: 400 }
       );
     }
 
-    const fields = { name, email, orderNumber, product, reason };
-    if (!validateReturnFields(fields)) {
+    // === 2. Walidacja paczkomatu ===
+    if (
+      !paczkomat ||
+      !paczkomat.name ||
+      !paczkomat.pointId ||
+      !paczkomat.address
+    ) {
       return NextResponse.json(
-        { message: "Wypełnij wszystkie wymagane pola" },
+        { message: "Proszę wybrać paczkomat do zwrotu." },
+        { status: 400 }
+      );
+    }
+
+    // === 3. Walidacja pozostałych pól ===
+    const data = { name, email, orderNumber, product, reason, paczkomat };
+    if (!validateReturnFields(data)) {
+      return NextResponse.json(
+        { message: "Wypełnij wszystkie wymagane pola." },
         { status: 400 }
       );
     }
 
     if (!isValidEmail(email)) {
       return NextResponse.json(
-        { message: "Podaj poprawny adres e-mail" },
+        { message: "Podaj poprawny adres e-mail." },
         { status: 400 }
       );
     }
 
-    // === 2. Konfiguracja Nodemailer ===
+    // === 4. Konfiguracja Nodemailer ===
     const transporter = nodemailer.createTransport({
-      service: process.env.SMTP_SERVICE || "gmail",
       host: process.env.SMTP_HOST || "smtp.gmail.com",
       port: parseInt(process.env.SMTP_PORT) || 465,
       secure: process.env.SMTP_SECURE === "true",
@@ -126,39 +166,39 @@ export async function POST(request) {
       },
     });
 
-    // === 3. E-mail do sklepu ===
-    const shopMailOptions = {
+    // === 5. E-mail do sklepu ===
+    const shopMail = {
       from: `"Zwroty KARPATY" <${process.env.NODEMAILER_EMAIL}>`,
-      //   to: "mwidel@pantofle-karpaty.pl", // lub inna skrzynka
-      to: "dominik.jojczyk@gmail.com",
-      subject: `ZWROT #${orderNumber} – ${name}`,
-      html: createReturnEmailTemplate(fields),
+      //   to: "mwidel@pantofle-karpaty.pl", // ← docelowy adres
+      to: "dominik.jojczyk@gmail.com", // ← testowy
+      subject: `ZWROT #${orderNumber} – ${name} – ${paczkomat.pointId}`,
+      html: createReturnEmailTemplate(data),
     };
 
-    // === 4. E-mail do klienta (potwierdzenie) ===
-    const clientMailOptions = {
+    // === 6. E-mail do klienta ===
+    const clientMail = {
       from: `"Pantofle KARPATY" <${process.env.NODEMAILER_EMAIL}>`,
       to: email,
-      subject: "Potwierdzenie zgłoszenia zwrotu – dziękujemy!",
-      html: createClientConfirmationTemplate({
-        ...fields,
-        name,
-        email,
-        orderNumber,
-      }),
+      subject: `Potwierdzenie zwrotu #${orderNumber} – paczkomat ${paczkomat.pointId}`,
+      html: createClientConfirmationTemplate(data),
     };
 
-    // === 5. Wysyłka obu e-maili ===
+    // === 7. Wysyłka ===
     await Promise.all([
-      transporter.sendMail(shopMailOptions),
-      transporter.sendMail(clientMailOptions),
+      transporter.sendMail(shopMail),
+      transporter.sendMail(clientMail),
     ]);
 
-    // === 6. Sukces ===
+    // === 8. Sukces ===
     return NextResponse.json(
       {
-        message: "Zgłoszenie zwrotu przyjęte! Otrzymasz etykietę w ciągu 24h.",
-        data: { orderNumber, email },
+        message:
+          "Zgłoszenie zwrotu przyjęte! Etykieta zostanie wysłana w ciągu 24h.",
+        data: {
+          orderNumber,
+          email,
+          paczkomat: paczkomat.pointId,
+        },
       },
       { status: 200 }
     );
@@ -167,7 +207,7 @@ export async function POST(request) {
     return NextResponse.json(
       {
         message: "Nie udało się przesłać zgłoszenia. Spróbuj później.",
-        error: error.message,
+        error: error.message || "Nieznany błąd",
       },
       { status: 500 }
     );

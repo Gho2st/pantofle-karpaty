@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import InPostGeowidget from "../components/InpostMap";
+
 
 export default function ClientReturnForm() {
   const [formData, setFormData] = useState({
@@ -11,6 +13,7 @@ export default function ClientReturnForm() {
     reason: "",
   });
   const [acceptPolicy, setAcceptPolicy] = useState(false);
+  const [selectedPaczkomat, setSelectedPaczkomat] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -21,8 +24,18 @@ export default function ClientReturnForm() {
     if (message && !isSuccess) setMessage(null);
   };
 
+  const handlePointSelect = (point) => {
+    setSelectedPaczkomat(point);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!selectedPaczkomat) {
+      setMessage("Proszę wybrać paczkomat do zwrotu.");
+      return;
+    }
+
     setIsLoading(true);
     setMessage(null);
 
@@ -30,7 +43,15 @@ export default function ClientReturnForm() {
       const res = await fetch("/api/zwrot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, acceptPolicy }),
+        body: JSON.stringify({
+          ...formData,
+          acceptPolicy,
+          paczkomat: {
+            name: selectedPaczkomat.name,
+            address: `${selectedPaczkomat.fullData.address_details.street} ${selectedPaczkomat.fullData.address_details.building_number}, ${selectedPaczkomat.fullData.address_details.post_code} ${selectedPaczkomat.fullData.address_details.city}`,
+            pointId: selectedPaczkomat.fullData.name, // np. KRA01N
+          },
+        }),
       });
 
       const result = await res.json();
@@ -74,7 +95,8 @@ export default function ClientReturnForm() {
           </h3>
           <p className="text-gray-700 mb-4">{message}</p>
           <p className="text-sm text-gray-600">
-            Etykieta zwrotna zostanie wysłana na{" "}
+            Etykieta zwrotna na paczkomat{" "}
+            <strong>{selectedPaczkomat?.name}</strong> zostanie wysłana na{" "}
             <strong>{formData.email}</strong> w ciągu 24h.
             <br />
             Sprawdź folder SPAM, jeśli nie dojdzie.
@@ -127,37 +149,28 @@ export default function ClientReturnForm() {
           </h3>
           <ol className="space-y-5 text-gray-700">
             {[
+              { step: "Zgłoś zwrot", desc: "Wypełnij poniższy formularz." },
               {
-                step: "Zgłoś zwrot",
-                desc: "Wypełnij poniższy formularz. Po otrzymaniu zgłoszenia skontaktujemy się z Tobą.",
+                step: "Wybierz paczkomat",
+                desc: "Wskaż paczkomat, do którego chcesz odesłać paczkę.",
               },
               {
                 step: "Pobierz etykietę",
-                desc: "Wyślemy Ci gotową etykietę zwrotną na e-mail – wystarczy wydrukować.",
+                desc: "Wyślemy Ci gotową etykietę zwrotną na e-mail.",
               },
               {
                 step: "Spakuj produkt",
-                desc: "Produkt musi być nieużywany (tylko przymierzony), z metkami, w oryginalnym opakowaniu. Dołącz paragon!",
+                desc: "Produkt musi być nieużywany, z metkami, w oryginalnym opakowaniu. Dołącz paragon!",
               },
-              {
-                step: "Naklej etykietę",
-                desc: "Umieść etykietę na paczce tak, by kod był dobrze widoczny.",
-              },
+              { step: "Naklej etykietę", desc: "Umieść etykietę na paczce." },
               {
                 step: "Nadaj paczkę",
-                desc: "Zanieś do najbliższego Paczkomatu InPost i nadaj zgodnie z instrukcją.",
+                desc: "Zanieś do wybranego Paczkomatu InPost.",
               },
-              {
-                step: "Śledź zwrot",
-                desc: "Otrzymasz link do śledzenia od przewoźnika.",
-              },
+              { step: "Śledź zwrot", desc: "Otrzymasz link do śledzenia." },
               {
                 step: "Zwrot pieniędzy",
-                desc: "Po sprawdzeniu towaru, zwrócimy środki (tą samą metodą płatności) – pomniejszone o 13,99 zł.",
-              },
-              {
-                step: "Potwierdzenie",
-                desc: "Otrzymasz e-mail z informacją o rozliczeniu zwrotu.",
+                desc: "Po sprawdzeniu towaru, zwrócimy środki (pomniejszone o 13,99 zł).",
               },
             ].map((item, i) => (
               <li key={i} className="flex items-start">
@@ -173,10 +186,22 @@ export default function ClientReturnForm() {
           </ol>
         </div>
 
+        {/* WYBÓR PACZKOMATU */}
+        <div className="mb-8">
+          <h3 className="text-lg font-medium text-gray-800 mb-4">
+            Wybierz paczkomat do zwrotu
+          </h3>
+          <InPostGeowidget
+            token={process.env.NEXT_PUBLIC_INPOST_TOKEN} // ← dodaj w .env
+            onPointSelect={handlePointSelect}
+            config="parcelCollect"
+          />
+        </div>
+
         {/* FORMULARZ */}
         <div className="bg-white p-6 border border-gray-300 rounded-lg">
           <h3 className="text-lg font-medium text-gray-800 mb-4">
-            Zgłoś zwrot
+            Dane do zgłoszenia
           </h3>
 
           {message && (
@@ -202,7 +227,7 @@ export default function ClientReturnForm() {
               onChange={handleInputChange}
               placeholder="Imię i nazwisko"
               required
-              className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
             <input
               type="email"
@@ -211,7 +236,7 @@ export default function ClientReturnForm() {
               onChange={handleInputChange}
               placeholder="Adres e-mail"
               required
-              className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
             <input
               type="text"
@@ -220,7 +245,7 @@ export default function ClientReturnForm() {
               onChange={handleInputChange}
               placeholder="Numer zamówienia"
               required
-              className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
             <input
               type="text"
@@ -229,14 +254,14 @@ export default function ClientReturnForm() {
               onChange={handleInputChange}
               placeholder="Produkt do zwrotu"
               required
-              className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
             <select
               name="reason"
               value={formData.reason}
               onChange={handleInputChange}
               required
-              className="p-3 border border-gray-300 rounded-lg md:col-span-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="p-3 border border-gray-300 rounded-lg md:col-span-2 focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Wybierz powód zwrotu</option>
               <option value="Zły rozmiar">Zły rozmiar</option>
@@ -262,9 +287,9 @@ export default function ClientReturnForm() {
 
             <button
               type="submit"
-              disabled={isLoading || !acceptPolicy}
+              disabled={isLoading || !acceptPolicy || !selectedPaczkomat}
               className={`md:col-span-2 py-3 px-6 rounded-lg font-medium transition-colors flex items-center justify-center ${
-                isLoading || !acceptPolicy
+                isLoading || !acceptPolicy || !selectedPaczkomat
                   ? "bg-gray-400 cursor-not-allowed text-gray-200"
                   : "bg-blue-600 text-white hover:bg-blue-700"
               }`}
