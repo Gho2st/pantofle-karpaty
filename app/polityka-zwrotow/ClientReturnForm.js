@@ -140,7 +140,7 @@ export default function ClientReturnForm() {
         <p className="text-gray-700 mb-4">
           Nie musisz martwić się o organizowanie przesyłki. Wyślemy Ci gotową
           etykietę mailowo. Koszt zwrotu do Paczkomatu InPost:{" "}
-          <strong>13,99 zł</strong> (zostanie potrącony z kwoty zwrotu).
+          <strong>9,99 zł</strong> (zostanie potrącony z kwoty zwrotu).
         </p>
 
         <div className="bg-gray-50 p-6 rounded-lg mb-6">
@@ -379,7 +379,7 @@ export default function ClientReturnForm() {
               wymienimy na nowy lub zwrócimy koszt.
             </li>
             <li>
-              Zwrócimy <strong>najtaniejszy koszt wysyłki</strong> dostępny w
+              Zwrócimy <strong>najtańszy koszt wysyłki</strong> dostępny w
               sklepie.
             </li>
             <li>Zwrot środków – tą samą metodą płatności.</li>
