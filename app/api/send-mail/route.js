@@ -58,14 +58,12 @@ export async function POST(request) {
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || "smtp.gmail.com",
       port: parseInt(process.env.SMTP_PORT) || 465,
-      secure: process.env.SMTP_SECURE === "true" || true,
+      secure: true, // ← ZAWSZE true dla portu 465
       auth: {
         user: process.env.NODEMAILER_EMAIL,
         pass: process.env.NODEMAILER_PW,
       },
-      // DODAJ TIMEOUT I POOL
-      pool: true,
-      maxConnections: 1,
+      // DODAJ TIMEOUT
       connectionTimeout: 10000,
       socketTimeout: 10000,
     });
@@ -73,7 +71,6 @@ export async function POST(request) {
     // TEST POŁĄCZENIA
     try {
       await transporter.verify();
-      console.log("SMTP: Połączenie udane");
     } catch (verifyError) {
       console.error("SMTP: Błąd połączenia:", verifyError.message);
       return NextResponse.json(
