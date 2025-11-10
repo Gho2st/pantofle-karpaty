@@ -26,9 +26,19 @@ export async function POST(request) {
           };
         }
 
+        const productId = parseInt(item.productId);
+        if (isNaN(productId)) {
+          return {
+            productId: item.productId,
+            size: item.size,
+            available: false,
+            message: `Nieprawidłowy ID produktu: ${item.productId}`,
+          };
+        }
+
         // Pobieranie produktu z bazy danych
         const product = await prisma.product.findUnique({
-          where: { id: parseInt(item.productId) },
+          where: { id: productId },
           select: { id: true, name: true, sizes: true },
         });
 
@@ -38,14 +48,34 @@ export async function POST(request) {
             productId: item.productId,
             size: item.size,
             available: false,
-            message: `Produkt ${
-              item.product?.name || "nieznany"
-            } nie znaleziony`,
+            message: `Produkt o ID ${item.productId} nie znaleziony`,
           };
         }
 
-        // Sprawdzenie, czy pole sizes istnieje i jest tablicą
-        if (!product.sizes || !Array.isArray(product.sizes)) {
+        // === KLUCZOWA POPRAWKA: Obsługa sizes jako string (JSON.stringify) ===
+        let sizes = product.sizes;
+
+        // Jeśli sizes to string (np. '[{"size":"37","stock":1}]'), sparsuj go
+        if (typeof sizes === "string") {
+          try {
+            sizes = JSON.parse(sizes);
+            // console.log(`[DEBUG] Parsowanie JSON udane:`, sizes);
+          } catch (parseError) {
+            console.error(
+              `[ERROR] Błąd parsowania JSON dla produktu ${product.name}:`,
+              parseError
+            );
+            return {
+              productId: item.productId,
+              size: item.size,
+              available: false,
+              message: `Błąd formatu danych rozmiarów dla produktu ${product.name}`,
+            };
+          }
+        }
+
+        // Teraz sprawdzamy, czy sizes jest tablicą
+        if (!sizes || !Array.isArray(sizes)) {
           return {
             productId: item.productId,
             size: item.size,
@@ -55,23 +85,33 @@ export async function POST(request) {
         }
 
         // Wyszukiwanie rozmiaru w tablicy sizes
-        const sizeData = product.sizes.find((s) => s.size === item.size);
-        if (!sizeData || sizeData.stock < item.quantity) {
+        const sizeData = sizes.find((s) => s.size === item.size);
+
+        if (!sizeData) {
           return {
             productId: item.productId,
             size: item.size,
             available: false,
-            message: `Niewystarczający stan magazynowy dla produktu ${
-              product.name
-            } (rozmiar: ${item.size}). Dostępna ilość: ${sizeData?.stock || 0}`,
+            message: `Rozmiar ${item.size} nie istnieje dla produktu ${product.name}`,
           };
         }
 
+        if (sizeData.stock < item.quantity) {
+          return {
+            productId: item.productId,
+            size: item.size,
+            available: false,
+            message: `Niewystarczający stan magazynowy dla produktu ${product.name} (rozmiar: ${item.size}). Dostępne: ${sizeData.stock}, żądane: ${item.quantity}`,
+          };
+        }
+
+        // Wszystko OK
         return {
           productId: item.productId,
           size: item.size,
           available: true,
           availableQuantity: sizeData.stock,
+          productName: product.name, // opcjonalnie
         };
       })
     );

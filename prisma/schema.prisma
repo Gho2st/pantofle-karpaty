@@ -107,6 +107,7 @@ model Order {
   paymentId String? @unique // Tutaj zapiszemy ID transakcji zwrócone przez Przelewy24 (ich 'orderId')
   companyName String?
   nip String?
+  guestToken  String?
 }
 model OrderItem {
   id Int @id @default(autoincrement())

@@ -1,10 +1,12 @@
-// app/potwierdzenie/[id]/page.js
-import { notFound } from "next/navigation";
+// app/zamowienie/[id]/page.js
+import { notFound, redirect } from "next/navigation";
 import prisma from "@/app/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import Stripe from "stripe";
 import StripeStatus from "./StripeStatus";
 import TraditionalPaymentInstructions from "../TraditionalPaymentInstructions";
-import OrderSummary from "./OrderSummary"; // DODAJ
+import OrderSummary from "./OrderSummary";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
@@ -17,15 +19,14 @@ export async function generateMetadata({ params }) {
   if (isNaN(orderId)) {
     return {
       title: "Zamówienie nie znalezione | Pantofle Karpaty",
-      robots: "noindex, nofollow",
+      robots: "noindex, nofollow, noarchive",
     };
   }
 
   return {
     title: `Zamówienie #${orderId} – Potwierdzenie | Pantofle Karpaty`,
-    description: `Twoje zamówienie #${orderId} zostało przyjęte. Sprawdź szczegóły i status płatności.`,
-    alternates: { canonical: `/potwierdzenie/${orderId}` },
-    robots: "noindex, nofollow",
+    description: `Twoje zamówienie #${orderId} zostało przyjęte.`,
+    robots: "noindex, nofollow, noarchive",
   };
 }
 
@@ -35,7 +36,7 @@ async function getOrder(id) {
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: { items: true },
+    include: { items: true, user: true },
   });
 
   if (!order) notFound();
@@ -46,34 +47,80 @@ export default async function OrderConfirmationPage({ params, searchParams }) {
   const { id } = await params;
   const resolvedSearchParams = await searchParams;
   const sessionId = resolvedSearchParams.session_id;
+  const session = await getServerSession(authOptions);
 
-  let order = await getOrder(id);
+  const order = await getOrder(id);
 
-  // Weryfikacja Stripe
+  // === AUTORYZACJA ===
+  const userEmail = session?.user?.email;
+  const isOwner = userEmail && order.user?.email === userEmail;
+  const isGuestWithToken =
+    !session && resolvedSearchParams.guestToken === order.guestToken;
+
+  // 1. LINK JUŻ WYGASŁ (token był, ale go nie ma)
+  if (!session && resolvedSearchParams.guestToken && !order.guestToken) {
+    return (
+      <div className="max-w-md mx-auto mt-20 p-8 bg-white rounded-xl shadow text-center">
+        <h1 className="text-2xl font-bold text-red-600 mb-4">Link wygasł</h1>
+        <p className="text-gray-600 mb-4">
+          Ten link do potwierdzenia zamówienia był{" "}
+          <strong>jednorazowy</strong> i już nie działa.
+        </p>
+        <p className="text-sm text-gray-500">
+          Sprawdź swoją skrzynkę email – wysłaliśmy Ci potwierdzenie na:
+          <br />
+          <strong className="text-blue-600">{order.email}</strong>
+        </p>
+        <a
+          href="/"
+          className="inline-block mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+        >
+          Wróć na stronę główną
+        </a>
+      </div>
+    );
+  }
+
+  // 2. POPRAWNY TOKEN → USUŃ GO OD RAZU
+  if (isGuestWithToken) {
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { guestToken: null },
+    });
+  }
+
+  // 3. BRAK DOSTĘPU → przekieruj
+  if (!isOwner && !isGuestWithToken) {
+    redirect("/zamowienie/brak-dostepu");
+  }
+
+  // === WERYFIKACJA STRIPE ===
   if (
     sessionId &&
     order.paymentId === sessionId &&
     order.status === "PENDING"
   ) {
     try {
-      const session = await stripe.checkout.sessions.retrieve(sessionId);
-      if (session.payment_status === "paid") {
+      const stripeSession = await stripe.checkout.sessions.retrieve(sessionId);
+      if (stripeSession.payment_status === "paid") {
         await prisma.order.update({
           where: { id: order.id },
           data: { status: "PAID" },
         });
-      } else if (session.status === "expired") {
+      } else if (stripeSession.status === "expired") {
         await prisma.order.update({
           where: { id: order.id },
           data: { status: "EXPIRED" },
         });
       }
     } catch (error) {
-      console.error("Błąd weryfikacji sesji Stripe:", error);
+      console.error("Błąd weryfikacji Stripe:", error);
     }
-    order = await getOrder(id);
+    const updatedOrder = await getOrder(id);
+    order.status = updatedOrder.status;
   }
 
+  // === TREŚĆ STRONY ===
   return (
     <div className="max-w-3xl mx-auto my-12 2xl:my-24 px-4">
       <div className="bg-white p-6 sm:p-8 rounded-xl shadow-lg border border-gray-100">
@@ -91,10 +138,8 @@ export default async function OrderConfirmationPage({ params, searchParams }) {
         )}
         {order.paymentMethod === "stripe" && <StripeStatus order={order} />}
 
-        {/* NOWE PODSUMOWANIE */}
         <OrderSummary order={order} />
 
-        {/* Adres dostawy */}
         <div className="mt-10">
           <h2 className="text-2xl font-semibold mb-4 border-b pb-2 text-gray-800">
             Adres dostawy
