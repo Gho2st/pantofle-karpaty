@@ -5,7 +5,6 @@ import FreeDelivery from "./components/FreeDelivery/FreeDelivery";
 import Footer from "./components/Footer/Footer";
 import AuthProvider from "./providers";
 import { CartProvider } from "./context/cartContext";
-import { AdminProvider } from "./context/adminContext";
 import { CategoriesProvider } from "./context/categoriesContext";
 import CookieConsent from "./components/CookieConsent";
 
@@ -24,13 +23,11 @@ export default function RootLayout({ children }) {
         <AuthProvider>
           <CartProvider>
             <CategoriesProvider>
-              <AdminProvider>
-                <FreeDelivery />
-                <Nav />
-                <main className="grow">{children}</main>
-                {/* <CookieConsent /> */}
-                <Footer />
-              </AdminProvider>
+              <FreeDelivery />
+              <Nav />
+              <main className="grow">{children}</main>
+              {/* <CookieConsent /> */}
+              <Footer />
             </CategoriesProvider>
           </CartProvider>
         </AuthProvider>

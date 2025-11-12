@@ -5,6 +5,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
 } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
@@ -15,6 +16,7 @@ const AdminContext = createContext();
 export function AdminProvider({ children }) {
   const { data: session, status } = useSession();
   const { fetchCart } = useCart();
+
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -25,40 +27,66 @@ export function AdminProvider({ children }) {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryDescription, setNewCategoryDescription] = useState("");
 
+  // === Pomocnicza funkcja do wyszukiwania kategorii ===
+  const findCategoryById = useCallback((categoriesList, id) => {
+    for (const cat of categoriesList) {
+      if (cat.id === id) return cat;
+      if (cat.subcategories) {
+        const found = cat.subcategories.find((sub) => sub.id === id);
+        if (found) return found;
+      }
+    }
+    return null;
+  }, []);
+
+  // === Pobieranie kategorii ===
   const fetchCategories = useCallback(async (parentId = null) => {
     setIsLoading(true);
+    setError(null);
     try {
       const res = await fetch(
         `/api/get-category${parentId ? `?parentId=${parentId}` : ""}`,
         { cache: "no-store" }
       );
-      if (!res.ok) {
-        throw new Error("Nie udało się pobrać kategorii");
-      }
-      const data = await res.json();
-      console.log("Fetched categories:", data.categories);
-      setCategories(data.categories || []);
-      setIsLoading(false);
-      return data.categories;
+      if (!res.ok) throw new Error("Nie udało się pobrać kategorii");
+      const { categories: data } = await res.json();
+      setCategories(data || []);
+      return data;
     } catch (err) {
       setError(err.message);
       toast.error(err.message);
-      setIsLoading(false);
       return null;
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
-  const handleCategoryUpdate = useCallback((updatedCategories) => {
-    console.log("Updating categories:", updatedCategories);
-    setCategories(updatedCategories);
-    toast.success("Operacja zakończona pomyślnie!");
+  // === Aktualizacja lokalnych kategorii po zmianie ===
+  const updateCategoriesLocally = useCallback((updater) => {
+    setCategories((prev) => {
+      const newCats = typeof updater === "function" ? updater(prev) : updater;
+      toast.success("Operacja zakończona pomyślnie!");
+      window.dispatchEvent(new Event("categoriesUpdated"));
+      return newCats;
+    });
   }, []);
 
+  // === Obsługa kliknięcia kategorii ===
   const handleCategoryClick = useCallback((category) => {
     setSelectedCategory(category);
-    console.log("Wybrana kategoria:", category);
   }, []);
 
+  // === Uniwersalna funkcja do aktualizacji selectedCategory po zmianach ===
+  const refreshSelectedCategory = useCallback(
+    (newCategories) => {
+      if (!selectedCategory) return;
+      const updated = findCategoryById(newCategories, selectedCategory.id);
+      if (updated) setSelectedCategory(updated);
+    },
+    [selectedCategory, findCategoryById]
+  );
+
+  // === Edycja kategorii ===
   const handleEditCategory = useCallback(
     async (category) => {
       try {
@@ -66,162 +94,93 @@ export function AdminProvider({ children }) {
         formData.append("name", editingCategory.name);
         formData.append("description", editingCategory.description || "");
         formData.append("slug", editingCategory.slug || "");
-        if (editingCategory.imageToRemove) {
+        if (editingCategory.imageToRemove)
           formData.append("imageToRemove", editingCategory.imageToRemove);
-        }
-        if (editingCategory.newImage instanceof File) {
+        if (editingCategory.newImage instanceof File)
           formData.append("image", editingCategory.newImage);
-        }
 
         const res = await fetch(`/api/update-category/${category.id}`, {
           method: "PUT",
           body: formData,
         });
         const data = await res.json();
-        if (!res.ok) {
-          throw new Error(
-            data.error || "Nie udało się zaktualizować kategorii"
-          );
-        }
-        const updatedCategories = await fetchCategories();
+        if (!res.ok)
+          throw new Error(data.error || "Błąd aktualizacji kategorii");
+
+        const updated = await fetchCategories();
+        refreshSelectedCategory(updated);
         setEditingCategory(null);
         setNewCategoryName("");
         setNewCategoryDescription("");
-        toast.success("Kategoria zaktualizowana pomyślnie");
-        handleCategoryUpdate(updatedCategories || categories);
-        if (selectedCategory?.id === category.id) {
-          const updatedCategory =
-            updatedCategories?.find((cat) => cat.id === category.id) ||
-            category;
-          setSelectedCategory(updatedCategory);
-        }
-        window.dispatchEvent(new Event("categoriesUpdated"));
+        window.dispatchEvent(new Event("menu-updated"));
       } catch (err) {
-        console.error("Błąd podczas edytowania kategorii:", err);
         toast.error(err.message);
       }
     },
-    [fetchCategories, handleCategoryUpdate, selectedCategory, editingCategory]
+    [editingCategory, fetchCategories, refreshSelectedCategory]
   );
 
+  // === Edycja produktu ===
   const handleEditProduct = useCallback(
-    async (product) => {
-      // 'product' to są nowe dane z formularza (productData)
-      console.log("Rozpoczęcie handleEditProduct dla produktu:", product);
+    async (productData) => {
+      if (!productData?.id) {
+        toast.error("Brak ID produktu");
+        return;
+      }
+
       try {
-        if (!product || !product.id) {
-          // Użyj 'product'
-          console.error("Błąd: Brak danych produktu lub ID produktu");
-          toast.error("Błąd: Brak danych produktu");
-          return;
-        }
-
         const formData = new FormData();
-        console.log("Tworzenie FormData z nowych danych...");
+        formData.append("name", productData.name || "");
+        formData.append("slug", productData.slug || "");
+        formData.append("price", productData.price?.toString() || "");
+        if (productData.promoPrice != null)
+          formData.append("promoPrice", productData.promoPrice.toString());
+        if (productData.promoStartDate)
+          formData.append("promoStartDate", productData.promoStartDate);
+        if (productData.promoEndDate)
+          formData.append("promoEndDate", productData.promoEndDate);
+        formData.append("description", productData.description || "");
+        formData.append("description2", productData.description2 || "");
+        formData.append("additionalInfo", productData.additionalInfo || "");
+        formData.append("categoryId", parseInt(productData.categoryId, 10));
 
-        // UŻYWAJ DANYCH Z ARGUMENTU 'product'
-        formData.append("name", product.name || "");
-        formData.append("slug", product.slug || "");
-        formData.append("price", product.price?.toString() || "");
-        if (product.promoPrice !== null && product.promoPrice !== undefined) {
-          formData.append("promoPrice", product.promoPrice.toString());
-        }
-        if (product.promoStartDate) {
-          formData.append("promoStartDate", product.promoStartDate);
-        }
-        if (product.promoEndDate) {
-          formData.append("promoEndDate", product.promoEndDate);
-        }
-        formData.append("description", product.description || "");
-        formData.append("description2", product.description2 || "");
-        formData.append("additionalInfo", product.additionalInfo || "");
+        if (Array.isArray(productData.sizes))
+          formData.append("sizes", JSON.stringify(productData.sizes));
 
-        if (product.sizes) {
-          try {
-            console.log("Parsowanie sizes:", product.sizes);
-            formData.append("sizes", JSON.stringify(product.sizes));
-          } catch (e) {
-            console.error("Błąd parsowania sizes:", e);
-            toast.error("Nieprawidłowy format rozmiarów");
-            return;
-          }
-        }
+        if (
+          Array.isArray(productData.imagesToRemove) &&
+          productData.imagesToRemove.length
+        )
+          formData.append(
+            "imagesToRemove",
+            JSON.stringify(productData.imagesToRemove)
+          );
 
-        formData.append("categoryId", parseInt(product.categoryId));
+        if (Array.isArray(productData.imagesToAdd))
+          productData.imagesToAdd.forEach((file) =>
+            formData.append("imagesToAdd", file)
+          );
 
-        if (product.imagesToRemove?.length > 0) {
-          try {
-            console.log("Parsowanie imagesToRemove:", product.imagesToRemove);
-            formData.append(
-              "imagesToRemove",
-              JSON.stringify(product.imagesToRemove)
-            );
-          } catch (e) {
-            console.error("Błąd parsowania imagesToRemove:", e);
-            toast.error("Nieprawidłowy format imagesToRemove");
-            return;
-          }
-        }
-
-        if (product.imagesToAdd?.length > 0) {
-          console.log("Dodawanie imagesToAdd:", product.imagesToAdd);
-          product.imagesToAdd.forEach((file) => {
-            formData.append("imagesToAdd", file);
-          });
-        }
-
-        console.log("Wysyłane FormData:", [...formData.entries()]); // Sprawdź czy cena jest nowa
-
-        console.log(
-          "Wysyłanie żądania PUT do:",
-          `/api/update-product/${product.id}`
-        );
-        const res = await fetch(`/api/update-product/${product.id}`, {
-          // Użyj 'product.id'
+        const res = await fetch(`/api/update-product/${productData.id}`, {
           method: "PUT",
           body: formData,
         });
-        console.log("Odpowiedź z API:", res.status, res.statusText);
         const data = await res.json();
-        console.log("Dane odpowiedzi:", data);
+        if (!res.ok)
+          throw new Error(data.error || "Błąd aktualizacji produktu");
 
-        if (!res.ok) {
-          throw new Error(data.error || "Nie udało się zaktualizować produktu");
-        }
-
-        console.log("Pobieranie zaktualizowanych kategorii...");
-        const updatedCategories = await fetchCategories();
-        handleCategoryUpdate(updatedCategories || categories);
-        if (selectedCategory) {
-          const findCategoryById = (categories, id) => {
-            for (const cat of categories) {
-              if (cat.id === id) return cat;
-              if (cat.subcategories) {
-                const found = cat.subcategories.find((sub) => sub.id === id);
-                if (found) return found;
-              }
-            }
-            return null;
-          };
-          const updatedCategory = findCategoryById(
-            updatedCategories,
-            selectedCategory.id
-          );
-          console.log("Zaktualizowana kategoria:", updatedCategory);
-          setSelectedCategory(updatedCategory || selectedCategory);
-        }
+        const updated = await fetchCategories();
+        refreshSelectedCategory(updated);
         setEditingProduct(null);
-        toast.success("Produkt zaktualizowany pomyślnie");
-        window.dispatchEvent(new Event("categoriesUpdated"));
         await fetchCart();
       } catch (err) {
-        console.error("Błąd w handleEditProduct:", err);
-        toast.error(err.message || "Błąd podczas edytowania produktu");
+        toast.error(err.message);
       }
     },
-    [fetchCategories, handleCategoryUpdate, selectedCategory, fetchCart]
+    [fetchCategories, refreshSelectedCategory, fetchCart]
   );
 
+  // === Dodawanie produktu ===
   const handleAddProduct = useCallback(
     async (categoryId, formData) => {
       try {
@@ -230,55 +189,20 @@ export function AdminProvider({ children }) {
           body: formData,
         });
         const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.error || "Nie udało się dodać produktu");
-        }
+        if (!res.ok) throw new Error(data.error || "Błąd dodawania produktu");
 
-        const updatedCategories = await fetchCategories();
-        console.log(
-          "Pełna lista zaktualizowanych kategorii:",
-          JSON.stringify(updatedCategories, null, 2)
-        );
-
-        const findCategoryById = (categories, id) => {
-          for (const cat of categories) {
-            if (cat.id === id) return cat;
-            if (cat.subcategories) {
-              const found = cat.subcategories.find((sub) => sub.id === id);
-              if (found) return found;
-            }
-          }
-          return null;
-        };
-        const updatedCategory = findCategoryById(updatedCategories, categoryId);
-        console.log("Znaleziono zaktualizowaną kategorię:", updatedCategory);
-        console.log(
-          "Produkty w zaktualizowanej kategorii:",
-          updatedCategory?.products
-        );
-
-        handleCategoryUpdate(updatedCategories || categories);
-
-        if (updatedCategory) {
-          setSelectedCategory(updatedCategory);
-        } else {
-          console.warn(
-            "Nie znaleziono zaktualizowanej kategorii dla categoryId:",
-            categoryId
-          );
-        }
-
-        toast.success("Produkt dodany pomyślnie");
-        window.dispatchEvent(new Event("categoriesUpdated"));
+        const updated = await fetchCategories();
+        const newCategory = findCategoryById(updated, categoryId);
+        if (newCategory) setSelectedCategory(newCategory);
         await fetchCart();
       } catch (err) {
-        console.error("Błąd podczas dodawania produktu:", err);
         toast.error(err.message);
       }
     },
-    [fetchCategories, handleCategoryUpdate, fetchCart]
+    [fetchCategories, findCategoryById, fetchCart]
   );
 
+  // === Dodawanie kategorii ===
   const handleAddCategory = useCallback(
     async (formData) => {
       try {
@@ -287,110 +211,60 @@ export function AdminProvider({ children }) {
           body: formData,
         });
         const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.error || "Nie udało się dodać kategorii");
+        if (!res.ok) throw new Error(data.error || "Błąd dodawania kategorii");
+
+        const updated = await fetchCategories();
+        if (selectedCategory) {
+          const refreshed = findCategoryById(updated, selectedCategory.id);
+          if (refreshed) setSelectedCategory(refreshed);
         }
-        const updatedCategories = await fetchCategories();
         setNewCategoryName("");
         setNewCategoryDescription("");
-        toast.success(
-          selectedCategory
-            ? "Podkategoria dodana pomyślnie"
-            : "Kategoria dodana pomyślnie"
-        );
-        handleCategoryUpdate(updatedCategories || categories);
-        if (selectedCategory) {
-          const findCategoryById = (categories, id) => {
-            for (const cat of categories) {
-              if (cat.id === id) return cat;
-              if (cat.subcategories) {
-                const found = cat.subcategories.find((sub) => sub.id === id);
-                if (found) return found;
-              }
-            }
-            return null;
-          };
-          const updatedCategory = findCategoryById(
-            updatedCategories,
-            selectedCategory.id
-          );
-          setSelectedCategory(updatedCategory || selectedCategory);
-        }
-        window.dispatchEvent(new Event("categoriesUpdated"));
+        window.dispatchEvent(new Event("menu-updated"));
       } catch (err) {
-        console.error("Błąd podczas dodawania kategorii:", err);
         toast.error(err.message);
       }
     },
-    [fetchCategories, handleCategoryUpdate, selectedCategory]
+    [fetchCategories, selectedCategory, findCategoryById]
   );
 
+  // === Usuwanie ===
   const handleDelete = useCallback(
     async (type, id) => {
       try {
-        const res = await fetch(
+        const endpoint =
           type === "category"
             ? `/api/delete-category/${id}`
-            : `/api/delete-product/${id}`,
-          { method: "DELETE" }
-        );
+            : `/api/delete-product/${id}`;
+        const res = await fetch(endpoint, { method: "DELETE" });
         const data = await res.json();
-        if (!res.ok) {
+        if (!res.ok)
           throw new Error(
             data.error ||
-              `Nie udało się usunąć ${
-                type === "category" ? "kategorii" : "produktu"
-              }`
+              `Błąd usuwania ${type === "category" ? "kategorii" : "produktu"}`
           );
-        }
-        const updatedCategories = await fetchCategories();
-        handleCategoryUpdate(updatedCategories || categories);
+
+        const updated = await fetchCategories();
         if (type === "category" && selectedCategory?.id === id) {
           setSelectedCategory(null);
-        } else if (selectedCategory) {
-          const findCategoryById = (categories, id) => {
-            for (const cat of categories) {
-              if (cat.id === id) return cat;
-              if (cat.subcategories) {
-                const found = cat.subcategories.find((sub) => sub.id === id);
-                if (found) return found;
-              }
-            }
-            return null;
-          };
-          const updatedCategory = findCategoryById(
-            updatedCategories,
-            selectedCategory.id
-          );
-          setSelectedCategory(updatedCategory || selectedCategory);
+        } else {
+          refreshSelectedCategory(updated);
         }
         setShowDeleteModal(null);
+        if (type === "product") await fetchCart();
+        //  TOAST PO USUNIĘCIU
         toast.success(
-          data.message ||
-            `${
-              type === "category" ? "Kategoria" : "Produkt"
-            } usunięty pomyślnie`
+          type === "category" ? "Kategoria usunięta!" : "Produkt usunięty!"
         );
-        window.dispatchEvent(new Event("categoriesUpdated"));
-        if (type === "product") {
-          await fetchCart();
-        }
+        window.dispatchEvent(new Event("menu-updated"));
       } catch (err) {
-        console.error("Błąd podczas usuwania:", err);
         toast.error(err.message);
       }
     },
-    [fetchCategories, handleCategoryUpdate, selectedCategory, fetchCart]
+    [fetchCategories, selectedCategory, refreshSelectedCategory, fetchCart]
   );
 
-  // ZAMIEŃ CAŁY useEffect NA TEN:
-  useEffect(() => {
-    if (status === "authenticated" && session?.user?.role === "ADMIN") {
-      console.log("Admin zalogowany – pobieranie kategorii...");
-      fetchCategories(); // TYLKO RAZ!
-    }
-  }, [status, session, fetchCategories]); // USUŃ categories.length
-
+  // === Przywrócenie produktu ===
   const handleRestoreProduct = useCallback(
     async (productId) => {
       try {
@@ -400,47 +274,79 @@ export function AdminProvider({ children }) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
         const updated = await fetchCategories();
-        handleCategoryUpdate(updated);
-        toast.success("Produkt przywrócony!");
-        window.dispatchEvent(new Event("categoriesUpdated"));
+        refreshSelectedCategory(updated);
       } catch (err) {
         toast.error(err.message);
       }
     },
-    [fetchCategories, handleCategoryUpdate]
+    [fetchCategories, refreshSelectedCategory]
+  );
+
+  useEffect(() => {
+    if (
+      status === "authenticated" &&
+      session?.user?.role === "ADMIN" &&
+      categories.length === 0
+    ) {
+      fetchCategories();
+    }
+  }, [status, session, fetchCategories, categories.length]);
+
+  // === Wartość kontekstu (memoizowana) ===
+  const value = useMemo(
+    () => ({
+      categories,
+      isLoading,
+      error,
+      selectedCategory,
+      setSelectedCategory,
+      editingCategory,
+      setEditingCategory,
+      editingProduct,
+      setEditingProduct,
+      showDeleteModal,
+      setShowDeleteModal,
+      newCategoryName,
+      setNewCategoryName,
+      newCategoryDescription,
+      setNewCategoryDescription,
+
+      // Akcje
+      fetchCategories,
+      handleCategoryClick,
+      handleEditCategory,
+      handleEditProduct,
+      handleAddProduct,
+      handleAddCategory,
+      handleDelete,
+      handleRestoreProduct,
+      refreshSelectedCategory,
+    }),
+    [
+      categories,
+      isLoading,
+      error,
+      selectedCategory,
+      editingCategory,
+      editingProduct,
+      showDeleteModal,
+      newCategoryName,
+      newCategoryDescription,
+
+      fetchCategories,
+      handleCategoryClick,
+      handleEditCategory,
+      handleEditProduct,
+      handleAddProduct,
+      handleAddCategory,
+      handleDelete,
+      handleRestoreProduct,
+      refreshSelectedCategory,
+    ]
   );
 
   return (
-    <AdminContext.Provider
-      value={{
-        categories,
-        isLoading,
-        error,
-        fetchCategories,
-        handleCategoryUpdate,
-        selectedCategory,
-        setSelectedCategory,
-        editingCategory,
-        setEditingCategory,
-        editingProduct,
-        setEditingProduct,
-        showDeleteModal,
-        setShowDeleteModal,
-        handleCategoryClick,
-        handleEditCategory,
-        handleEditProduct,
-        handleAddProduct,
-        handleAddCategory,
-        handleDelete,
-        newCategoryName,
-        setNewCategoryName,
-        newCategoryDescription,
-        setNewCategoryDescription,
-        handleRestoreProduct,
-      }}
-    >
-      {children}
-    </AdminContext.Provider>
+    <AdminContext.Provider value={value}>{children}</AdminContext.Provider>
   );
 }
 

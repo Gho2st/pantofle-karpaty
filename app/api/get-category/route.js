@@ -88,7 +88,7 @@ export async function GET(request) {
 
             // Produkty w podkategorii – z promocją
             products: {
-              where: { deletedAt: null },
+              // where: { deletedAt: null },
               select: {
                 id: true,
                 name: true,

@@ -13,13 +13,6 @@ export default function ClientProfil() {
   const [activeTab, setActiveTab] = useState("orders");
   const router = useRouter();
 
-  // Przekierowanie dla admina
-  useEffect(() => {
-    if (status === "authenticated" && session?.user?.role === "ADMIN") {
-      router.push("/admin");
-    }
-  }, [status, session, router]);
-
   const handleTabChange = (tab) => setActiveTab(tab);
 
   const tabButtonClasses = (isActive) =>

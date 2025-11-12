@@ -14,7 +14,7 @@ export default function Products() {
     handleAddProduct,
     setShowDeleteModal,
     fetchCategories,
-    handleCategoryUpdate,
+    refreshSelectedCategory,
   } = useAdmin();
 
   const [newProduct, setNewProduct] = useState({
@@ -118,6 +118,7 @@ export default function Products() {
     }
   };
 
+  // W handleRestoreProduct
   const handleRestoreProduct = async (productId) => {
     if (!confirm("Przywrócić produkt?")) return;
 
@@ -129,25 +130,7 @@ export default function Products() {
       if (!res.ok) throw new Error(data.error);
 
       const updatedCategories = await fetchCategories();
-      handleCategoryUpdate(updatedCategories);
-
-      if (selectedCategory) {
-        const findCategoryById = (cats, id) => {
-          for (const cat of cats) {
-            if (cat.id === id) return cat;
-            if (cat.subcategories) {
-              const found = cat.subcategories.find((sub) => sub.id === id);
-              if (found) return found;
-            }
-          }
-          return null;
-        };
-        const newSelected = findCategoryById(
-          updatedCategories,
-          selectedCategory.id
-        );
-        if (newSelected) setSelectedCategory(newSelected);
-      }
+      refreshSelectedCategory(updatedCategories); // ← ZAMIENIONE
 
       toast.success("Produkt przywrócony!");
     } catch (err) {
@@ -158,7 +141,7 @@ export default function Products() {
   // === FILTROWANIE PRODUKTÓW ===
   const filteredProducts =
     selectedCategory?.products?.filter((p) =>
-      showDeleted ? true : !p.deletedAt
+      showDeleted ? p.deletedAt : !p.deletedAt
     ) || [];
 
   // === KOMPONENT CENY Z PROMOCJĄ ===
@@ -212,12 +195,17 @@ export default function Products() {
   return (
     <div className="mt-6">
       {/* NAGŁÓWEK + FILTR */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
         <h2 className="text-2xl font-bold text-gray-800">
           Produkty w {selectedCategory?.name || "Kategorii"}
+          {showDeleted && (
+            <span className="ml-2 text-sm text-red-600 font-normal">
+              (tryb: usunięte)
+            </span>
+          )}
         </h2>
 
-        {/* <button
+        <button
           onClick={() => setShowDeleted((prev) => !prev)}
           className={`px-4 py-2 rounded-md text-sm font-medium transition ${
             showDeleted
@@ -226,14 +214,14 @@ export default function Products() {
           }`}
         >
           {showDeleted ? "Ukryj usunięte" : "Pokaż usunięte"}
-        </button> */}
+        </button>
       </div>
 
       {/* PRZYCISK DODAJ */}
       {!showAddForm && (
         <button
           onClick={() => setShowAddForm(true)}
-          className="mb-6 px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          className="mb-6 px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
         >
           Dodaj nowy produkt
         </button>
@@ -345,12 +333,15 @@ export default function Products() {
               {newProductImages.length > 0 && (
                 <ul className="mt-2 list-disc pl-5">
                   {newProductImages.map((file, i) => (
-                    <li key={i} className="text-gray-600">
-                      {file.name}
+                    <li
+                      key={i}
+                      className="text-gray-600 flex justify-between items-center"
+                    >
+                      <span>{file.name}</span>
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(i)}
-                        className="ml-2 text-red-500"
+                        className="ml-2 text-red-500 hover:text-red-700"
                       >
                         Usuń
                       </button>
@@ -382,7 +373,7 @@ export default function Products() {
                 <button
                   type="button"
                   onClick={handleAddSize}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
                   Dodaj
                 </button>
@@ -390,12 +381,17 @@ export default function Products() {
               {newProduct.sizes.length > 0 ? (
                 <ul className="list-disc pl-5">
                   {newProduct.sizes.map((item) => (
-                    <li key={item.size} className="text-gray-600">
-                      {item.size}: {item.stock}
+                    <li
+                      key={item.size}
+                      className="text-gray-600 flex justify-between items-center"
+                    >
+                      <span>
+                        {item.size}: {item.stock}
+                      </span>
                       <button
                         type="button"
                         onClick={() => handleRemoveSize(item.size)}
-                        className="ml-2 text-red-500"
+                        className="ml-2 text-red-500 hover:text-red-700"
                       >
                         Usuń
                       </button>
@@ -407,11 +403,11 @@ export default function Products() {
               )}
             </div>
           </div>
-          <div className="flex gap-3 mt-4">
+          <div className="flex gap-3 mt-6">
             <button
               type="submit"
               disabled={isAdding}
-              className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 flex items-center space-x-2"
+              className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 flex items-center space-x-2 transition"
             >
               {isAdding && (
                 <svg
@@ -452,7 +448,7 @@ export default function Products() {
                 setNewProductImages([]);
                 setShowAddForm(false);
               }}
-              className="px-6 py-3 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400"
+              className="px-6 py-3 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
             >
               Anuluj
             </button>
@@ -461,35 +457,48 @@ export default function Products() {
       )}
 
       {/* LISTA PRODUKTÓW */}
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">Produkty</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mb-4">
+        Produkty ({filteredProducts.length})
+      </h3>
 
       {filteredProducts.length === 0 ? (
-        <div className="text-gray-600">
-          {showDeleted ? "Brak usuniętych produktów" : "Brak produktów"}
+        <div className="text-gray-600 p-8 text-center bg-gray-50 rounded-lg border border-gray-200">
+          {showDeleted
+            ? "Brak usuniętych produktów w tej kategorii."
+            : "Brak produktów w tej kategorii. Dodaj pierwszy!"}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProducts.map((product) => (
             <div
               key={product.id}
-              className={`p-6 bg-white rounded-lg shadow-md transition-all duration-200 ${
+              className={`relative p-6 bg-white rounded-lg shadow-md transition-all duration-200 ${
                 product.deletedAt
-                  ? "opacity-60 border-2 border-red-300"
-                  : "hover:shadow-lg"
+                  ? "opacity-70 border-2 border-red-400"
+                  : "hover:shadow-xl"
               }`}
             >
-              {product.images?.[0] && (
+              {/* Etykieta USUNIĘTY */}
+              {product.deletedAt && (
+                <div className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded font-medium">
+                  USUNIĘTY
+                </div>
+              )}
+
+              {product.images?.[0] ? (
                 <img
                   src={product.images[0]}
                   alt={product.name}
-                  className="w-full h-48 object-cover rounded-md mb-2"
+                  className="w-full h-48 object-cover rounded-md mb-3"
                 />
+              ) : (
+                <div className="bg-gray-200 border-2 border-dashed rounded-md w-full h-48 mb-3 flex items-center justify-center text-gray-500 text-sm">
+                  Brak zdjęcia
+                </div>
               )}
-              <h4 className="text-lg font-semibold text-gray-800">
+
+              <h4 className="text-lg font-semibold text-gray-800 line-clamp-2">
                 {product.name}
-                {product.deletedAt && (
-                  <span className="ml-2 text-sm text-red-600">[USUNIĘTY]</span>
-                )}
               </h4>
 
               {/* CENA Z PROMOCJĄ */}
@@ -505,14 +514,15 @@ export default function Products() {
                       imagesToRemove: [],
                     })
                   }
-                  className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm"
+                  className="flex-1 px-3 py-1.5 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm font-medium transition"
+                  disabled={product.deletedAt}
                 >
                   Edytuj
                 </button>
                 {product.deletedAt ? (
                   <button
                     onClick={() => handleRestoreProduct(product.id)}
-                    className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                    className="flex-1 px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 text-sm font-medium transition"
                   >
                     Przywróć
                   </button>
@@ -521,7 +531,7 @@ export default function Products() {
                     onClick={() =>
                       setShowDeleteModal({ type: "product", id: product.id })
                     }
-                    className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+                    className="flex-1 px-3 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 text-sm font-medium transition"
                   >
                     Usuń
                   </button>

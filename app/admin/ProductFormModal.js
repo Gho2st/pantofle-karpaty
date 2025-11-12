@@ -12,13 +12,13 @@ export default function ProductFormModal() {
   const [newStock, setNewStock] = useState("");
 
   useEffect(() => {
-    console.log("editingProduct zmienione:", editingProduct);
     if (editingProduct) {
       setProductData({
         ...editingProduct,
         imagesToAdd: [],
         imagesToRemove: [],
         promoPrice: editingProduct.promoPrice || null,
+        slug: editingProduct.slug || generateSlug(editingProduct.name),
       });
     } else {
       setProductData(null);

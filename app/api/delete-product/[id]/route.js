@@ -33,6 +33,7 @@ async function deleteFileFromS3(url) {
 
 export async function DELETE(request, { params }) {
   const session = await getServerSession(authOptions);
+  const awaitedParams = await params;
   if (!session || session.user.role !== "ADMIN") {
     return NextResponse.json(
       { error: "Nieautoryzowany dostęp" },
@@ -40,7 +41,7 @@ export async function DELETE(request, { params }) {
     );
   }
 
-  const { id } = params;
+  const { id } = awaitedParams;
   const productId = parseInt(id);
   if (isNaN(productId)) {
     return NextResponse.json({ error: "ID musi być liczbą" }, { status: 400 });

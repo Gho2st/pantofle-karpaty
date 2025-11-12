@@ -1,4 +1,7 @@
 import ClientProfil from "./ClientProfil";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../api/auth/[...nextauth]/route";
+import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "Twój profil – Zamówienia, dane, adresy | Pantofle Karpaty",
@@ -7,9 +10,19 @@ export const metadata = {
   alternates: {
     canonical: "/profil",
   },
-  robots: "noindex, nofollow", // Profil prywatny – nie w Google
+  robots: "noindex, nofollow",
 };
 
-export default function ProfilPage() {
+export default async function ProfilPage() {
+  const session = await getServerSession(authOptions); // ← await!
+
+  if (!session) {
+    redirect("/login");
+  }
+
+  if (session.user?.role === "ADMIN") {
+    redirect("/admin");
+  }
+
   return <ClientProfil />;
 }
