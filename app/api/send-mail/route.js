@@ -20,26 +20,26 @@ function createEmailTemplate({ name, text, email }) {
     <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4;">
       <div style="max-width: 600px; margin: auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1);">
         <h2 style="color: #fa7070; text-align: center;">Wiadomość ze strony <br>Pantofle Karpaty</h2>
-        <ul style="list-style-type: none; padding: 0; font-size: 16px; color: #333; line-height: 1.5;">
+        <ul style="list-style-type: none; padding: 0; font-size: 16px; color: #333; line-height: 1.8;">
           <li><strong>Imię i Nazwisko:</strong> ${name}</li>
-          <li><strong>Wiadomość:</strong> ${text}</li>
-          <li><strong>Email:</strong> <a href="mailto:${email}" style="color: #fa7070;">${email}</a></li>
+          <li><strong>Wiadomość:</strong> ${text.replace(/\n/g, "<br>")}</li>
+          <li><strong>Email:</strong> <a href="mailto:${email}" style="color: #fa7070; text-decoration: none;">${email}</a></li>
         </ul>
-        <hr style="border: 1px solid #ddd; margin: 20px 0;">
+        <hr style="border: 1px solid #ddd; margin: 25px 0;">
         <p style="font-size: 14px; color: #888; text-align: center;">
-          Ta wiadomość została wysłana z formularza kontaktowego na stronie Pantofle Karpaty.
+          Wiadomość wysłana z formularza kontaktowego na stronie <strong>Pantofle Karpaty</strong>.
         </p>
       </div>
     </div>
   `;
 }
 
-// === GŁÓWNA FUNKCJA ===
+// === GŁÓWNA FUNKCJA POST ===
 export async function POST(request) {
   try {
     const { text, name, email } = await request.json();
 
-    // === 1. Walidacja ===
+    // === 1. Walidacja pól ===
     if (!validateFields({ name, email, text })) {
       return NextResponse.json(
         { message: "Uzupełnij wszystkie pola." },
@@ -54,41 +54,43 @@ export async function POST(request) {
       );
     }
 
-    // === 2. Konfiguracja Nodemailer z TESTEM POŁĄCZENIA ===
+    // === 2. Konfiguracja Nodemailer (SEOHost) ===
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.gmail.com",
+      host: process.env.SMTP_HOST, // h24.seohost.pl
       port: parseInt(process.env.SMTP_PORT) || 465,
-      secure: true, // ← ZAWSZE true dla portu 465
+      secure: true, // SSL dla portu 465
       auth: {
-        user: process.env.NODEMAILER_EMAIL,
-        pass: process.env.NODEMAILER_PW,
+        user: process.env.SMTP_USER, // robert@domiweb.pl
+        pass: process.env.SMTP_PASS, // Minisiek1!
       },
-      // DODAJ TIMEOUT
       connectionTimeout: 10000,
       socketTimeout: 10000,
     });
 
-    // TEST POŁĄCZENIA
+    // === 3. Test połączenia SMTP ===
     try {
       await transporter.verify();
+      console.log("✅ SMTP działa – gotowy do wysyłki");
     } catch (verifyError) {
-      console.error("SMTP: Błąd połączenia:", verifyError.message);
+      console.error("❌ Błąd połączenia SMTP:", verifyError.message);
       return NextResponse.json(
-        { message: "Błąd serwera SMTP. Spróbuj później." },
+        { message: "Błąd serwera pocztowego. Spróbuj później." },
         { status: 500 }
       );
     }
 
-    // === 3. E-mail ===
+    // === 4. Opcje e-maila ===
     const mailOptions = {
-      from: `"Kontakt KARPATY" <${process.env.NODEMAILER_EMAIL}>`,
-      to: "jestemfajny1244@gmail.com", // ← docelowy
-      subject: `Kontakt od ${name} – Pantofle Karpaty`,
+      from: `"Pantofle Karpaty" <${process.env.SMTP_USER}>`, // Poprawny nadawca
+      replyTo: email, // Odpowiedź trafi do klienta
+      to: "jestemfajny1244@gmail.com", // Twój e-mail
+      subject: `Kontakt: ${name} – Pantofle Karpaty`,
       html: createEmailTemplate({ name, text, email }),
     };
 
-    // === 4. Wysyłka ===
+    // === 5. Wysyłka ===
     await transporter.sendMail(mailOptions);
+    console.log(`✅ Mail wysłany do: jestemfajny1244@gmail.com od: ${name}`);
 
     return NextResponse.json(
       { message: "Wiadomość wysłana prawidłowo!" },
@@ -98,7 +100,7 @@ export async function POST(request) {
     console.error("Błąd API /contact:", error.message || error);
     return NextResponse.json(
       {
-        message: "Nie udało się wysłać wiadomości. Spróbuj później.",
+        message: "Nie udało się wysłać wiadomości.",
         error: error.message || "Nieznany błąd",
       },
       { status: 500 }

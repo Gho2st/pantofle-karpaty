@@ -7,30 +7,22 @@ function isValidEmail(email) {
   return emailRegex.test(email);
 }
 
-// === WALIDACJA PÓL ===
+// === WALIDACJA PÓL ZWROTU ===
 function validateReturnFields(data) {
-  const required = [
-    "name",
-    "email",
-    "orderNumber",
-    "product",
-    "reason",
-    "paczkomat",
-  ];
-  return required.every((key) => {
-    if (key === "paczkomat") {
-      return (
-        data.paczkomat &&
-        data.paczkomat.name &&
-        data.paczkomat.pointId &&
-        data.paczkomat.address
-      );
-    }
-    return data[key] && data[key].toString().trim() !== "";
-  });
+  const required = ["name", "email", "orderNumber", "product", "reason"];
+  const paczkomatOk =
+    data.paczkomat &&
+    data.paczkomat.name &&
+    data.paczkomat.pointId &&
+    data.paczkomat.address;
+
+  return (
+    required.every((key) => data[key] && data[key].toString().trim() !== "") &&
+    paczkomatOk
+  );
 }
 
-// === SZABLONY E-MAILI (bez zmian) ===
+// === SZABLON: MAIL DO SKLEPU ===
 function createReturnEmailTemplate(data) {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; background: #f9f9f9; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
@@ -64,6 +56,7 @@ function createReturnEmailTemplate(data) {
   `;
 }
 
+// === SZABLON: POTWIERDZENIE DO KLIENTA ===
 function createClientConfirmationTemplate(data) {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; background: #f9f9f9; padding: 20px; border-radius: 12px;">
@@ -98,7 +91,7 @@ function createClientConfirmationTemplate(data) {
   `;
 }
 
-// === GŁÓWNA FUNKCJA ===
+// === GŁÓWNA FUNKCJA POST ===
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -112,7 +105,7 @@ export async function POST(request) {
       paczkomat,
     } = body;
 
-    // === 1. Walidacja ===
+    // === 1. Walidacja polityki ===
     if (!acceptPolicy) {
       return NextResponse.json(
         { message: "Musisz zaakceptować politykę zwrotów." },
@@ -120,6 +113,7 @@ export async function POST(request) {
       );
     }
 
+    // === 2. Walidacja paczkomatu ===
     if (
       !paczkomat ||
       !paczkomat.name ||
@@ -133,6 +127,8 @@ export async function POST(request) {
     }
 
     const data = { name, email, orderNumber, product, reason, paczkomat };
+
+    // === 3. Walidacja pól ===
     if (!validateReturnFields(data)) {
       return NextResponse.json(
         { message: "Wypełnij wszystkie wymagane pola." },
@@ -147,37 +143,37 @@ export async function POST(request) {
       );
     }
 
-    // === 2. TWORZENIE TRANSPORTERA Z TESTEM POŁĄCZENIA ===
+    // === 4. KONFIGURACJA NODemailer (SEOHost) ===
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.gmail.com",
+      host: process.env.SMTP_HOST, // h24.seohost.pl
       port: parseInt(process.env.SMTP_PORT) || 465,
-      secure: process.env.SMTP_SECURE === "true" || true,
+      secure: true, // SSL
       auth: {
-        user: process.env.NODEMAILER_EMAIL,
-        pass: process.env.NODEMAILER_PW,
+        user: process.env.SMTP_USER, // robert@domiweb.pl
+        pass: process.env.SMTP_PASS, // Minisiek1!
       },
-      // DODAJ TIMEOUT I POOL
       pool: true,
       maxConnections: 1,
       connectionTimeout: 10000,
       socketTimeout: 10000,
     });
 
-    // TEST POŁĄCZENIA
+    // === 5. TEST POŁĄCZENIA SMTP ===
     try {
       await transporter.verify();
-      console.log("SMTP: Połączenie udane");
+      console.log("SMTP: Połączenie udane – gotowy do wysyłki");
     } catch (verifyError) {
       console.error("SMTP: Błąd połączenia:", verifyError.message);
       return NextResponse.json(
-        { message: "Błąd serwera SMTP. Spróbuj później." },
+        { message: "Błąd serwera pocztowego. Spróbuj później." },
         { status: 500 }
       );
     }
 
-    // === 3. E-MAILE ===
+    // === 6. OPCJE E-MAILI ===
     const shopMail = {
-      from: `"Zwroty KARPATY" <${process.env.NODEMAILER_EMAIL}>`,
+      from: `"Zwroty KARPATY" <${process.env.SMTP_USER}>`,
+      replyTo: email,
       to: "dominik.jojczyk@gmail.com", // ← testowy
       // to: "mwidel@pantofle-karpaty.pl", // ← docelowy
       subject: `ZWROT #${orderNumber} – ${name} – ${paczkomat.pointId}`,
@@ -185,26 +181,23 @@ export async function POST(request) {
     };
 
     const clientMail = {
-      from: `"Pantofle KARPATY" <${process.env.NODEMAILER_EMAIL}>`,
+      from: `"Pantofle KARPATY" <${process.env.SMTP_USER}>`,
       to: email,
-      subject: `Potwierdzenie zwrotu #${orderNumber} – paczkomat ${paczkomat.pointId}`,
+      subject: `Potwierdzenie zwrotu #${orderNumber}`,
       html: createClientConfirmationTemplate(data),
     };
 
-    // === 4. WYSYŁKA Z TIMEOUT ===
+    // === 7. WYSYŁKA (równolegle) ===
     await Promise.all([
-      transporter.sendMail(shopMail).catch((err) => {
-        throw new Error(`Sklep: ${err.message}`);
-      }),
-      transporter.sendMail(clientMail).catch((err) => {
-        throw new Error(`Klient: ${err.message}`);
-      }),
+      transporter.sendMail(shopMail),
+      transporter.sendMail(clientMail),
     ]);
+
+    console.log(`Zwrot #${orderNumber}: maile wysłane do sklepu i klienta`);
 
     return NextResponse.json(
       {
-        message:
-          "Zgłoszenie zwrotu przyjęte! Etykieta zostanie wysłana w ciągu 24h.",
+        message: "Zgłoszenie zwrotu przyjęte! Etykieta w ciągu 24h.",
         data: { orderNumber, email, paczkomat: paczkomat.pointId },
       },
       { status: 200 }
@@ -213,7 +206,7 @@ export async function POST(request) {
     console.error("Błąd API /zwrot:", error.message || error);
     return NextResponse.json(
       {
-        message: "Nie udało się przesłać zgłoszenia. Spróbuj później.",
+        message: "Nie udało się przesłać zgłoszenia.",
         error: error.message || "Nieznany błąd",
       },
       { status: 500 }
