@@ -143,7 +143,7 @@ export default async function CategorySlug({ params }) {
               src={product.images?.[0] || "/pantofle/pantofle.jpg"}
               alt={product.name}
               label={product.name}
-              href={`${basePath}/${product.slug}`}
+              href={`/produkty/${product.slug}`}
               product={product}
             />
           ))

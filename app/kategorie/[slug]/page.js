@@ -1,8 +1,10 @@
+// app/kategorie/[slug]/page.js
+
 import prisma from "@/app/lib/prisma";
 import { notFound } from "next/navigation";
 import CollectionTitle from "@/app/components/CollectionTitle";
 
-// --- DŁUGIE, SEO-FRIENDLY OPISY DLA KAŻDEJ KATEGORII ---
+// --- SEO ---
 const CATEGORY_SEO = {
   "dla-kobiet": {
     title: "Pantofle damskie – ręcznie robione z wełny | Pantofle Karpaty",
@@ -41,33 +43,50 @@ export async function generateMetadata({ params }) {
   return {
     title: seo.title,
     description: seo.description,
-    alternates: {
-      canonical: `/kategorie/${slug}`,
-    },
+    alternates: { canonical: `/kategorie/${slug}` },
   };
 }
 
 export default async function CategoryPage({ params }) {
   const { slug } = await params;
 
+  // 1. Główna kategoria
   const mainCategory = await prisma.category.findFirst({
     where: { slug, deletedAt: null },
-    include: {
-      subcategories: {
-        where: { deletedAt: null },
-        include: {
-          products: {
-            where: { deletedAt: null },
-            select: { id: true, name: true, price: true },
-          },
-        },
-      },
-    },
+    select: { id: true, name: true, description: true },
   });
 
   if (!mainCategory) notFound();
 
-  const subcategories = mainCategory.subcategories || [];
+  // 2. Podkategorie (bez orderBy)
+  const subcategories = await prisma.category.findMany({
+    where: {
+      parentId: mainCategory.id,
+      deletedAt: null,
+    },
+    include: {
+      products: {
+        where: { deletedAt: null },
+        select: { id: true, name: true, price: true },
+      },
+    },
+  });
+
+  // 3. Produkty bezpośrednie (bez orderBy)
+  const directProducts = await prisma.product.findMany({
+    where: {
+      categoryId: mainCategory.id,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      name: true,
+      price: true,
+      slug: true,
+      images: true,
+    },
+  });
+
   const seo = CATEGORY_SEO[slug] || {
     description:
       "Ręcznie robione pantofle z Karpat – ciepłe, naturalne, pełne tradycji i pasji.",
@@ -77,9 +96,8 @@ export default async function CategoryPage({ params }) {
     <div className="max-w-7xl text-center mx-auto my-16 lg:my-24">
       <h1 className="text-5xl font-light uppercase">{mainCategory.name}</h1>
 
-      {/* Długi, SEO-friendly opis na stronie */}
       <p className="my-8 px-4 lg:px-0 font-light xl:text-lg max-w-4xl mx-auto leading-relaxed">
-        {mainCategory.description ? mainCategory.description : seo.description}
+        {mainCategory.description || seo.description}
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10">
@@ -96,9 +114,29 @@ export default async function CategoryPage({ params }) {
               }`}
             />
           ))
+        ) : directProducts.length > 0 ? (
+          directProducts.map((product) => {
+            const firstImage =
+              product.images &&
+              Array.isArray(product.images) &&
+              product.images[0]
+                ? product.images[0]
+                : "/pantofle/pantofle.jpg";
+
+            return (
+              <CollectionTitle
+                key={product.id}
+                src={firstImage}
+                alt={product.name}
+                label={product.name}
+                href={`/produkty/${product.slug || product.id}`}
+                price={product.price}
+              />
+            );
+          })
         ) : (
           <p className="text-gray-600 col-span-full">
-            Brak podkategorii w {mainCategory.name.toLowerCase()}.
+            Brak produktów w kategorii {mainCategory.name.toLowerCase()}.
           </p>
         )}
       </div>
