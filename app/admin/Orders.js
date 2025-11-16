@@ -79,6 +79,24 @@ export default function Orders() {
           order.id === orderId ? updatedOrder.order : order
         )
       );
+
+      // wyslij email dla shipped lub canceled
+
+      if (newStatus === "SHIPPED" || newStatus === "CANCELLED") {
+        const order = updatedOrder.order;
+        await fetch("/api/orders/status-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId: order.id,
+            status: newStatus === "SHIPPED" ? "wysłane" : "anulowane",
+            customerName: `${order.firstName} ${order.lastName}`,
+            customerEmail: order.email,
+          }),
+        });
+      }
+
+      // powiadomienie
       const statusText = {
         PENDING: "Oczekujące",
         PAID: "Opłacone",
