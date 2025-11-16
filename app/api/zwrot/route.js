@@ -82,7 +82,7 @@ function createClientConfirmationTemplate(data) {
         2. Wydrukuj etykietę<br />
         3. Spakuj produkt z paragonem<br />
         4. Nadaj w paczkomacie <strong>${data.paczkomat.pointId}</strong><br />
-        5. Otrzymasz zwrot pieniędzy (minus 13,99 zł za przesyłkę)</p>
+        5. Otrzymasz zwrot pieniędzy (minus 9,99 zł za przesyłkę)</p>
         <p style="font-size: 14px; color: #6b7280;">
           W razie pytań – pisz: <a href="mailto:mwidel@pantofle-karpaty.pl" style="color: #1e40af;">mwidel@pantofle-karpaty.pl</a>
         </p>

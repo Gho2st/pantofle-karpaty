@@ -170,7 +170,7 @@ export default function ClientReturnForm() {
               { step: "Śledź zwrot", desc: "Otrzymasz link do śledzenia." },
               {
                 step: "Zwrot pieniędzy",
-                desc: "Po sprawdzeniu towaru, zwrócimy środki (pomniejszone o 13,99 zł).",
+                desc: "Po sprawdzeniu towaru, zwrócimy środki (pomniejszone o 9,99 zł).",
               },
             ].map((item, i) => (
               <li key={i} className="flex items-start">
@@ -332,7 +332,7 @@ export default function ClientReturnForm() {
         </h3>
         <p className="text-gray-700">
           Jeśli wolisz, możesz odesłać towar <strong>samodzielnie</strong>{" "}
-          dowolnym przewoźnikiem – wtedy <strong>nie potrącamy 13,99 zł</strong>
+          dowolnym przewoźnikiem – wtedy <strong>nie potrącamy 9,99 zł</strong>
           .
         </p>
         <p className="mt-2 font-medium">
