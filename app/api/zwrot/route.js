@@ -145,12 +145,12 @@ export async function POST(request) {
 
     // === 4. KONFIGURACJA NODemailer (SEOHost) ===
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST, // h24.seohost.pl
+      host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT) || 465,
       secure: true, // SSL
       auth: {
-        user: process.env.SMTP_USER, // robert@domiweb.pl
-        pass: process.env.SMTP_PASS, // Minisiek1!
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
       },
       pool: true,
       maxConnections: 1,
@@ -174,8 +174,7 @@ export async function POST(request) {
     const shopMail = {
       from: `"Zwroty KARPATY" <${process.env.SMTP_USER}>`,
       replyTo: email,
-      to: "dominik.jojczyk@gmail.com", // ← testowy
-      // to: "mwidel@pantofle-karpaty.pl", // ← docelowy
+      to: "mwidel@pantofle-karpaty.pl", // ← docelowy
       subject: `ZWROT #${orderNumber} – ${name} – ${paczkomat.pointId}`,
       html: createReturnEmailTemplate(data),
     };

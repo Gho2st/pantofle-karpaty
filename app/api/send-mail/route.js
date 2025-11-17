@@ -83,7 +83,7 @@ export async function POST(request) {
     const mailOptions = {
       from: `"Pantofle Karpaty" <${process.env.SMTP_USER}>`, // Poprawny nadawca
       replyTo: email, // Odpowiedź trafi do klienta
-      to: "jestemfajny1244@gmail.com", // Twój e-mail
+      to: "mwidel@pantofle-karpaty.pl", // Twój e-mail
       subject: `Kontakt: ${name} – Pantofle Karpaty`,
       html: createEmailTemplate({ name, text, email }),
     };
