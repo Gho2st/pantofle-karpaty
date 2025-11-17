@@ -72,7 +72,7 @@ export default async function CategoryPage({ params }) {
     },
   });
 
-  // 3. Produkty bezpośrednie (bez orderBy)
+  // 3. Produkty bezpośrednie – teraz z pełnymi danymi cenowymi
   const directProducts = await prisma.product.findMany({
     where: {
       categoryId: mainCategory.id,
@@ -81,7 +81,9 @@ export default async function CategoryPage({ params }) {
     select: {
       id: true,
       name: true,
-      price: true,
+      price: true, // cena katalogowa
+      promoPrice: true, // cena promocyjna (jeśli masz takie pole)
+      lowestPrice: true, // ← OBOWIĄZKOWO DODAJ TO!
       slug: true,
       images: true,
     },
@@ -130,7 +132,7 @@ export default async function CategoryPage({ params }) {
                 alt={product.name}
                 label={product.name}
                 href={`/produkty/${product.slug || product.id}`}
-                price={product.price}
+                product={product}
               />
             );
           })

@@ -15,7 +15,7 @@ export default function CollectionTitle({ src, alt, label, href, product }) {
     : 0;
 
   return (
-    <Link href={href} className="group block relative">
+    <Link href={href} className="group block relative text-left">
       {/* Obrazek z badge'em w lewym górnym rogu */}
       <div className="aspect-square bg-gray-100 rounded-md overflow-hidden mb-3 relative">
         <Image
