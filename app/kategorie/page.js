@@ -11,7 +11,7 @@ export default function Kategoria() {
     <>
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-4xl font-bold text-center mb-6">
-          Kategorie odzieży
+          Kategorie
         </h1>
         <p className="text-lg text-center text-gray-600 mb-10 max-w-3xl mx-auto">
           Przeglądaj naszą ofertę i wybierz kategorię, która Cię interesuje:{" "}
