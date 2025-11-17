@@ -90,9 +90,6 @@ const authOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      console.log("🔍 Callback redirect: url=", url, "baseUrl=", baseUrl);
-      console.log("ℹ️ Przekierowanie na stronę główną:", baseUrl);
-      // Uwaga: Usuń hardcoded URL, jeśli nie jest potrzebny
       return baseUrl; // Zwraca np. http://localhost:3000/
     },
   },
