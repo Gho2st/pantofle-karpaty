@@ -93,7 +93,7 @@ const authOptions = {
         return url;
       }
       // W przeciwnym razie przekieruj na stronę po logowaniu
-      return baseUrl + "/dashboard"; // albo "/profile", albo "/"
+      return baseUrl + "/profil"; // albo "/profile", albo "/"
     },
   },
 };
