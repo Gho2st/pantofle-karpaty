@@ -54,14 +54,14 @@ export async function POST(request) {
       );
     }
 
-    // === 2. Konfiguracja Nodemailer (SEOHost) ===
+    // === 2. Konfiguracja Nodemailer
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST, // h24.seohost.pl
+      host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT) || 465,
-      secure: true, // SSL dla portu 465
+      secure: true,
       auth: {
-        user: process.env.SMTP_USER, // robert@domiweb.pl
-        pass: process.env.SMTP_PASS, // Minisiek1!
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
       },
       connectionTimeout: 10000,
       socketTimeout: 10000,

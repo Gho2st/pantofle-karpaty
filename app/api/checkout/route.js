@@ -4,20 +4,22 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 import Stripe from "stripe";
 import crypto from "crypto";
-import nodemailer from "nodemailer"; // DODANE
+import nodemailer from "nodemailer";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2023-10-16",
+});
 
-// === WALIDACJA E-MAILA ===
 function isValidEmail(email) {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return regex.test(email);
 }
 
 export async function POST(req) {
   try {
     const session = await getServerSession(authOptions);
     const body = await req.json();
+
     const {
       cartItems,
       formData,
@@ -29,11 +31,11 @@ export async function POST(req) {
       discountValue,
     } = body;
 
+    // Podstawowe walidacje
     if (!Array.isArray(cartItems) || cartItems.length === 0) {
-      return NextResponse.json({ error: "Koszyk pusty" }, { status: 400 });
+      return NextResponse.json({ error: "Koszyk jest pusty" }, { status: 400 });
     }
 
-    // Walidacja e-maila
     if (!isValidEmail(formData.email)) {
       return NextResponse.json(
         { error: "Nieprawidłowy adres e-mail" },
@@ -41,8 +43,10 @@ export async function POST(req) {
       );
     }
 
+    // Czy użytkownik zalogowany?
     let userId = null;
     let isGuest = true;
+
     if (session?.user?.email) {
       const user = await prisma.user.findUnique({
         where: { email: session.user.email },
@@ -53,57 +57,35 @@ export async function POST(req) {
       }
     }
 
-    // === TRANSACTION: SPRAWDŹ STOCK + UTWÓRZ ZAMÓWIENIE + ODEJMIJ STOCK + GENERUJ TOKEN ===
+    // GŁÓWNA TRANSAKCJA – wszystko w jednym bloku
     const { createdOrder, guestToken } = await prisma.$transaction(
       async (tx) => {
-        // 1. SPRAWDŹ STOCK PRZED ZAMÓWIENIEM
+        // 1. Sprawdź dostępność stocku
         for (const item of cartItems) {
           const product = await tx.product.findUnique({
             where: { id: item.productId },
           });
 
-          if (
-            !product ||
-            product.sizes === null ||
-            product.sizes === undefined
-          ) {
+          if (!product || !product.sizes) {
             throw new Error(
-              `Produkt o ID ${item.productId} nie istnieje lub brak danych o rozmiarach`
+              `Produkt o ID ${item.productId} nie istnieje lub brak rozmiarów`
             );
           }
 
-          let sizes;
-          try {
-            sizes =
-              typeof product.sizes === "string"
-                ? JSON.parse(product.sizes)
-                : product.sizes;
-          } catch (e) {
-            throw new Error(
-              `Nieprawidłowy format danych sizes dla produktu ${product.name}`
-            );
-          }
-
-          if (!Array.isArray(sizes)) {
-            throw new Error(
-              `Dane sizes nie są tablicą dla produktu ${product.name}`
-            );
-          }
-
+          let sizes =
+            typeof product.sizes === "string"
+              ? JSON.parse(product.sizes)
+              : product.sizes;
           const sizeData = sizes.find((s) => s.size === item.size);
 
           if (!sizeData || sizeData.stock < item.quantity) {
             throw new Error(
-              `Brak wystarczającej ilości produktu "${
-                product.name
-              }" (rozmiar: ${item.size}). Dostępne: ${
-                sizeData?.stock || 0
-              }, potrzebne: ${item.quantity}`
+              `Brak wystarczającej ilości: ${product.name} (rozmiar ${item.size})`
             );
           }
         }
 
-        // 2. UTWÓRZ ZAMÓWIENIE
+        // 2. Utwórz zamówienie
         const order = await tx.order.create({
           data: {
             user: userId ? { connect: { id: userId } } : undefined,
@@ -118,13 +100,13 @@ export async function POST(req) {
             phone: formData.phone,
             paczkomat: formData.parcelLocker || null,
             paymentMethod,
-            status: "PENDING",
             deliveryMethod,
             deliveryCost: parseFloat(deliveryCost),
             companyName: formData.companyName || null,
             nip: formData.nip || null,
             discountCode: discountCode || null,
             discountAmount: discountValue || 0,
+            status: "PENDING",
             items: {
               create: cartItems.map((item) => ({
                 productId: item.productId,
@@ -132,42 +114,35 @@ export async function POST(req) {
                 size: item.size,
                 quantity: item.quantity,
                 price: item.product.price,
-                promoPrice: item.product.promoPrice,
-                promoEndDate: item.product.promoDate,
+                promoPrice: item.product.promoPrice || null,
+                promoEndDate: item.product.promoEndDate || null,
               })),
             },
           },
-          include: { items: true }, // Pobierz items do e-maila
+          include: { items: true },
         });
 
-        // 3. GENERUJ GUEST TOKEN (jeśli gość)
+        // 3. Token dla gościa
         let guestToken = null;
         if (isGuest) {
-          guestToken = crypto.randomBytes(16).toString("hex");
+          guestToken = crypto.randomBytes(20).toString("hex");
           await tx.order.update({
             where: { id: order.id },
             data: { guestToken },
           });
         }
 
-        // 4. ODEJMIJ STOCK
+        // 4. Odejmij stock
         for (const item of cartItems) {
           const product = await tx.product.findUnique({
             where: { id: item.productId },
           });
+          if (!product) continue;
 
-          let sizes;
-          try {
-            sizes =
-              typeof product.sizes === "string"
-                ? JSON.parse(product.sizes)
-                : product.sizes;
-          } catch (e) {
-            throw new Error(
-              `Błąd parsowania sizes przy odjęciu stocku dla ${product.name}`
-            );
-          }
-
+          let sizes =
+            typeof product.sizes === "string"
+              ? JSON.parse(product.sizes)
+              : product.sizes;
           const sizeIndex = sizes.findIndex((s) => s.size === item.size);
           if (sizeIndex !== -1) {
             sizes[sizeIndex].stock -= item.quantity;
@@ -178,7 +153,7 @@ export async function POST(req) {
           }
         }
 
-        // 5. ZWIĘKSZ usedCount KODU RABATOWEGO
+        // 5. Zwiększ licznik kodu rabatowego
         if (discountCode) {
           await tx.discountCode.update({
             where: { code: discountCode },
@@ -190,14 +165,28 @@ export async function POST(req) {
       }
     );
 
-    // === BUDUJ redirectUrl Z GUEST TOKENEM ===
+    // Link do śledzenia zamówienia
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     let redirectUrl = `${baseUrl}/zamowienie/${createdOrder.id}`;
     if (isGuest && guestToken) {
       redirectUrl += `?guestToken=${guestToken}`;
     }
 
-    // === WYŚLIJ E-MAIL Z POTWIERDZENIEM ZAMÓWIENIA ===
+    // Czy potrzebna faktura VAT?
+    const isCompany = !!formData.companyName && !!formData.nip;
+    const totalWithoutDelivery =
+      createdOrder.totalAmount - parseFloat(deliveryCost || "0");
+    const needsInvoice = isCompany && totalWithoutDelivery >= 450;
+
+    const invoiceInfo = needsInvoice
+      ? `<div style="background:#e8f5e8;padding:15px;border-radius:8px;border-left:4px solid #4CAF50;margin:20px 0;">
+           Faktura VAT zostanie wysłana na <strong>${formData.email}</strong> w ciągu 1-2 dni roboczych.
+         </div>`
+      : `<div style="background:#f0f0f0;padding:15px;border-radius:8px;margin:20px 0;">
+           Paragon fiskalny będzie dołączony do paczki.
+         </div>`;
+
+    // WYŚLIJ MAIL Z POTWIERDZENIEM ZAMÓWIENIA
     try {
       const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
@@ -207,98 +196,93 @@ export async function POST(req) {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS,
         },
-        connectionTimeout: 10000,
-        socketTimeout: 10000,
       });
 
       await transporter.verify();
 
-      const orderItemsHtml = createdOrder.items
+      const itemsHtml = createdOrder.items
         .map(
-          (item) => `
-            <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #eee;">
-                ${item.name} (rozmiar: ${item.size})
-              </td>
-              <td style="text-align: right;">${item.quantity} szt.</td>
-              <td style="text-align: right;">${item.price.toFixed(2)} zł</td>
-            </tr>
-          `
+          (i) => `
+          <tr>
+            <td style="padding:8px 0;border-bottom:1px solid #eee;">
+              ${i.name} (rozmiar: ${i.size})
+            </td>
+            <td style="text-align:center;">${i.quantity} szt.</td>
+            <td style="text-align:right;">${parseFloat(i.price).toFixed(
+              2
+            )} zł</td>
+          </tr>`
         )
         .join("");
 
       const emailHtml = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; background: #f9f9f9; padding: 20px; border-radius: 10px;">
-          <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <h2 style="color: #fa7070; text-align: center;">Dziękujemy za zamówienie!</h2>
-            <p style="font-size: 16px; color: #333;">
-              Cześć <strong>${formData.firstName} ${formData.lastName}</strong>!
-            </p>
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;background:#f9f9f9;padding:20px;">
+          <div style="background:#fff;padding:30px;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.1);">
+            <h2 style="color:#fa7070;text-align:center;">Dziękujemy za zamówienie!</h2>
+            <p>Cześć <strong>${formData.firstName} ${
+        formData.lastName
+      }</strong>!</p>
             <p>Otrzymaliśmy Twoje zamówienie <strong>#${
               createdOrder.id
-            }</strong>. Oto szczegóły:</p>
+            }</strong>:</p>
 
-            <table style="width: 100%; margin: 20px 0; border-collapse: collapse;">
+            <table style="width:100%;border-collapse:collapse;margin:20px 0;">
               <thead>
-                <tr style="border-bottom: 2px solid #fa7070;">
-                  <th style="text-align: left; padding: 8px 0;">Produkt</th>
-                  <th style="text-align: right;">Ilość</th>
-                  <th style="text-align: right;">Cena</th>
+                <tr style="border-bottom:2px solid #fa7070;">
+                  <th style="text-align:left;padding:8px 0;">Produkt</th>
+                  <th style="text-align:center;">Ilość</th>
+                  <th style="text-align:right;">Cena</th>
                 </tr>
               </thead>
               <tbody>
-                ${orderItemsHtml}
+                ${itemsHtml}
                 <tr>
-                  <td colspan="2" style="padding-top: 12px; font-weight: bold;">Koszt dostawy:</td>
-                  <td style="text-align: right;">${deliveryCost.toFixed(
-                    2
-                  )} zł</td>
+                  <td colspan="2" style="padding-top:12px;font-weight:bold;">Dostawa:</td>
+                  <td style="text-align:right;">${parseFloat(
+                    deliveryCost
+                  ).toFixed(2)} zł</td>
                 </tr>
                 ${
                   discountValue
                     ? `<tr>
-                        <td colspan="2" style="padding-top: 8px; font-weight: bold; color: #4CAF50;">Rabat (${discountCode}):</td>
-                        <td style="text-align: right; color: #4CAF50;">-${discountValue.toFixed(
-                          2
-                        )} zł</td>
-                      </tr>`
+                      <td colspan="2" style="padding-top:8px;color:#4CAF50;font-weight:bold;">Rabat (${discountCode}):</td>
+                      <td style="text-align:right;color:#4CAF50;">-${parseFloat(
+                        discountValue
+                      ).toFixed(2)} zł</td>
+                    </tr>`
                     : ""
                 }
                 <tr>
-                  <td colspan="2" style="padding-top: 12px; font-size: 18px; font-weight: bold; color: #fa7070;">
-                    Do zapłaty:
-                  </td>
-                  <td style="text-align: right; font-size: 18px; font-weight: bold; color: #fa7070;">
+                  <td colspan="2" style="padding-top:15px;font-size:18px;font-weight:bold;color:#fa7070;">Do zapłaty:</td>
+                  <td style="text-align:right;font-size:20px;font-weight:bold;color:#fa7070;">
                     ${createdOrder.totalAmount.toFixed(2)} zł
                   </td>
                 </tr>
               </tbody>
             </table>
 
-            <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin: 20px 0; font-size: 14px;">
-              <p><strong>Metoda płatności:</strong> ${
+            <div style="background:#f8f8f8;padding:15px;border-radius:8px;margin:20px 0;">
+              <p><strong>Płatność:</strong> ${
                 paymentMethod === "stripe"
-                  ? "Stripe (karta, BLIK, P24)"
+                  ? "Karta / BLIK / Przelewy24"
                   : "Przelew tradycyjny"
               }</p>
-              <p><strong>Metoda dostawy:</strong> ${deliveryMethod}</p>
-              ${
-                formData.parcelLocker
-                  ? `<p><strong>Paczkomat:</strong> ${formData.parcelLocker}</p>`
-                  : ""
-              }
+              <p><strong>Dostawa:</strong> ${deliveryMethod}${
+        formData.parcelLocker ? ` – ${formData.parcelLocker}` : ""
+      }</p>
             </div>
 
-            <hr style="border: 1px solid #eee; margin: 25px 0;">
+            ${invoiceInfo}
 
-            <p style="text-align: center; font-size: 14px; color: #777;">
-              <strong>Pantofle Karpaty</strong> • <a href="https://pantofle-karpaty.pl" style="color: #fa7070;">pantofle-karpaty.pl</a>
+            <p style="text-align:center;margin-top:30px;">
+              <a href="${redirectUrl}" style="background:#fa7070;color:white;padding:14px 28px;text-decoration:none;border-radius:6px;font-weight:bold;">
+                Śledź zamówienie →
+              </a>
             </p>
-            <p style="text-align: center; font-size: 12px; color: #aaa; margin-top: 20px;">
-              Zamówienie możesz śledzić tutaj: 
-              <a href="${redirectUrl}" style="color: #fa7070;">Zobacz zamówienie #${
-        createdOrder.id
-      }</a>
+
+            <p style="text-align:center;color:#888;font-size:13px;margin-top:40px;">
+              Pantofle Karpaty • z miłości do gór i wygody<br>
+              <a href="https://pantofle-karpaty.pl" style="color:#fa7070;">pantofle-karpaty.pl</a>
             </p>
           </div>
         </div>
@@ -307,27 +291,22 @@ export async function POST(req) {
       await transporter.sendMail({
         from: `"Pantofle Karpaty" <${process.env.SMTP_USER}>`,
         to: formData.email,
-        subject: `Potwierdzenie zamówienia #${createdOrder.id} – Pantofle Karpaty`,
+        subject: `Zamówienie #${createdOrder.id} – Pantofle Karpaty`,
         html: emailHtml,
       });
 
-      console.log(`E-mail z potwierdzeniem wysłany do: ${formData.email}`);
-    } catch (emailError) {
-      console.error(
-        "Błąd wysyłki e-maila z potwierdzeniem:",
-        emailError.message
-      );
-      // Nie przerywaj – zamówienie istnieje!
+      console.log("Mail potwierdzający wysłany do:", formData.email);
+    } catch (emailErr) {
+      console.error("Błąd wysyłki maila:", emailErr);
+      // Nie przerywamy – zamówienie i tak istnieje
     }
 
-    // === STRIPE LUB PRZEKIEROWANIE ===
+    // PŁATNOŚĆ STRIPE
     if (paymentMethod === "stripe") {
-      const amountInCents = Math.round(
-        parseFloat(createdOrder.totalAmount) * 100
-      );
+      const amountCents = Math.round(createdOrder.totalAmount * 100);
 
       const stripeSession = await stripe.checkout.sessions.create({
-        payment_method_types: ["card", "blik", "p24"],
+        payment_method_types: ["card", "p24", "blik"],
         mode: "payment",
         currency: "pln",
         customer_email: formData.email,
@@ -339,7 +318,7 @@ export async function POST(req) {
             price_data: {
               currency: "pln",
               product_data: { name: `Zamówienie #${createdOrder.id}` },
-              unit_amount: amountInCents,
+              unit_amount: amountCents,
             },
             quantity: 1,
           },
@@ -354,10 +333,10 @@ export async function POST(req) {
       return NextResponse.json({ redirectUrl: stripeSession.url });
     }
 
-    // Tradycyjna płatność → przekieruj od razu
+    // Przelew tradycyjny – od razu przekieruj
     return NextResponse.json({ redirectUrl });
   } catch (error) {
-    console.error("Checkout error:", error);
+    console.error("Błąd checkout:", error);
     return NextResponse.json(
       { error: error.message || "Wystąpił błąd podczas składania zamówienia" },
       { status: 500 }
