@@ -14,8 +14,7 @@ export default function NoAccessPage() {
         Nie masz uprawnień do wyświetlenia tego zamówienia.
       </p>
       <p className="text-sm text-gray-500 mb-6">
-        Jeśli to Twoje zamówienie – sprawdź email gdzie znajdziesz
-        potwierdzenie.
+        Jeśli to Twoje zamówienie i masz konto - zaloguj się.
       </p>
       <Link
         href="/"

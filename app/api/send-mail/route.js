@@ -90,7 +90,6 @@ export async function POST(request) {
 
     // === 5. Wysyłka ===
     await transporter.sendMail(mailOptions);
-    console.log(`✅ Mail wysłany do: jestemfajny1244@gmail.com od: ${name}`);
 
     return NextResponse.json(
       { message: "Wiadomość wysłana prawidłowo!" },
