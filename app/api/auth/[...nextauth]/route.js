@@ -14,8 +14,6 @@ const authOptions = {
           response_type: "code",
         },
       },
-      // DODAJ TO:
-      checks: ["none"], // Wyłącza weryfikację stanu w WebView .
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
@@ -90,7 +88,12 @@ const authOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      return baseUrl; // Zwraca np. http://localhost:3000/
+      // Jeśli URL jest z tej samej domeny – pozwól na niego wrócić
+      if (url.startsWith(baseUrl)) {
+        return url;
+      }
+      // W przeciwnym razie przekieruj na stronę po logowaniu
+      return baseUrl + "/dashboard"; // albo "/profile", albo "/"
     },
   },
 };
