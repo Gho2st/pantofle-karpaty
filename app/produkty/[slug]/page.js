@@ -3,7 +3,7 @@ import prisma from "@/app/lib/prisma";
 import { notFound } from "next/navigation";
 import ProductDetails from "@/app/components/ProductDetails";
 
-// --- SEO ---
+// SEO – bez zmian
 export async function generateMetadata({ params }) {
   const { slug } = await params;
 
@@ -41,23 +41,31 @@ export async function generateMetadata({ params }) {
   };
 }
 
+// GŁÓWNA STRONA – DZIAŁA ZAWSZE
 export default async function ProductPage({ params }) {
   const { slug } = await params;
 
   const product = await prisma.product.findFirst({
     where: { slug, deletedAt: null },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      price: true,
+      promoPrice: true,
+      lowestPrice: true,
+      description: true,
+      description2: true,
+      additionalInfo: true,
+      images: true,
+      sizes: true, // pole Json? – bierzemy surowe dane
       category: {
         select: {
           id: true,
           name: true,
           slug: true,
           parent: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-            },
+            select: { id: true, name: true, slug: true },
           },
         },
       },
@@ -66,17 +74,28 @@ export default async function ProductPage({ params }) {
 
   if (!product) notFound();
 
-  // Normalizuj `sizes` – upewnij się, że to tablica obiektów
-  const normalizedSizes = Array.isArray(product.sizes) ? product.sizes : [];
+  // NAPRAWA: sizes i images przychodzą czasem jako STRING (np. "[{...}]")
+  const fixJsonField = (field) => {
+    if (!field) return [];
+    if (Array.isArray(field)) return field;
+    if (typeof field === "string") {
+      try {
+        return JSON.parse(field);
+      } catch (e) {
+        console.error("Błąd parsowania JSON:", field);
+        return [];
+      }
+    }
+    return [];
+  };
 
-  // Normalizuj `images`
-  const images = Array.isArray(product.images) ? product.images : [];
+  const images = fixJsonField(product.images);
+  const sizes = fixJsonField(product.sizes); // TERAZ ZAWSZE BĘDZIE TABLICĄ!
 
-  // Przygotuj produkt dla komponentu
   const productForClient = {
     ...product,
     images,
-    sizes: normalizedSizes,
+    sizes,
   };
 
   return <ProductDetails product={productForClient} />;
