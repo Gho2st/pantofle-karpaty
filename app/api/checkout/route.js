@@ -392,7 +392,8 @@ export async function POST(req) {
 
     await transporter.sendMail({
       from: `"Pantofle Karpaty" <${process.env.SMTP_USER}>`,
-      to: "mwidel@pantofle-karpaty.pl",
+      // to: "mwidel@pantofle-karpaty.pl",
+      to: "dominik.jojczyk@gmail.com",
       subject: `NOWE ZAMÓWIENIE #${
         createdOrder.id
       } – ${createdOrder.totalAmount.toFixed(2)} zł`,
