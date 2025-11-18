@@ -195,7 +195,130 @@ export async function POST(req) {
       )
       .join("");
 
-    const clientEmailHtml = `...`; // Twój dotychczasowy piękny HTML (zostaw dokładnie taki sam jak miałeś – nie zmieniamy)
+    const clientEmailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Dziękujemy za zamówienie!</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:#f9f9f9; color:#333; margin:0; padding:20px; }
+    .container { max-width: 640px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+    .header { background: #fa7070; padding: 30px 20px; text-align: center; color: white; }
+    .header h1 { margin: 0; font-size: 28px; }
+    .content { padding: 30px; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { padding: 12px 0; text-align: left; border-bottom: 1px solid #eee; }
+    th { color: #888; font-weight: normal; }
+    .total-row { font-weight: bold; font-size: 18px; color: #fa7070; }
+    .info-box { background: #f0f8ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #fa7070; }
+    .footer { background: #333; color: #ccc; padding: 30px; text-align: center; font-size: 14px; }
+    a { color: #fa7070; text-decoration: none; }
+    .btn { display: inline-block; background: #fa7070; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Dziękujemy za zamówienie! ❤️</h1>
+      <p style="margin:10px 0 0;font-size:16px;">Zamówienie nr #${
+        createdOrder.id
+      }</p>
+    </div>
+
+    <div class="content">
+      <p>Cześć ${formData.firstName},</p>
+      <p>Dziękujemy serdecznie za zaufanie i zakup w <strong>Pantofle Karpaty</strong>! Twoje zamówienie zostało przyjęte i zaraz zabieramy się do pakowania </p>
+
+      <div class="info-box">
+        <strong>Adres dostawy:</strong><br>
+        ${formData.firstName} ${formData.lastName}<br>
+        ${formData.street}<br>
+        ${formData.postalCode} ${formData.city}<br>
+        ${formData.phone}<br>
+        ${
+          formData.parcelLocker
+            ? `<br><strong>Paczkomat:</strong> ${formData.parcelLocker}`
+            : ""
+        }
+        ${
+          formData.companyName
+            ? `<br><br><strong>Dane do faktury:</strong><br>${formData.companyName} (NIP: ${formData.nip})`
+            : ""
+        }
+      </div>
+
+      <h3 style="color:#fa7070;">Twoje zamówienie:</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Produkt</th>
+            <th style="text-align:center;">Ilość</th>
+            <th style="text-align:right;">Cena</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${createdOrder.items
+            .map(
+              (i) => `
+            <tr>
+              <td>${i.name} <small style="color:#888;">(rozmiar ${
+                i.size
+              })</small></td>
+              <td style="text-align:center;">${i.quantity} szt.</td>
+              <td style="text-align:right;">${(
+                (i.promoPrice || i.price) * i.quantity
+              ).toFixed(2)} zł</td>
+            </tr>`
+            )
+            .join("")}
+          <tr>
+            <td colspan="2" style="text-align:right; padding-top:15px;"><strong>Dostawa (${deliveryMethod})</strong></td>
+            <td style="text-align:right; padding-top:15px;">${parseFloat(
+              deliveryCost
+            ).toFixed(2)} zł</td>
+          </tr>
+          ${
+            discountValue
+              ? `<tr style="color:#4CAF50;">
+                   <td colspan="2" style="text-align:right;"><strong>Rabat (${discountCode})</strong></td>
+                   <td style="text-align:right;">-${parseFloat(
+                     discountValue
+                   ).toFixed(2)} zł</td>
+                 </tr>`
+              : ""
+          }
+          <tr class="total-row">
+            <td colspan="2" style="text-align:right;"><strong>Do zapłaty:</strong></td>
+            <td style="text-align:right;"><strong>${createdOrder.totalAmount.toFixed(
+              2
+            )} zł</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      ${invoiceInfo}
+
+      <p style="text-align:center;">
+        <a href="${redirectUrl}" class="btn">Twoje zamówienie →</a>
+      </p>
+
+      <p>Jeśli masz jakiekolwiek pytania – pisz śmiało na <a href="mailto:mwidel@pantofle-karpaty.pl">mwidel@pantofle-karpaty.pl</a> albo dzwoń: <strong>123 456 789</strong>.</p>
+
+      <p>Do zobaczenia przy następnych zakupach! 🐑✨</p>
+    </div>
+
+    <div class="footer">
+      <p><strong>Pantofle Karpaty</strong> • Handmade z miłością w Bieszczadach</p>
+      <p><a href="https://sklep-pantofle-karpaty.pl">sklep-pantofle-karpaty.pl</a> • mwidel@pantofle-karpaty.pl</p>
+      <p style="margin-top:20px; font-size:12px; color:#999;">
+        © ${new Date().getFullYear()} Pantofle Karpaty. Wszystkie prawa zastrzeżone.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+`;
 
     await transporter.sendMail({
       from: `"Pantofle Karpaty" <${process.env.SMTP_USER}>`,
