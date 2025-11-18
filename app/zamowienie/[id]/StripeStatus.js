@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { CheckCircle, AlertCircle } from "lucide-react";
 
 export default function StripeStatus({ order }) {
   const [isRetrying, setIsRetrying] = useState(false);
@@ -66,10 +66,10 @@ export default function StripeStatus({ order }) {
             : `Oczekujemy na potwierdzenie Twojej płatności dla zamówienia nr ${order.id}. Jeśli nie dokonałeś jeszcze płatności, możesz spróbować ponownie.`}
           Możesz spróbować ponownie lub skontaktować się z nami pod adresem{" "}
           <a
-            href="mailto:support@example.com"
+            href="mailto:mwidel@pantofle-karpaty.pl"
             className="text-blue-600 hover:underline"
           >
-            support@example.com
+            mwidel@pantofle-karpaty.pl
           </a>
           .
         </p>
@@ -101,10 +101,10 @@ export default function StripeStatus({ order }) {
         {order.id}. Prosimy złożyć nowe zamówienie lub skontaktować się z nami
         pod adresem{" "}
         <a
-          href="mailto:support@example.com"
+          href="mailto:mwidel@pantofle-karpaty.pl"
           className="text-blue-600 hover:underline"
         >
-          support@example.com
+          mwidel@pantofle-karpaty.pl
         </a>
         .
       </p>
