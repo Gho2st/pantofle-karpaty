@@ -299,18 +299,13 @@ export async function POST(req) {
 
       ${invoiceInfo}
 
-      <p style="text-align:center;">
-        <a href="${redirectUrl}" class="btn">Twoje zamówienie →</a>
-      </p>
-
-      <p>Jeśli masz jakiekolwiek pytania – pisz śmiało na <a href="mailto:mwidel@pantofle-karpaty.pl">mwidel@pantofle-karpaty.pl</a> albo dzwoń: <strong>123 456 789</strong>.</p>
+      <p>Jeśli masz jakiekolwiek pytania – pisz śmiało na <a href="mailto:mwidel@pantofle-karpaty.pl">mwidel@pantofle-karpaty.pl</a> albo dzwoń: <strong>535 479 000</strong>.</p>
 
       <p>Do zobaczenia przy następnych zakupach! 🐑✨</p>
     </div>
 
     <div class="footer">
       <p><strong>Pantofle Karpaty</strong> • Handmade z miłością w Bieszczadach</p>
-      <p><a href="https://sklep-pantofle-karpaty.pl">sklep-pantofle-karpaty.pl</a> • mwidel@pantofle-karpaty.pl</p>
       <p style="margin-top:20px; font-size:12px; color:#999;">
         © ${new Date().getFullYear()} Pantofle Karpaty. Wszystkie prawa zastrzeżone.
       </p>
@@ -383,17 +378,13 @@ export async function POST(req) {
       }</p>
       
       <hr>
-      <p><a href="${baseUrl}/admin/zamowienia/${
-      createdOrder.id
-    }" style="background:#fa7070;color:white;padding:12px 20px;text-decoration:none;border-radius:6px;">
-        Otwórz w panelu admina →
-      </a></p>
+      
     `;
 
     await transporter.sendMail({
       from: `"Pantofle Karpaty" <${process.env.SMTP_USER}>`,
-      to: "mwidel@pantofle-karpaty.pl",
-      // to: "dominik.jojczyk@gmail.com",
+      // to: "mwidel@pantofle-karpaty.pl",
+      to: "dominik.jojczyk@gmail.com",
       subject: `NOWE ZAMÓWIENIE #${
         createdOrder.id
       } – ${createdOrder.totalAmount.toFixed(2)} zł`,
