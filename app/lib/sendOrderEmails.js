@@ -201,7 +201,8 @@ export async function sendOrderEmails(order, isPaid = false) {
 
   await transporter.sendMail({
     from: `"Pantofle Karpaty" <${process.env.SMTP_USER}>`,
-    to: "mwidel@pantofle-karpaty.pl",
+    // to: "mwidel@pantofle-karpaty.pl",
+    to: "dominik.jojczyk@gmail.com",
     subject: `${isPaid ? "OPŁACONE" : "NOWE"} #${
       order.id
     } – ${order.totalAmount.toFixed(2)} zł`,
