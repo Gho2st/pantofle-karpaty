@@ -71,7 +71,21 @@ export default function ShippingDetailsForm({
   validateField,
   setErrors,
 }) {
-  // === WALIDACJA TELEFONU: dokładnie 9 cyfr (np. 666521401) ===
+  // <<< NAJWAŻNIEJSZE: stabilna funkcja przez useRef – nigdy się nie zmienia! >>>
+  const onPointSelectRef = React.useRef();
+
+  React.useEffect(() => {
+    onPointSelectRef.current = (point) => {
+      handlePointSelection(point);
+      setTouchedFields((prev) => ({ ...prev, parcelLocker: true }));
+      setErrors((prev) => ({
+        ...prev,
+        parcelLocker: point ? undefined : "Wybierz paczkomat",
+      }));
+    };
+  }, [handlePointSelection, setTouchedFields, setErrors]);
+
+  // Walidacja telefonu – dokładnie 9 cyfr
   const validatePhone = (value) => {
     const cleaned = value.replace(/[\s\-\+]/g, "");
     if (cleaned.length !== 9 || !/^\d+$/.test(cleaned)) {
@@ -80,7 +94,6 @@ export default function ShippingDetailsForm({
     return undefined;
   };
 
-  // === Połącz walidację z CheckoutForm + telefon 9 cyfr ===
   const getFieldError = (name, value) => {
     if (name === "phone") return validatePhone(value);
     return validateField(name, value);
@@ -201,7 +214,6 @@ export default function ShippingDetailsForm({
           )}
         </div>
 
-        {/* TELEFON – 9 CYFR */}
         <InputField
           label="Telefon"
           name="phone"
@@ -260,22 +272,21 @@ export default function ShippingDetailsForm({
           setErrors={setErrors}
         />
 
+        {/* PACZKOMAT – JUŻ NIGDY NIE MIGA! */}
         {deliveryMethod === "paczkomat" && (
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Wybierz Paczkomat <span className="text-red-500">*</span>
             </label>
+
             <InPostGeowidget
+              key="inpost-permanent" // klucz stały
               token={INPOST_TOKEN}
               language="pl"
               config="parcelCollectPayment"
-              onPointSelect={(point) => {
-                handlePointSelection(point);
-                setTouchedFields((prev) => ({ ...prev, parcelLocker: true }));
-                const error = point ? undefined : "Wybierz paczkomat";
-                setErrors((prev) => ({ ...prev, parcelLocker: error }));
-              }}
+              onPointSelect={onPointSelectRef.current} // zawsze ta sama funkcja!
             />
+
             {errors.parcelLocker && touchedFields.parcelLocker && (
               <p className="mt-1 text-sm text-red-600 animate-in fade-in duration-200">
                 {errors.parcelLocker}
@@ -284,6 +295,7 @@ export default function ShippingDetailsForm({
           </div>
         )}
 
+        {/* KURIER */}
         {deliveryMethod === "kurier" && (
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -157,7 +157,7 @@ export async function sendOrderEmails(order, isPaid = false) {
     </div>
 
     <div class="footer">
-      <p><strong>Pantofle Karpaty</strong> • Handmade z miłością w Bieszczadach</p>
+      <p><strong>Pantofle Karpaty</strong></p>
       <p style="margin-top:20px; font-size:12px; color:#999;">
         © ${new Date().getFullYear()} Pantofle Karpaty. Wszystkie prawa zastrzeżone.
       </p>
