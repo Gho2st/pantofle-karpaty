@@ -172,7 +172,7 @@ export async function POST(req) {
       customer_email: formData.email,
       metadata: { orderId: createdOrder.id.toString() },
       success_url: redirectUrl + "?payment=success",
-      cancel_url: `${baseUrl}/koszyk`,
+      cancel_url: `${baseUrl}/profil`,
       line_items: [
         {
           price_data: {
