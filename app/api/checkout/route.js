@@ -170,6 +170,7 @@ export async function POST(req) {
       mode: "payment",
       currency: "pln",
       customer_email: formData.email,
+      ui_mode: "hosted",
       metadata: { orderId: createdOrder.id.toString() },
       success_url: redirectUrl + "?payment=success",
       cancel_url: `${baseUrl}/profil`,
