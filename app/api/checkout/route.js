@@ -96,7 +96,7 @@ export async function POST(req) {
             nip: formData.nip || null,
             discountCode: discountCode || null,
             discountAmount: discountValue || 0,
-            status: paymentMethod === "stripe" ? "AWAITING_PAYMENT" : "PENDING", // ← ważne!
+            status: "PENDING",
             items: {
               create: cartItems.map((item) => ({
                 productId: item.productId,
