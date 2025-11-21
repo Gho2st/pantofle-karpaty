@@ -6,6 +6,9 @@ export const metadata = {
   title: "Kontakt – Sklep Karpaty | Pantofle domowe i kapcie",
   description:
     "Masz pytanie? Napisz lub zadzwoń! Kontakt: mwidel@pantofle-karpaty.pl | +48 608 238 103. Szybka pomoc 8:00–17:00 (pn–pt).",
+  alternates: {
+    canonical: "/kontakt",
+  },
 };
 
 export default function Contact() {
