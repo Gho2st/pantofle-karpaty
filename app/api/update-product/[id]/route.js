@@ -113,6 +113,7 @@ export async function PUT(request, { params }) {
     const promoPrice = formData.get("promoPrice");
     const promoStartDate = formData.get("promoStartDate") || null;
     const promoEndDate = formData.get("promoEndDate") || null;
+    const sortOrder = formData.get("sortOrder");
 
     // === WALIDACJA SLUG (KLUCZOWA ZMIANA!) ===
     const existingActiveProduct = await prisma.product.findFirst({
@@ -255,6 +256,7 @@ export async function PUT(request, { params }) {
         sizes,
         images: updatedImages,
         categoryId: categoryId ? parseInt(categoryId) : product.categoryId,
+        sortOrder: sortOrder ? parseInt(sortOrder) : null,
       },
     });
 

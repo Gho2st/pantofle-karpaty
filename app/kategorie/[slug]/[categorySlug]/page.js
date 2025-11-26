@@ -79,6 +79,10 @@ export default async function CategorySlug({ params }) {
           promoPrice: true,
           promoEndDate: true,
         },
+        orderBy: [
+          { sortOrder: "asc" }, // najpierw ręczna kolejność
+          { id: "asc" }, // jeśli sortOrder jest NULL – po ID (stabilna kolejność)
+        ],
       },
     },
   });

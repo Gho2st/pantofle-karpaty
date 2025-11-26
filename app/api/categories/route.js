@@ -36,8 +36,12 @@ export async function GET(request) {
                 name: true,
                 price: true,
                 description: true,
-                images: true,
+                sortOrder: true, // potrzebne do sortowania (nawet jeśli nie zwracamy)
               },
+              orderBy: [
+                { sortOrder: "asc" }, // 1, 2, 3, 4… → ręczna kolejność
+                { id: "asc" }, // jeśli sortOrder null → po ID (stabilnie)
+              ],
             },
           },
         },

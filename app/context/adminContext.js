@@ -144,6 +144,14 @@ export function AdminProvider({ children }) {
         formData.append("additionalInfo", productData.additionalInfo || "");
         formData.append("categoryId", parseInt(productData.categoryId, 10));
 
+        if (
+          productData.sortOrder !== null &&
+          productData.sortOrder !== undefined &&
+          productData.sortOrder !== ""
+        ) {
+          formData.append("sortOrder", productData.sortOrder.toString());
+        }
+
         if (Array.isArray(productData.sizes))
           formData.append("sizes", JSON.stringify(productData.sizes));
 

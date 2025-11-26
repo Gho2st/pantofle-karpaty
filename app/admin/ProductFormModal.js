@@ -31,7 +31,12 @@ export default function ProductFormModal() {
     const { name, value } = e.target;
     setProductData((prev) => ({
       ...prev,
-      [name]: name === "price" ? parseFloat(value) || "" : value,
+      [name]:
+        name === "price" || name === "promoPrice" || name === "sortOrder"
+          ? value === ""
+            ? null
+            : parseInt(value) || ""
+          : value,
       ...(name === "name" && { slug: generateSlug(value) }),
     }));
   };
@@ -136,7 +141,10 @@ export default function ProductFormModal() {
       toast.error("Błąd: Nieprawidłowe ID kategorii");
       return;
     }
-    handleEditProduct(productData);
+    handleEditProduct({
+      ...productData,
+      sortOrder: productData.sortOrder ? parseInt(productData.sortOrder) : null,
+    });
     setEditingProduct(null);
   };
 
@@ -292,6 +300,25 @@ export default function ProductFormModal() {
                 </div>
               </div>
             )}
+          </div>
+          {/* === NOWE POLE: KOLEJNOŚĆ WYŚWIETLANIA === */}
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Kolejność wyświetlania w kategorii
+              <span className="block text-xs font-normal text-gray-500 mt-1">
+                Im mniejsza liczba → tym wyżej na liście (np. 1,2,3...).
+              </span>
+            </label>
+            <input
+              type="number"
+              name="sortOrder"
+              value={productData.sortOrder ?? ""}
+              onChange={handleChange}
+              placeholder="np. 5 (opcjonalne)"
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200"
+              min="1"
+              step="1"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

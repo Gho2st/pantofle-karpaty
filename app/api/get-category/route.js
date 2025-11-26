@@ -71,7 +71,12 @@ export async function GET(request) {
             images: true,
             categoryId: true,
             deletedAt: true,
+            sortOrder: true, // potrzebne do sortowania
           },
+          orderBy: [
+            { sortOrder: "asc" }, // 1, 2, 3... – Twoja ręczna kolejność
+            { id: "asc" }, // stabilne sortowanie, gdy sortOrder null
+          ],
         },
 
         // --- PODKATEGORIE (1 poziom) ---
@@ -104,7 +109,12 @@ export async function GET(request) {
                 images: true,
                 categoryId: true,
                 deletedAt: true,
+                sortOrder: true, // potrzebne do sortowania
               },
+              orderBy: [
+                { sortOrder: "asc" }, // 1, 2, 3...
+                { id: "asc" },
+              ],
             },
           },
         },

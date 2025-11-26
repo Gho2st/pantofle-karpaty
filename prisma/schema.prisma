@@ -63,6 +63,7 @@ model Product {
   promoPrice Float? // cena promocyjna
   promoStartDate DateTime?
   promoEndDate DateTime?
+  sortOrder    Int? // null domyslna wartosc
   @@unique([slug, deletedAt]) // KLUCZ: unikalny TYLKO wśród aktywnych!
 }
 model Cart {
