@@ -350,7 +350,6 @@ export default function ProductDetails({ product }) {
           </div>
         </div>
       </div>
-
       {/* MODAL ZOOM */}
       {isZoomed && (
         <div
@@ -372,6 +371,54 @@ export default function ProductDetails({ product }) {
             >
               ×
             </button>
+          </div>
+        </div>
+      )}
+      {product.showPartnerTile && (
+        <div className="max-w-7xl mx-auto my-16 px-4">
+          <div className="border-t-2 border-gray-200 pt-12">
+            <h2 className="text-2xl md:text-3xl uppercase text-center mb-10 text-gray-900">
+              {product.partnerTitle}
+            </h2>
+
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              {/* Zdjęcie drugiego produktu */}
+              <div className="flex justify-center">
+                <div className="relative aspect-4/5 w-full max-w-md bg-gray-100 rounded-md overflow-hidden border-2 border-gray-300">
+                  <Image
+                    src={product.partnerImage || "/placeholder.png"}
+                    fill
+                    sizes="(max-width: 768px) 90vw, 500px"
+                    style={{ objectFit: "cover" }}
+                    alt={product.partnerName}
+                    className="transition-transform duration-300 hover:scale-105"
+                  />
+                </div>
+              </div>
+
+              {/* Tekst + przycisk */}
+              <div className="text-center md:text-left space-y-6">
+                <div>
+                  <h3 className="text-2xl md:text-3xl uppercase mb-4">
+                    {product.partnerName}
+                  </h3>
+                  <p className="text-gray-700 leading-relaxed">
+                    Idealny komplet dla pary – te same ciepłe, wełniane kapcie
+                    <br />w wersji{" "}
+                    {product.partnerTitle === "Kup też dla Niego"
+                      ? "męskiej"
+                      : "damskiej"}
+                  </p>
+                </div>
+
+                <a
+                  href={product.partnerUrl}
+                  className="inline-block px-8 py-4 bg-red-600 text-white font-medium rounded-md hover:bg-red-700 transition uppercase tracking-wider"
+                >
+                  Pokaż drugą parę →
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       )}

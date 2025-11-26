@@ -3,7 +3,6 @@ import prisma from "@/app/lib/prisma";
 import { notFound } from "next/navigation";
 import ProductDetails from "@/app/components/ProductDetails";
 
-// SEO – bez zmian
 export async function generateMetadata({ params }) {
   const { slug } = await params;
 
@@ -41,7 +40,6 @@ export async function generateMetadata({ params }) {
   };
 }
 
-// GŁÓWNA STRONA – DZIAŁA ZAWSZE
 export default async function ProductPage({ params }) {
   const { slug } = await params;
 
@@ -58,7 +56,7 @@ export default async function ProductPage({ params }) {
       description2: true,
       additionalInfo: true,
       images: true,
-      sizes: true, // pole Json? – bierzemy surowe dane
+      sizes: true,
       category: {
         select: {
           id: true,
@@ -74,7 +72,6 @@ export default async function ProductPage({ params }) {
 
   if (!product) notFound();
 
-  // NAPRAWA: sizes i images przychodzą czasem jako STRING (np. "[{...}]")
   const fixJsonField = (field) => {
     if (!field) return [];
     if (Array.isArray(field)) return field;
@@ -90,12 +87,46 @@ export default async function ProductPage({ params }) {
   };
 
   const images = fixJsonField(product.images);
-  const sizes = fixJsonField(product.sizes); // TERAZ ZAWSZE BĘDZIE TABLICĄ!
+  const sizes = fixJsonField(product.sizes);
+
+  let partner = null;
+
+  if (slug === "kapcie-zdobione-skora-owcza") {
+    partner = await prisma.product.findFirst({
+      where: { slug: "kapcie-meskie-skorzane-welna", deletedAt: null },
+      select: { name: true, images: true },
+    });
+  } else if (slug === "kapcie-meskie-skorzane-welna") {
+    partner = await prisma.product.findFirst({
+      where: { slug: "kapcie-zdobione-skora-owcza", deletedAt: null },
+      select: { name: true, images: true },
+    });
+  }
+
+  const partnerImage = partner ? fixJsonField(partner.images)?.[0] : null;
+  const partnerName = partner?.name || "drugą parę";
+
+  const partnerUrl =
+    slug === "kapcie-zdobione-skora-owcza"
+      ? "/produkty/kapcie-meskie-skorzane-welna"
+      : slug === "kapcie-meskie-skorzane-welna"
+      ? "/produkty/kapcie-zdobione-skora-owcza"
+      : null;
+
+  const partnerTitle =
+    slug === "kapcie-zdobione-skora-owcza"
+      ? "Kup też dla Niego"
+      : "Kup też dla Niej";
 
   const productForClient = {
     ...product,
     images,
     sizes,
+    showPartnerTile: !!partner,
+    partnerUrl,
+    partnerImage,
+    partnerName,
+    partnerTitle,
   };
 
   return <ProductDetails product={productForClient} />;

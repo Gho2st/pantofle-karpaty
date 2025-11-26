@@ -6,7 +6,7 @@ export default function FacebookPixel() {
   const pixelId = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID;
 
   // Debug – możesz zostawić na chwilę
-  console.log("Pixel ID z env:", pixelId);
+  // console.log("Pixel ID z env:", pixelId);
 
   if (!pixelId) {
     console.warn(
