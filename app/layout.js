@@ -7,6 +7,7 @@ import AuthProvider from "./providers";
 import { CartProvider } from "./context/cartContext";
 import { CategoriesProvider } from "./context/categoriesContext";
 import CookieConsent from "./components/CookieConsent";
+import FacebookPixel from "./components/FacebookPixel";
 
 // Konfiguracja czcionki Josefin Sans
 const josefinSans = Josefin_Sans({
@@ -25,6 +26,7 @@ export default function RootLayout({ children }) {
             <CategoriesProvider>
               <FreeDelivery />
               <Nav />
+              <FacebookPixel />
               <main className="grow">{children}</main>
               {/* <CookieConsent /> */}
               <Footer />
