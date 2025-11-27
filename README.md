@@ -9,18 +9,19 @@ W pełni działający e-commerce z płatnościami Stripe, paczkomatami InPost i 
 - Koszyk zakupowy z lokalnym zapisem (localStorage)
 - Płatności online przez **Stripe** (karty, Przelewy24, BLIK, Apple/Google Pay)
 - Wybór paczkomatu przez **InPost Geowidget**
-- Logowanie i rejestracja użytkowników – **NextAuth.js** (Google + credentials)
+- Logowanie i rejestracja użytkowników przez Google – **NextAuth.js**
 - Panel użytkownika (historia zamówień, dane adresowe)
 - Responsywny design (mobile-first)
 - Optymalizacja SEO i szybkość (Next.js Image, SSG/SSR gdzie potrzeba)
+- Baza danych Neon
 
 ## Technologie
 
 - **Next.js** (App Router)
-- **JavaScript** (bez TypeScript – celowo, dla szybszego developmentu)
+- **JavaScript**
 - **NextAuth.js** – autoryzacja
 - **Stripe** – płatności
 - **InPost Geowidget** – wybór paczkomatu
 - **Tailwind CSS** + Headless UI
-- **Zustand** – zarządzanie stanem koszyka
+- **NeonDB** – Baza danych
 - Hosting & deployment: **Vercel**
