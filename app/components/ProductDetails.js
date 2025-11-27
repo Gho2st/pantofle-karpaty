@@ -290,16 +290,19 @@ export default function ProductDetails({ product }) {
                   <option value="" disabled>
                     Wybierz rozmiar
                   </option>
-                  {product.sizes?.map((s) => (
-                    <option
-                      key={s.size}
-                      value={s.size}
-                      disabled={s.stock === 0}
-                    >
-                      Rozmiar {s.size}
-                      {s.stock === 0 && " (niedostępny)"}
-                    </option>
-                  ))}
+                  {product.sizes
+                    ?.slice() // tworzymy kopię, żeby nie mutować oryginalnej tablicy
+                    .sort((a, b) => a.size - b.size) // sortujemy numerycznie rosnąco
+                    .map((s) => (
+                      <option
+                        key={s.size}
+                        value={s.size}
+                        disabled={s.stock === 0}
+                      >
+                        Rozmiar {s.size}
+                        {s.stock === 0 && " (niedostępny)"}
+                      </option>
+                    ))}
                 </select>
               </div>
 

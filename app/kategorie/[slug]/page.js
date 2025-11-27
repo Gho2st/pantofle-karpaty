@@ -102,11 +102,15 @@ export default async function CategoryPage({ params }) {
         {mainCategory.description || seo.description}
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10">
+      <div
+        id="categories"
+        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10"
+      >
         {subcategories.length > 0 ? (
           subcategories.map((category) => (
             <CollectionTitle
               key={category.id}
+              centerOnMobile="true"
               src={category.image || "/pantofle/pantofle.jpg"}
               alt={category.name}
               label={`${category.name} (${category.products?.length || 0})`}

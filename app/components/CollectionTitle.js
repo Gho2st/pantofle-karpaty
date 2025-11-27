@@ -3,7 +3,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/app/context/cartContext";
 
-export default function CollectionTitle({ src, alt, label, href, product }) {
+export default function CollectionTitle({
+  src,
+  alt,
+  label,
+  href,
+  product,
+  centerOnMobile = false,
+}) {
   const { getCurrentPrice } = useCart();
 
   const currentPrice = product ? getCurrentPrice(product) : null;
@@ -17,7 +24,7 @@ export default function CollectionTitle({ src, alt, label, href, product }) {
   return (
     <Link href={href} className="group block relative text-left">
       {/* Obrazek z badge'em w lewym górnym rogu */}
-      <div className="aspect-square bg-gray-100 rounded-md overflow-hidden mb-3 relative">
+      <div className="aspect-square bg-gray-100 md:rounded-md overflow-hidden mb-3 relative">
         <Image
           src={src}
           alt={alt}
@@ -34,7 +41,12 @@ export default function CollectionTitle({ src, alt, label, href, product }) {
         )}
       </div>
 
-      <h3 className="font-medium text-gray-900 group-hover:text-red-600 transition-colors">
+      <h3
+        className={`
+  font-medium text-gray-900 group-hover:text-red-600 transition-colors
+  ${centerOnMobile ? "text-center md:text-left" : "text-left"}
+`.trim()}
+      >
         {label}
       </h3>
 
