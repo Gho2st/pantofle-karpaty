@@ -4,8 +4,6 @@
 Nowoczesny, szybki sklep online polskiego producenta tradycyjnych pantofli skórzanych i wełnianych.  
 W pełni działający e-commerce z płatnościami Stripe, paczkomatami InPost i zarządzaniem zamówieniami.
 
-![preview](https://raw.githubusercontent.com/Gho2st/pantofle-karpaty/main/public/preview.jpg)
-
 ## Główne funkcje
 
 - Koszyk zakupowy z lokalnym zapisem (localStorage)
