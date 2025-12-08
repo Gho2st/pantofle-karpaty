@@ -95,8 +95,7 @@ const CookieConsent = () => {
           </h2>
           <p className="text-xs md:text-sm text-gray-300 mb-3 leading-relaxed">
             Używamy <strong>Google Analytics 4</strong>, by lepiej rozumieć, jak
-            korzystasz ze sklepu.
-            <br className="hidden md:block" />
+            korzystasz ze sklepu. {" "}<br className="hidden md:block" />
             To pomaga nam poprawiać działanie strony.
           </p>
 
