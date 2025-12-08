@@ -28,7 +28,7 @@ export default function RootLayout({ children }) {
               <Nav />
               <FacebookPixel />
               <main className="grow">{children}</main>
-              {/* <CookieConsent /> */}
+              <CookieConsent />
               <Footer />
             </CategoriesProvider>
           </CartProvider>

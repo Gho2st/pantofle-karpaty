@@ -40,7 +40,7 @@ const CookieConsent = () => {
     const script = document.createElement("script");
     script.id = "gtm-script";
     script.async = true;
-    script.src = "https://www.googletagmanager.com/gtm.js?id=GTM-TDB9CR6D";
+    script.src = "https://www.googletagmanager.com/gtm.js?id=GTM-M7C454G3";
     document.head.appendChild(script);
 
     window.dataLayer = window.dataLayer || [];
@@ -89,7 +89,7 @@ const CookieConsent = () => {
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-linear-to-t from-gray-900 to-gray-800 text-white p-4 md:p-6 shadow-2xl z-50 animate-fadeIn">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center md:text-left">
+        <div className="text-center ">
           <h2 className="text-xl md:text-2xl font-bold mb-2">
             Ciasteczka w sklepie KARPATY
           </h2>
