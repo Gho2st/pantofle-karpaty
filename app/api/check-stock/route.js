@@ -52,14 +52,12 @@ export async function POST(request) {
           };
         }
 
-        // === KLUCZOWA POPRAWKA: Obsługa sizes jako string (JSON.stringify) ===
         let sizes = product.sizes;
 
         // Jeśli sizes to string (np. '[{"size":"37","stock":1}]'), sparsuj go
         if (typeof sizes === "string") {
           try {
             sizes = JSON.parse(sizes);
-            // console.log(`[DEBUG] Parsowanie JSON udane:`, sizes);
           } catch (parseError) {
             console.error(
               `[ERROR] Błąd parsowania JSON dla produktu ${product.name}:`,
