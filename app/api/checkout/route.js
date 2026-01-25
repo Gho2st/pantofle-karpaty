@@ -38,7 +38,7 @@ export async function POST(req) {
     if (!isValidEmail(formData.email)) {
       return NextResponse.json(
         { error: "Nieprawidłowy adres e-mail" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -71,7 +71,7 @@ export async function POST(req) {
           const sizeData = sizes.find((s) => s.size === item.size);
           if (!sizeData || sizeData.stock < item.quantity) {
             throw new Error(
-              `Brak wystarczającej ilości: ${product.name} (${item.size})`
+              `Brak wystarczającej ilości: ${product.name} (${item.size})`,
             );
           }
         }
@@ -148,7 +148,7 @@ export async function POST(req) {
         }
 
         return { createdOrder: order, guestToken };
-      }
+      },
     );
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
@@ -159,14 +159,14 @@ export async function POST(req) {
     if (paymentMethod !== "stripe") {
       await sendOrderEmails(createdOrder, false); // false = nieopłacone (przelew tradycyjny)
       console.log(
-        `Maile wysłane – zamówienie #${createdOrder.id} (przelew tradycyjny)`
+        `Maile wysłane – zamówienie #${createdOrder.id} (przelew tradycyjny)`,
       );
       return NextResponse.json({ redirectUrl });
     }
 
     // === STRIPE – tylko tworzymy sesję, ŻADNYCH MAILI ===
     const stripeSession = await stripe.checkout.sessions.create({
-      payment_method_types: ["card", "p24", "blik"],
+      payment_method_types: ["card", "blik"],
       mode: "payment",
       currency: "pln",
       customer_email: formData.email,
@@ -195,7 +195,7 @@ export async function POST(req) {
     console.error("Checkout error:", error);
     return NextResponse.json(
       { error: error.message || "Błąd podczas składania zamówienia" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
