@@ -164,9 +164,7 @@ export async function POST(req) {
       return NextResponse.json({ redirectUrl });
     }
 
-    // === STRIPE – tylko tworzymy sesję, ŻADNYCH MAILI ===
     const stripeSession = await stripe.checkout.sessions.create({
-      // payment_method_types: ["card", "blik"],
       mode: "payment",
       currency: "pln",
       customer_email: formData.email,
