@@ -38,10 +38,9 @@ export default function Modal() {
           onClick={handleOutsideClick}
         >
           <div className="relative bg-[#fdfaf5] border-t-4 border-[#8b5a2b] rounded-lg shadow-2xl max-w-md w-full p-8 transform transition-all duration-300 scale-100 ring-1 ring-black/5">
-            {/* Przycisk zamykania - stylizowany na drewno/skórę */}
             <button
               onClick={closeModal}
-              className="absolute top-2 right-3 text-[#5d4037] hover:text-[#8b5a2b] text-3xl font-light transition-colors duration-200"
+              className="absolute cursor-pointer top-2 right-3 text-[#5d4037] hover:text-[#8b5a2b] text-3xl font-light transition-colors duration-200"
               aria-label="Zamknij"
             >
               &times;
