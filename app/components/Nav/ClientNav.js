@@ -53,7 +53,7 @@ export default function ClientNav({ initialCategories }) {
 
   // Klasy wspólne
   const baseMenuItemClasses =
-    "p-3 hover:text-red-600 hover:bg-gray-50 transition duration-300 flex items-center w-full text-left rounded-md font-medium";
+    "p-3 hover:text-red-600 hover:bg-gray-50 transition duration-300 flex items-center w-full text-left rounded-md font-medium ";
   const iconButtonClasses =
     "relative text-gray-700 p-3 hover:bg-gray-100 rounded-md transition duration-300 min-h-11 min-w-11 flex items-center justify-center";
 
@@ -116,9 +116,9 @@ export default function ClientNav({ initialCategories }) {
 
         {/* Desktop Menu */}
         <div className="hidden md:flex items-center space-x-6">
-          <ul className="flex space-x-1 text-lg font-medium items-center">
+          <ul className="flex space-x-1 text-lg font-medium items-center ">
             <li>
-              <Link href="/" className={baseMenuItemClasses}>
+              <Link href="/" className={baseMenuItemClasses} >
                 Strona Główna
               </Link>
             </li>
@@ -127,7 +127,7 @@ export default function ClientNav({ initialCategories }) {
               <li key={category.id} className="group relative">
                 <Link
                   href={`/kategorie/${category.slug || category.name}`}
-                  className={`flex items-center ${baseMenuItemClasses} pr-1`}
+                  className={`flex items-center ${baseMenuItemClasses} pr-1 `}
                 >
                   {category.name}
                   {category.subcategories &&
