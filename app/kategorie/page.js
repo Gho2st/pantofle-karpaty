@@ -9,8 +9,8 @@ export const metadata = {
 export default function Kategoria() {
   return (
     <>
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold text-center mb-6">
+      <div className="max-w-5xl 2xl:max-w-7xl container mx-auto px-4 my-16 2xl:my-24">
+        <h1 className="text-5xl font-light uppercase text-center mb-8">
           Kategorie
         </h1>
         <p className="text-lg text-center text-gray-600 mb-10 max-w-3xl mx-auto">

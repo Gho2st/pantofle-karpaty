@@ -13,8 +13,20 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 
+// ====================== BEZPIECZNY KOMPONENT IMAGE ======================
+function SafeImage({ src, alt, ...props }) {
+  const finalSrc =
+    src && typeof src === "string" && src.trim() !== ""
+      ? src
+      : "/placeholder.png"; // Twój placeholder
+
+  return <Image src={finalSrc} alt={alt || "Zdjęcie produktu"} {...props} />;
+}
+
+// ====================== GŁÓWNY KOMPONENT ======================
 export default function ProductDetails({ product }) {
   const { addToCart, getCurrentPrice } = useCart();
+
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
@@ -30,14 +42,16 @@ export default function ProductDetails({ product }) {
   const currentPrice = product ? getCurrentPrice(product) : null;
   const isPromoActive = product ? currentPrice < product.price : false;
 
-  // Ustaw pierwsze zdjęcie
+  // Ustaw pierwsze zdjęcie jako główne
   useEffect(() => {
-    if (images.length > 0) {
+    if (images.length > 0 && images[0]) {
       setMainImage(images[0]);
+    } else {
+      setMainImage("/placeholder.png");
     }
   }, [images]);
 
-  // Reset myszki
+  // Reset pozycji myszki przy wyłączeniu zooma
   useEffect(() => {
     if (!isHoverZoom) {
       setMousePos({ x: 50, y: 50 });
@@ -75,7 +89,7 @@ export default function ProductDetails({ product }) {
       setShowCartLink(true);
       setTimeout(() => setIsAdded(false), 2000);
     } catch {
-      toast.error("Błąd dodawania");
+      toast.error("Błąd dodawania do koszyka");
     }
   };
 
@@ -108,9 +122,9 @@ export default function ProductDetails({ product }) {
         </nav>
 
         <div className="flex flex-col md:flex-row gap-8 md:gap-16">
-          {/* --- GALERIA ZDJĘĆ --- */}
+          {/* ====================== GALERIA ZDJĘĆ ====================== */}
           <div className="w-full md:w-1/3">
-            {/* MOBILE: Swiper (przesuwanie lewo/prawo) */}
+            {/* MOBILE: Swiper */}
             <div className="md:hidden">
               <Swiper
                 modules={[Navigation, Pagination]}
@@ -131,7 +145,7 @@ export default function ProductDetails({ product }) {
                           setIsZoomed(true);
                         }}
                       >
-                        <Image
+                        <SafeImage
                           src={image}
                           fill
                           sizes="90vw"
@@ -167,12 +181,12 @@ export default function ProductDetails({ product }) {
                           : "border-gray-300 hover:border-gray-400"
                       }`}
                     >
-                      <Image
+                      <SafeImage
                         src={image}
                         fill
                         sizes="80px"
                         style={{ objectFit: "cover" }}
-                        alt={`Miniaturka ${i + 1}`}
+                        alt={`Miniaturka ${product.name} ${i + 1}`}
                         className="hover:scale-105 transition-transform"
                       />
                     </button>
@@ -199,8 +213,8 @@ export default function ProductDetails({ product }) {
                   }}
                   onClick={() => setIsZoomed(true)}
                 >
-                  <Image
-                    src={mainImage || "/placeholder.png"}
+                  <SafeImage
+                    src={mainImage}
                     fill
                     sizes="50vw"
                     style={{ objectFit: "cover" }}
@@ -209,34 +223,35 @@ export default function ProductDetails({ product }) {
                   />
 
                   {/* Hover zoom lupa */}
-                  {isHoverZoom && (
-                    <div
-                      className="absolute inset-0 pointer-events-none overflow-hidden rounded-md"
-                      style={{
-                        backgroundImage: `url(${mainImage})`,
-                        backgroundSize: "200%",
-                        backgroundPosition: `${mousePos.x}% ${mousePos.y}%`,
-                        backgroundRepeat: "no-repeat",
-                      }}
-                    >
+                  {isHoverZoom &&
+                    mainImage &&
+                    mainImage !== "/placeholder.png" && (
                       <div
-                        className="absolute w-40 h-40 border-4 border-white rounded-full pointer-events-none shadow-2xl"
+                        className="absolute inset-0 pointer-events-none overflow-hidden rounded-md"
                         style={{
-                          top: `${mousePos.y}%`,
-                          left: `${mousePos.x}%`,
-                          transform: "translate(-50%, -50%)",
-                          clipPath: "circle(50%)",
+                          backgroundImage: `url(${mainImage})`,
+                          backgroundSize: "200%",
+                          backgroundPosition: `${mousePos.x}% ${mousePos.y}%`,
+                          backgroundRepeat: "no-repeat",
                         }}
-                      />
-                    </div>
-                  )}
+                      >
+                        <div
+                          className="absolute w-40 h-40 border-4 border-white rounded-full pointer-events-none shadow-2xl"
+                          style={{
+                            top: `${mousePos.y}%`,
+                            left: `${mousePos.x}%`,
+                            transform: "translate(-50%, -50%)",
+                            clipPath: "circle(50%)",
+                          }}
+                        />
+                      </div>
+                    )}
                 </div>
               </div>
             </div>
           </div>
-          {/* --- KONIEC GALERII --- */}
 
-          {/* Informacje o produkcie */}
+          {/* ====================== INFORMACJE O PRODUKCIE ====================== */}
           <div className="w-full md:w-2/3">
             <h1 className="text-3xl md:text-4xl uppercase mb-6">
               {product.name}
@@ -291,8 +306,8 @@ export default function ProductDetails({ product }) {
                     Wybierz rozmiar
                   </option>
                   {product.sizes
-                    ?.slice() // tworzymy kopię, żeby nie mutować oryginalnej tablicy
-                    .sort((a, b) => a.size - b.size) // sortujemy numerycznie rosnąco
+                    ?.slice()
+                    .sort((a, b) => a.size - b.size)
                     .map((s) => (
                       <option
                         key={s.size}
@@ -332,6 +347,7 @@ export default function ProductDetails({ product }) {
                 >
                   {isAdded ? "Dodano!" : "Dodaj do koszyka"}
                 </button>
+
                 {showCartLink && (
                   <Link
                     href="/koszyk"
@@ -349,10 +365,12 @@ export default function ProductDetails({ product }) {
             {product.additionalInfo && (
               <p className="mt-10 text-gray-700">{product.additionalInfo}</p>
             )}
+
             <SizeChart />
           </div>
         </div>
       </div>
+
       {/* MODAL ZOOM */}
       {isZoomed && (
         <div
@@ -360,8 +378,8 @@ export default function ProductDetails({ product }) {
           onClick={() => setIsZoomed(false)}
         >
           <div className="relative max-w-5xl max-h-full">
-            <Image
-              src={mainImage || "/placeholder.png"}
+            <SafeImage
+              src={mainImage}
               width={1200}
               height={1500}
               style={{ objectFit: "contain" }}
@@ -377,6 +395,8 @@ export default function ProductDetails({ product }) {
           </div>
         </div>
       )}
+
+      {/* PARTNER TILE */}
       {product.showPartnerTile && (
         <div className="max-w-7xl mx-auto my-16 px-4">
           <div className="border-t-2 border-gray-200 pt-12">
@@ -385,11 +405,10 @@ export default function ProductDetails({ product }) {
             </h2>
 
             <div className="grid md:grid-cols-2 gap-12 items-center">
-              {/* Zdjęcie drugiego produktu */}
               <div className="flex justify-center">
                 <div className="relative aspect-4/5 w-full max-w-md bg-gray-100 rounded-md overflow-hidden border-2 border-gray-300">
-                  <Image
-                    src={product.partnerImage || "/placeholder.png"}
+                  <SafeImage
+                    src={product.partnerImage}
                     fill
                     sizes="(max-width: 768px) 90vw, 500px"
                     style={{ objectFit: "cover" }}
@@ -399,7 +418,6 @@ export default function ProductDetails({ product }) {
                 </div>
               </div>
 
-              {/* Tekst + przycisk */}
               <div className="text-center md:text-left space-y-6">
                 <div>
                   <h3 className="text-2xl md:text-3xl uppercase mb-4">

@@ -1,10 +1,7 @@
-// app/kategorie/[slug]/page.js
-
 import prisma from "@/app/lib/prisma";
 import { notFound } from "next/navigation";
 import CollectionTitle from "@/app/components/CollectionTitle";
 
-// --- SEO ---
 const CATEGORY_SEO = {
   "dla-kobiet": {
     title: "Pantofle damskie – ręcznie robione z wełny | Pantofle Karpaty",
@@ -22,10 +19,8 @@ const CATEGORY_SEO = {
       "Pantofelki dla dzieci z Karpat – kolorowe, mięciutkie, ręcznie robione z wełny. Bezpieczne, ciepłe i pełne karpackich wzorów. Idealne na prezent, do przedszkola i na zimowe wieczory w domu.",
   },
 };
-
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-
   const mainCategory = await prisma.category.findFirst({
     where: { slug, deletedAt: null },
     select: { name: true },
@@ -37,7 +32,7 @@ export async function generateMetadata({ params }) {
 
   const seo = CATEGORY_SEO[slug] || {
     title: `${mainCategory.name} | Pantofle Karpaty`,
-    description: `Ręcznie robione pantofle z Karpat – tradycja, wełna, ciepło. Odkryj kolekcję ${mainCategory.name.toLowerCase()}.`,
+    description: `Ręcznie robione pantofle z Karpat – tradycja, wełna, ciepło.`,
   };
 
   return {
@@ -50,7 +45,7 @@ export async function generateMetadata({ params }) {
 export default async function CategoryPage({ params }) {
   const { slug } = await params;
 
-  // 1. Główna kategoria
+  // Najpierw pobieramy główną kategorię
   const mainCategory = await prisma.category.findFirst({
     where: { slug, deletedAt: null },
     select: { id: true, name: true, description: true },
@@ -58,36 +53,48 @@ export default async function CategoryPage({ params }) {
 
   if (!mainCategory) notFound();
 
-  // 2. Podkategorie (bez orderBy)
-  const subcategories = await prisma.category.findMany({
-    where: {
-      parentId: mainCategory.id,
-      deletedAt: null,
-    },
-    include: {
-      products: {
-        where: { deletedAt: null },
-        select: { id: true, name: true, price: true },
+  // Teraz, gdy mamy już mainCategory.id, robimy resztę zapytań równolegle
+  const [subcategories, directProducts] = await Promise.all([
+    // Podkategorie + liczba produktów
+    prisma.category.findMany({
+      where: {
+        parentId: mainCategory.id,
+        deletedAt: null,
       },
-    },
-  });
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        image: true,
+        _count: {
+          select: {
+            products: {
+              where: { deletedAt: null },
+            },
+          },
+        },
+      },
+      orderBy: { name: "asc" },
+    }),
 
-  // 3. Produkty bezpośrednie – teraz z pełnymi danymi cenowymi
-  const directProducts = await prisma.product.findMany({
-    where: {
-      categoryId: mainCategory.id,
-      deletedAt: null,
-    },
-    select: {
-      id: true,
-      name: true,
-      price: true, // cena katalogowa
-      promoPrice: true, // cena promocyjna (jeśli masz takie pole)
-      lowestPrice: true, // ← OBOWIĄZKOWO DODAJ TO!
-      slug: true,
-      images: true,
-    },
-  });
+    // Produkty bezpośrednie
+    prisma.product.findMany({
+      where: {
+        categoryId: mainCategory.id,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        price: true,
+        promoPrice: true,
+        lowestPrice: true,
+        images: true,
+      },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   const seo = CATEGORY_SEO[slug] || {
     description:
@@ -95,7 +102,7 @@ export default async function CategoryPage({ params }) {
   };
 
   return (
-    <div className="max-w-7xl text-center mx-auto my-16 lg:my-24">
+    <div className="max-w-5xl 2xl:max-w-7xl text-center mx-auto my-16 2xl:my-24">
       <h1 className="text-5xl font-light uppercase">{mainCategory.name}</h1>
 
       <p className="my-8 px-4 lg:px-0 font-light xl:text-lg max-w-4xl mx-auto leading-relaxed">
@@ -113,19 +120,14 @@ export default async function CategoryPage({ params }) {
               centerOnMobile="true"
               src={category.image || "/pantofle/pantofle.jpg"}
               alt={category.name}
-              label={`${category.name} (${category.products?.length || 0})`}
-              href={`/kategorie/${slug}/${
-                category.slug ||
-                category.name.toLowerCase().replace(/\s+/g, "-")
-              }`}
+              label={`${category.name} (${category._count.products})`}
+              href={`/kategorie/${slug}/${category.slug || category.name.toLowerCase().replace(/\s+/g, "-")}`}
             />
           ))
         ) : directProducts.length > 0 ? (
           directProducts.map((product) => {
             const firstImage =
-              product.images &&
-              Array.isArray(product.images) &&
-              product.images[0]
+              Array.isArray(product.images) && product.images.length > 0
                 ? product.images[0]
                 : "/pantofle/pantofle.jpg";
 

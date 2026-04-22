@@ -1,8 +1,13 @@
-// app/produkty/[slug]/page.js
 import prisma from "@/app/lib/prisma";
 import { notFound } from "next/navigation";
 import ProductDetails from "@/app/components/ProductDetails";
 
+const SPECIAL_PARTNERS = {
+  "kapcie-zdobione-skora-owcza": "kapcie-meskie-skorzane-welna",
+  "kapcie-meskie-skorzane-welna": "kapcie-zdobione-skora-owcza",
+};
+
+// ==================== GENERATE METADATA ====================
 export async function generateMetadata({ params }) {
   const { slug } = await params;
 
@@ -12,8 +17,8 @@ export async function generateMetadata({ params }) {
       name: true,
       price: true,
       promoPrice: true,
-      images: true,
       description: true,
+      images: true,
     },
   });
 
@@ -22,12 +27,12 @@ export async function generateMetadata({ params }) {
   }
 
   const currentPrice = product.promoPrice || product.price;
-  const isPromo = product.promoPrice && product.promoPrice < product.price;
+  const isPromo = Boolean(
+    product.promoPrice && product.promoPrice < product.price,
+  );
 
   return {
-    title: `${product.name} – ${
-      isPromo ? `${product.promoPrice} zł` : `${currentPrice} zł`
-    } | Pantofle Karpaty`,
+    title: `${product.name} – ${currentPrice} zł | Pantofle Karpaty`,
     description:
       product.description ||
       `Kup ${product.name.toLowerCase()} – ręcznie robione pantofle z Karpat. Tradycja, wełna, ciepło.`,
@@ -40,9 +45,11 @@ export async function generateMetadata({ params }) {
   };
 }
 
+// ==================== PAGE ====================
 export default async function ProductPage({ params }) {
   const { slug } = await params;
 
+  // Główne zapytanie – pobieramy wszystko co potrzebne
   const product = await prisma.product.findFirst({
     where: { slug, deletedAt: null },
     select: {
@@ -72,6 +79,7 @@ export default async function ProductPage({ params }) {
 
   if (!product) notFound();
 
+  // Parsowanie pól JSON (images, sizes)
   const fixJsonField = (field) => {
     if (!field) return [];
     if (Array.isArray(field)) return field;
@@ -89,30 +97,28 @@ export default async function ProductPage({ params }) {
   const images = fixJsonField(product.images);
   const sizes = fixJsonField(product.sizes);
 
+  // === Logika partnera (zoptymalizowana) ===
   let partner = null;
 
-  if (slug === "kapcie-zdobione-skora-owcza") {
+  const partnerSlug = SPECIAL_PARTNERS[slug];
+
+  if (partnerSlug) {
     partner = await prisma.product.findFirst({
-      where: { slug: "kapcie-meskie-skorzane-welna", deletedAt: null },
-      select: { name: true, images: true },
-    });
-  } else if (slug === "kapcie-meskie-skorzane-welna") {
-    partner = await prisma.product.findFirst({
-      where: { slug: "kapcie-zdobione-skora-owcza", deletedAt: null },
-      select: { name: true, images: true },
+      where: {
+        slug: partnerSlug,
+        deletedAt: null,
+      },
+      select: {
+        name: true,
+        images: true,
+      },
     });
   }
 
   const partnerImage = partner ? fixJsonField(partner.images)?.[0] : null;
   const partnerName = partner?.name || "drugą parę";
 
-  const partnerUrl =
-    slug === "kapcie-zdobione-skora-owcza"
-      ? "/produkty/kapcie-meskie-skorzane-welna"
-      : slug === "kapcie-meskie-skorzane-welna"
-      ? "/produkty/kapcie-zdobione-skora-owcza"
-      : null;
-
+  const partnerUrl = partnerSlug ? `/produkty/${partnerSlug}` : null;
   const partnerTitle =
     slug === "kapcie-zdobione-skora-owcza"
       ? "Kup też dla Niego"

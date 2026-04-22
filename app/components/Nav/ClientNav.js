@@ -72,7 +72,7 @@ export default function ClientNav({ initialCategories }) {
       <div className="flex justify-between items-center max-w-7xl mx-auto px-4 sm:px-6">
         {/* Logo */}
         <Link href="/" className="shrink-0">
-          <div className="w-32 md:w-40 2xl:w-48">
+          <div className="w-24 md:w-30 2xl:w-48">
             <Image
               src="/logo.png"
               width={120}

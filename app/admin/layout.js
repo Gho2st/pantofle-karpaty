@@ -8,7 +8,6 @@ import Admin from "./page";
 export default async function AdminLayout({ children }) {
   const session = await getServerSession(authOptions);
 
-  // Ochrona trasy
   if (!session?.user || session.user.role !== "ADMIN") {
     redirect("/");
   }

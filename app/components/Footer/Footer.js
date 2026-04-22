@@ -64,7 +64,7 @@ export default function Footer() {
       {/* Kontent stopki */}
       <div className="flex justify-between items-center px-6 lg:px-20 py-5">
         {/* Lewa strona: Linki */}
-        <ul className="uppercase flex flex-col sm:flex-row gap-6 md:gap-10 text-xs md:text-sm">
+        <ul className="uppercase flex flex-col sm:flex-row gap-6 md:gap-10 text-xs 2xl:text-sm">
           <li>
             <a href="/regulamin" className="hover:text-primary transition">
               Regulamin

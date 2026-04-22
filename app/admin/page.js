@@ -2,7 +2,6 @@
 "use client";
 import { useState } from "react";
 import Category from "./Category";
-import Users from "./Users";
 import Orders from "./Orders";
 import DiscountCodes from "./DiscountCodes";
 import { ToastContainer } from "react-toastify";
@@ -17,8 +16,6 @@ export default function Admin({ session }) {
     switch (activeView) {
       case "categories":
         return <Category />;
-      case "users":
-        return <Users />;
       case "orders":
         return <Orders />;
       case "discounts":
@@ -82,7 +79,6 @@ export default function Admin({ session }) {
           <nav className="flex-1 space-y-1">
             {menuItem("dashboard", "Dashboard")}
             {menuItem("orders", "Zamówienia")}
-            {menuItem("users", "Użytkownicy")}
             {menuItem("categories", "Kategorie")}
             {menuItem("discounts", "Kody rabatowe")}
           </nav>

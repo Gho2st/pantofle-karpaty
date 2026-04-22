@@ -2,57 +2,87 @@ import Collection from "./Collection";
 
 export default function About() {
   return (
-    <section className="max-w-7xl mx-auto py-20 px-6 sm:px-8 text-center">
-      {/* NAGŁÓWEK H2 */}
-      <h2 className="text-3xl sm:text-4xl 2xl:text-5xl font-medium text-center text-gray-900 mb-8 md:mb-16 leading-tight tracking-tight">
-        Odkryj Wyjątkowe Pantofle Skórzane Karpaty – Tradycja i Jakość Prosto z
-        Polski
-      </h2>
+    <section className="max-w-5xl 2xl:max-w-7xl mx-auto px-6 py-16 lg:py-24">
+      <div className="grid lg:grid-cols-12 gap-12 xl:gap-20 items-center">
+        {/* Treść tekstowa */}
+        <div className="lg:col-span-7 order-2 lg:order-1">
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <span className="inline-flex items-center gap-2 bg-red-50 border border-red-100 text-red-700 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide uppercase">
+                <span className="text-base">🇵🇱</span> Polski producent z Karpat
+              </span>
 
-      <div className="max-w-4xl mx-auto space-y-8 md:space-y-10 text-gray-700 text-base sm:text-lg leading-relaxed">
-        {/* PARAGRAF 1 */}
-        <p className="leading-relaxed">
-          Jesteśmy firmą Karpaty, dumnym, polskim producentem pantofli. Od lat
-          specjalizujemy się w wytwarzaniu szerokiej gamy wysokiej jakości
-          pantofli ze skóry naturalnej. Nasze wieloletnie doświadczenie w
-          rzemiośle obuwniczym gwarantuje, że każdy produkt cechuje się nie
-          tylko wysoką jakością wykonania i komfortem, ale przede wszystkim
-          długą żywotnością.
-        </p>
+              <h2 className="text-3xl md:text-5xl font-serif font-medium leading-[1.1] text-gray-900">
+                Tradycja i jakość <br className="hidden sm:block" />
+                <span className="text-red-700">prosto z polskiego serca.</span>
+              </h2>
+            </div>
 
-        {/* PARAGRAF 2 - Wyróżniony */}
-        <p className="relative bg-white p-8 rounded-xl border border-gray-200 shadow-md italic text-gray-800 md:text-lg">
-          {/* Zmieniono tło na białe (bg-white), dodano subtelny cień (shadow-md), ramkę (border), większy padding (p-8), zaokrąglone rogi (rounded-xl) */}
-          Na naszej stronie znajdą Państwo pełną ofertę produktów – od pantofli
-          damskich i męskich po kolekcje dla dzieci. Nasze solidne i wygodne
-          pantofle ze skóry doceniło już tysiące klientów. Eksportujemy je z
-          sukcesem do krajów Unii Europejskiej, w tym do Niemiec, Francji, Litwy
-          i Wielkiej Brytanii, co jest najlepszym dowodem na międzynarodową
-          jakość marki Karpaty.
-        </p>
+            <div className="space-y-5 text-base md:text-lg leading-relaxed text-gray-600 max-w-2xl">
+              <p>
+                Jesteśmy rodzinnym producentem pantofli z{" "}
+                <strong className="text-gray-900 font-medium">
+                  naturalnej skóry i owczej wełny
+                </strong>
+                . Od lat łączymy góralskie rzemiosło z nowoczesnym komfortem.
+              </p>
 
-        {/* PARAGRAF 3 - CTA */}
-        <div className="text-center">
-          {/* Przeniesiono CTA do osobnego div dla lepszej kontroli nad układem */}
-          <p className="leading-relaxed mb-6">
-            Zapraszamy do zapoznania się ze szczegółami naszej najnowszej
-            kolekcji. Jeśli mają Państwo pytania dotyczące zamówień hurtowych
-            lub specyficznych modeli, nasz zespół pozostaje do Państwa
-            dyspozycji.
-          </p>
-          <a
-            href="#kontakt"
-            className="inline-block bg-primary text-white font-semibold py-3 px-6 rounded-full hover:bg-primary-dark transition-colors duration-300"
-          >
-            {/* Dodano przycisk CTA dla lepszego wezwania do działania */}
-            Skontaktuj się z nami
-          </a>
+              <p>
+                Każda para przechodzi przez ręce naszych mistrzów kaletnictwa.
+                Dbamy o każdy detal — od selekcji surowców, przez precyzyjne
+                szycie, aż po końcową kontrolę jakości.
+              </p>
+
+              <div className="pl-4 border-l-2 border-red-200 italic text-gray-500 py-1">
+                "Zaufanie tysięcy klientów z Niemiec, Francji i Wielkiej
+                Brytanii to nasz najlepszy certyfikat jakości."
+              </div>
+            </div>
+
+            {/* CTA */}
+            <div className="pt-4">
+              <a
+                href="#kontakt"
+                className="group inline-flex items-center gap-3 bg-gray-900 hover:bg-red-700 
+                           transition-all duration-300 text-white 
+                           font-medium px-8 py-4 rounded-xl shadow-lg hover:shadow-red-200"
+              >
+                Skontaktuj się z nami
+                <span className="group-hover:translate-x-1 transition-transform text-xl">
+                  →
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Sekcja Video / TikTok */}
+        <div className="lg:col-span-5 order-1 lg:order-2 flex justify-center">
+          <div className="relative w-full max-w-[320px] group">
+            {/* Ozdobny element w tle */}
+            <div className="absolute -inset-4 bg-red-50 rounded-[2.5rem] -rotate-2 group-hover:rotate-0 transition-transform duration-500" />
+
+            <div className="relative aspect-[9/16] rounded-[2rem] overflow-hidden shadow-2xl bg-black border-[6px] border-white">
+              <iframe
+                src="https://www.tiktok.com/player/v1/7542430067901664535"
+                className="absolute top-0 left-0 w-full h-full object-cover"
+                allowFullScreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                title="Proces produkcji pantofli Karpaty"
+              />
+            </div>
+
+            <div className="mt-6 flex items-center justify-center gap-2 text-sm font-medium text-gray-400">
+              <span className="w-8 h-[1px] bg-gray-200"></span>
+              Obejrzyj proces produkcji
+              <span className="w-8 h-[1px] bg-gray-200"></span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Komponent Collection */}
-      <div className="mt-12 md:mt-16">
-        {/* Dodano margines nad komponentem Collection dla lepszego odstępu */}
+      {/* Sekcja z kategoriami */}
+      <div className="mt-24 border-t border-gray-100 pt-16">
         <Collection />
       </div>
     </section>
