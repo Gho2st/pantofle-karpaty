@@ -1,4 +1,5 @@
 import Collection from "./Collection";
+import Link from "next/link";
 
 export default function About() {
   return (
@@ -41,17 +42,17 @@ export default function About() {
 
             {/* CTA */}
             <div className="pt-4">
-              <a
-                href="#kontakt"
+              <Link
+                href="/kontakt"
                 className="group inline-flex items-center gap-3 bg-gray-900 hover:bg-red-700 
-                           transition-all duration-300 text-white 
-                           font-medium px-8 py-4 rounded-xl shadow-lg hover:shadow-red-200"
+                transition-all duration-300 text-white 
+                font-medium px-8 py-4 rounded-xl shadow-lg hover:shadow-red-200"
               >
                 Skontaktuj się z nami
                 <span className="group-hover:translate-x-1 transition-transform text-xl">
                   →
                 </span>
-              </a>
+              </Link>
             </div>
           </div>
         </div>
