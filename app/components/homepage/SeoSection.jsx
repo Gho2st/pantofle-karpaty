@@ -32,7 +32,7 @@ const topics = [
   {
     href: "/kategorie",
     heading: "Polski producent obuwia ze skóry naturalnej",
-    body: "Kapcie, klapki, sandały i pantofle regionalne — wszystko wytwarzamy ręcznie w naszym warsztacie w Karpatach. Sprzedajemy bezpośrednio, bez pośredników. Materiały: skóra bydlęca, welur, zamsz, owcza wełna. Dostawa do 12 krajów Europy.",
+    body: "Kapcie, klapki, sandały i pantofle regionalne — wszystko wytwarzamy ręcznie w naszym warsztacie w Męcinie. Sprzedajemy bezpośrednio, bez pośredników. Materiały: skóra bydlęca, welur, zamsz, owcza wełna. Dostawa do 12 krajów Europy.",
   },
 ];
 
