@@ -11,12 +11,3 @@
     @apply text-[#ca001a];
   }
 }
-
-.swiper-button-prev,
-.swiper-button-next {
-  color: black !important;
-}
-
-.swiper-pagination-bullet-active {
-  background: black !important;
-}

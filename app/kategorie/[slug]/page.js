@@ -109,7 +109,7 @@ export default async function CategoryPage({ params }) {
 
       <div
         id="categories"
-        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10"
+        className="px-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10"
       >
         {subcategories.length > 0 ? (
           subcategories.map((category) => (

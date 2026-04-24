@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useCart } from "@/app/context/cartContext";
 import SizeChart from "@/app/components/Sizes";
+import { X } from "lucide-react";
 
 // Import Swiper
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -125,13 +126,13 @@ export default function ProductDetails({ product }) {
           {/* ====================== GALERIA ZDJĘĆ ====================== */}
           <div className="w-full md:w-1/3">
             {/* MOBILE: Swiper */}
-            <div className="md:hidden">
+            <div className="md:hidden relative group product-swiper-container">
               <Swiper
                 modules={[Navigation, Pagination]}
                 spaceBetween={10}
                 slidesPerView={1}
                 pagination={{ clickable: true }}
-                navigation
+                navigation={true}
                 loop={images.length > 1}
                 className="rounded-md overflow-hidden"
               >
@@ -148,7 +149,7 @@ export default function ProductDetails({ product }) {
                         <SafeImage
                           src={image}
                           fill
-                          sizes="90vw"
+                          sizes="100vw"
                           style={{ objectFit: "cover" }}
                           alt={`${product.name} - zdjęcie ${i + 1}`}
                           priority={i === 0}
@@ -164,6 +165,41 @@ export default function ProductDetails({ product }) {
                   </SwiperSlide>
                 )}
               </Swiper>
+
+              {/* Custom CSS dla ładniejszych strzałek i kropek */}
+              <style jsx global>{`
+                /* Kontener dla strzałek */
+                .product-swiper-container .swiper-button-next,
+                .product-swiper-container .swiper-button-prev {
+                  background: rgba(255, 255, 255, 0.7);
+                  backdrop-filter: blur(4px);
+                  width: 30px;
+                  height: 30px;
+                  padding: 5px;
+                  border-radius: 50%;
+                  color: #000; /* Kolor strzałki */
+                  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                  transition: all 0.2s ease;
+                }
+
+                /* Ukrycie strzałek, gdy nie ma więcej zdjęć */
+                .product-swiper-container .swiper-button-disabled {
+                  display: none !important;
+                }
+
+                /* Stylowanie kropek na dole */
+                .product-swiper-container .swiper-pagination-bullet {
+                  background: #000;
+                  opacity: 0.2;
+                }
+                .product-swiper-container .swiper-pagination-bullet-active {
+                  background: #dc2626; /* Czerwony kolor z Twojego motywu */
+                  opacity: 1;
+                  width: 12px;
+                  border-radius: 4px;
+                  transition: width 0.3s ease;
+                }
+              `}</style>
             </div>
 
             {/* DESKTOP: Miniaturki + główne zdjęcie z hover zoom */}
@@ -374,24 +410,29 @@ export default function ProductDetails({ product }) {
       {/* MODAL ZOOM */}
       {isZoomed && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4 cursor-zoom-out"
+          className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 cursor-zoom-out"
           onClick={() => setIsZoomed(false)}
         >
-          <div className="relative max-w-5xl max-h-full">
+          {/* Przycisk X */}
+          <button
+            className="absolute top-4 right-4 z-10 text-white/70 hover:text-white hover:bg-white/10 rounded-full p-2 transition-all"
+            onClick={() => setIsZoomed(false)}
+          >
+            <X size={28} />
+          </button>
+
+          <div
+            className="relative max-w-5xl max-h-full"
+            onClick={(e) => e.stopPropagation()}
+          >
             <SafeImage
               src={mainImage}
               width={1200}
               height={1500}
               style={{ objectFit: "contain" }}
               alt="Powiększone zdjęcie"
-              className="max-w-full max-h-full"
+              className="max-w-full max-h-[90vh]"
             />
-            <button
-              className="absolute top-4 right-4 text-white text-3xl bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-70 transition"
-              onClick={() => setIsZoomed(false)}
-            >
-              ×
-            </button>
           </div>
         </div>
       )}
