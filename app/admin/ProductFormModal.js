@@ -98,7 +98,7 @@ export default function ProductFormModal() {
     }
     setProductData((prev) => {
       const updatedSizes = prev.sizes.map((item) =>
-        item.size === size ? { ...item, stock: item.stock + adjustment } : item
+        item.size === size ? { ...item, stock: item.stock + adjustment } : item,
       );
       return { ...prev, sizes: updatedSizes };
     });

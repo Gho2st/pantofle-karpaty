@@ -60,7 +60,7 @@ export async function GET(request) {
         error: "Błąd serwera podczas pobierania danych",
         details: error.message,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
