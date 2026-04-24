@@ -59,7 +59,7 @@ export default function About() {
 
         {/* Sekcja Video / TikTok */}
         <div className="lg:col-span-5 order-1 lg:order-2 flex justify-center">
-          <div className="relative w-full max-w-[320px] group">
+          <div className="relative w-full max-w-[300px] md:max-w-[320px] group">
             {/* Ozdobny element w tle */}
             <div className="absolute -inset-4 bg-red-50 rounded-[2.5rem] -rotate-2 group-hover:rotate-0 transition-transform duration-500" />
 
