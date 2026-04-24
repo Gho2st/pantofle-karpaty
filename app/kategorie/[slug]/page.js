@@ -1,3 +1,4 @@
+// app/kategorie/[slug]/page.tsx
 import prisma from "@/app/lib/prisma";
 import { notFound } from "next/navigation";
 import CollectionTitle from "@/app/components/CollectionTitle";
@@ -19,70 +20,34 @@ const CATEGORY_SEO = {
       "Pantofelki dla dzieci z Karpat – kolorowe, mięciutkie, ręcznie robione z wełny. Bezpieczne, ciepłe i pełne karpackich wzorów. Idealne na prezent, do przedszkola i na zimowe wieczory w domu.",
   },
 };
-export async function generateMetadata({ params }) {
-  const { slug } = await params;
-  const mainCategory = await prisma.category.findFirst({
-    where: { slug, deletedAt: null },
-    select: { name: true },
-  });
 
-  if (!mainCategory) {
-    return { title: "Kategoria nie znaleziona | Pantofle Karpaty" };
-  }
+// ─── Jedno zapytanie, współdzielone przez metadata i page ─────────────────────
 
-  const seo = CATEGORY_SEO[slug] || {
-    title: `${mainCategory.name} | Pantofle Karpaty`,
-    description: `Ręcznie robione pantofle z Karpat – tradycja, wełna, ciepło.`,
-  };
-
-  return {
-    title: seo.title,
-    description: seo.description,
-    alternates: { canonical: `/kategorie/${slug}` },
-  };
-}
-
-export default async function CategoryPage({ params }) {
-  const { slug } = await params;
-
-  // Najpierw pobieramy główną kategorię
+async function getCategoryPageData(slug) {
   const mainCategory = await prisma.category.findFirst({
     where: { slug, deletedAt: null },
     select: { id: true, name: true, description: true },
   });
 
-  if (!mainCategory) notFound();
+  if (!mainCategory) return null;
 
-  // Teraz, gdy mamy już mainCategory.id, robimy resztę zapytań równolegle
   const [subcategories, directProducts] = await Promise.all([
-    // Podkategorie + liczba produktów
     prisma.category.findMany({
-      where: {
-        parentId: mainCategory.id,
-        deletedAt: null,
-      },
+      where: { parentId: mainCategory.id, deletedAt: null },
       select: {
         id: true,
         name: true,
         slug: true,
         image: true,
         _count: {
-          select: {
-            products: {
-              where: { deletedAt: null },
-            },
-          },
+          select: { products: { where: { deletedAt: null } } },
         },
       },
       orderBy: { name: "asc" },
     }),
 
-    // Produkty bezpośrednie
     prisma.product.findMany({
-      where: {
-        categoryId: mainCategory.id,
-        deletedAt: null,
-      },
+      where: { categoryId: mainCategory.id, deletedAt: null },
       select: {
         id: true,
         name: true,
@@ -95,6 +60,39 @@ export default async function CategoryPage({ params }) {
       orderBy: { name: "asc" },
     }),
   ]);
+
+  return { mainCategory, subcategories, directProducts };
+}
+
+// ─── Metadata ─────────────────────────────────────────────────────────────────
+
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  const data = await getCategoryPageData(slug);
+
+  if (!data) return { title: "Kategoria nie znaleziona | Pantofle Karpaty" };
+
+  const seo = CATEGORY_SEO[slug] || {
+    title: `${data.mainCategory.name} | Pantofle Karpaty`,
+    description: "Ręcznie robione pantofle z Karpat – tradycja, wełna, ciepło.",
+  };
+
+  return {
+    title: seo.title,
+    description: seo.description,
+    alternates: { canonical: `/kategorie/${slug}` },
+  };
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default async function CategoryPage({ params }) {
+  const { slug } = await params;
+  const data = await getCategoryPageData(slug);
+
+  if (!data) notFound();
+
+  const { mainCategory, subcategories, directProducts } = data;
 
   const seo = CATEGORY_SEO[slug] || {
     description:

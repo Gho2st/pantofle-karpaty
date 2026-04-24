@@ -3,59 +3,11 @@ import { notFound } from "next/navigation";
 import CollectionTitle from "@/app/components/CollectionTitle";
 import Link from "next/link";
 
-// GENERATE METADATA
-export async function generateMetadata({ params }) {
-  const { categorySlug } = await params;
+// ─── Shared data fetcher ──────────────────────────────────────────────────────
 
+async function getCategoryData(categorySlug) {
   const category = await prisma.category.findFirst({
-    where: {
-      slug: categorySlug,
-      deletedAt: null,
-    },
-    select: {
-      name: true,
-      description: true,
-      parent: {
-        select: { name: true, slug: true },
-      },
-    },
-  });
-
-  if (!category) {
-    return { title: "Kategoria nie znaleziona | Pantofle Karpaty" };
-  }
-
-  const parentName = category.parent?.name;
-  const fullTitle = parentName
-    ? `${category.name} – ${parentName} | Pantofle Karpaty`
-    : `${category.name} | Pantofle Karpaty`;
-
-  const fullDescription = category.description
-    ? `${category.description} Ręcznie robione pantofle z Karpat – tradycja, wełna i pasja w każdym modelu.`
-    : `Odkryj kolekcję ${category.name.toLowerCase()} – ręcznie robione pantofle z wełny, ciepłe i wygodne.`;
-
-  return {
-    title: fullTitle,
-    description: fullDescription,
-    alternates: {
-      canonical: `/kategorie/${category.parent?.slug ? `${category.parent.slug}/` : ""}${categorySlug}`,
-    },
-    robots: "index, follow",
-  };
-}
-
-//  PAGE
-export default async function CategorySlug({ params }) {
-  const { categorySlug } = await params;
-
-  if (!categorySlug) notFound();
-
-  // Najpierw pobieramy kategorię + parent (lekkie zapytanie)
-  const category = await prisma.category.findFirst({
-    where: {
-      slug: categorySlug,
-      deletedAt: null,
-    },
+    where: { slug: categorySlug, deletedAt: null },
     select: {
       id: true,
       name: true,
@@ -67,14 +19,10 @@ export default async function CategorySlug({ params }) {
     },
   });
 
-  if (!category) notFound();
+  if (!category) return null;
 
-  // Osobne zapytanie tylko po produkty – lepsza wydajność
   const products = await prisma.product.findMany({
-    where: {
-      categoryId: category.id,
-      deletedAt: null,
-    },
+    where: { categoryId: category.id, deletedAt: null },
     select: {
       id: true,
       name: true,
@@ -84,15 +32,48 @@ export default async function CategorySlug({ params }) {
       lowestPrice: true,
       promoPrice: true,
       promoEndDate: true,
-      sortOrder: true, // jeśli używasz do sortowania
+      sortOrder: true,
     },
     orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
   });
 
-  const parentSlug = category.parent?.slug;
-  const basePath = parentSlug
-    ? `/kategorie/${parentSlug}/${category.slug}`
-    : `/kategorie/${category.slug}`;
+  return { category, products };
+}
+
+// ─── Metadata ─────────────────────────────────────────────────────────────────
+
+export async function generateMetadata({ params }) {
+  const { categorySlug } = await params;
+  const data = await getCategoryData(categorySlug);
+
+  if (!data) return { title: "Kategoria nie znaleziona | Pantofle Karpaty" };
+
+  const { category } = data;
+  const parentName = category.parent?.name;
+
+  return {
+    title: parentName
+      ? `${category.name} – ${parentName} | Pantofle Karpaty`
+      : `${category.name} | Pantofle Karpaty`,
+    description: category.description
+      ? `${category.description} Ręcznie robione pantofle z Karpat – tradycja, wełna i pasja w każdym modelu.`
+      : `Odkryj kolekcję ${category.name.toLowerCase()} – ręcznie robione pantofle z wełny, ciepłe i wygodne.`,
+    alternates: {
+      canonical: `/kategorie/${category.parent?.slug ? `${category.parent.slug}/` : ""}${categorySlug}`,
+    },
+    robots: "index, follow",
+  };
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default async function CategorySlug({ params }) {
+  const { categorySlug } = await params;
+  const data = await getCategoryData(categorySlug);
+
+  if (!data) notFound();
+
+  const { category, products } = data;
 
   const breadcrumb = [
     { name: "Strona główna", href: "/" },
@@ -105,7 +86,6 @@ export default async function CategorySlug({ params }) {
 
   return (
     <div className="max-w-5xl 2xl:max-w-7xl mx-auto my-16 2xl:my-24 px-4">
-      {/* BREADCRUMB */}
       <nav className="text-sm text-gray-600 mb-6 text-center">
         {breadcrumb.map((item, i) => (
           <span key={i}>
@@ -129,13 +109,8 @@ export default async function CategorySlug({ params }) {
       </h1>
 
       <p className="my-8 font-light text-center max-w-3xl mx-auto leading-relaxed">
-        {category.description || (
-          <>
-            Ręcznie robione pantofle z Karpat – ciepłe, naturalne, z wełny.
-            Idealne na zimę, do domu i na prezent. Tradycja i pasja w każdym
-            szwie.
-          </>
-        )}
+        {category.description ||
+          "Ręcznie robione pantofle z Karpat – ciepłe, naturalne, z wełny. Idealne na zimę, do domu i na prezent. Tradycja i pasja w każdym szwie."}
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
