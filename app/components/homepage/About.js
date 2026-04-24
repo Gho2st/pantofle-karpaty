@@ -81,11 +81,6 @@ export default function About() {
           </div>
         </div>
       </div>
-
-      {/* Sekcja z kategoriami */}
-      <div className="mt-24 border-t border-gray-100 pt-16">
-        <Collection />
-      </div>
     </section>
   );
 }

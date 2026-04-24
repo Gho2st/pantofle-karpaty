@@ -1,6 +1,8 @@
 import Baner from "./components/homepage/Baner";
 import About from "./components/homepage/About";
 import Testimonials from "./components/homepage/Testimonials";
+import SeoSection from "./components/homepage/SeoSection";
+import HomeCollection from "./components/homepage/HomeCollection";
 
 export const metadata = {
   title: "Pantofle Karpaty - Kapcie Skórzane i Wełniane | Producent",
@@ -16,7 +18,9 @@ export default function Home() {
     <>
       <Baner />
       <About />
+      <HomeCollection />
       <Testimonials />
+      <SeoSection />
     </>
   );
 }

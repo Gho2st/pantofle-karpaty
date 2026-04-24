@@ -5,7 +5,14 @@ import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useCart } from "@/app/context/cartContext";
 import SizeChart from "@/app/components/Sizes";
-import { X } from "lucide-react";
+import {
+  X,
+  Truck,
+  RotateCcw,
+  ShieldCheck,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 
 // Import Swiper
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -19,7 +26,7 @@ function SafeImage({ src, alt, ...props }) {
   const finalSrc =
     src && typeof src === "string" && src.trim() !== ""
       ? src
-      : "/placeholder.png"; // Twój placeholder
+      : "/placeholder.png";
 
   return <Image src={finalSrc} alt={alt || "Zdjęcie produktu"} {...props} />;
 }
@@ -36,6 +43,7 @@ export default function ProductDetails({ product }) {
   const [isZoomed, setIsZoomed] = useState(false);
   const [isHoverZoom, setIsHoverZoom] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
+  const [descExpanded, setDescExpanded] = useState(false);
 
   const images = product.images || [];
   const category = product.category;
@@ -43,7 +51,6 @@ export default function ProductDetails({ product }) {
   const currentPrice = product ? getCurrentPrice(product) : null;
   const isPromoActive = product ? currentPrice < product.price : false;
 
-  // Ustaw pierwsze zdjęcie jako główne
   useEffect(() => {
     if (images.length > 0 && images[0]) {
       setMainImage(images[0]);
@@ -52,7 +59,6 @@ export default function ProductDetails({ product }) {
     }
   }, [images]);
 
-  // Reset pozycji myszki przy wyłączeniu zooma
   useEffect(() => {
     if (!isHoverZoom) {
       setMousePos({ x: 50, y: 50 });
@@ -94,29 +100,41 @@ export default function ProductDetails({ product }) {
     }
   };
 
-  const selectedSizeStock =
-    product.sizes?.find((s) => s.size === selectedSize)?.stock || 0;
+  const selectedSizeObj = product.sizes?.find(
+    (s) => s.size.toString() === selectedSize,
+  );
+  const selectedSizeStock = selectedSizeObj?.stock || 0;
   const isSizeAvailable = selectedSizeStock > 0;
+
+  const handleQuantityChange = (delta) => {
+    setQuantity((q) =>
+      Math.max(1, Math.min(selectedSizeStock || 1, q + delta)),
+    );
+  };
+
+  const discount = isPromoActive
+    ? Math.round(((product.price - currentPrice) / product.price) * 100)
+    : null;
 
   return (
     <>
       <div className="max-w-7xl mx-auto my-12 md:my-24 px-4">
         {/* Breadcrumb */}
-        <nav className="text-sm text-center md:text-left text-gray-600 mb-8 xl:mb-12">
+        <nav className="text-xs text-center md:text-left text-gray-400 mb-8 xl:mb-12 tracking-wide uppercase">
           {breadcrumb.map((item, i) => (
             <span key={i}>
               {item.href ? (
                 <Link
                   href={item.href}
-                  className="hover:text-red-600 hover:underline"
+                  className="hover:text-red-600 transition-colors"
                 >
                   {item.name}
                 </Link>
               ) : (
-                <span className="text-gray-900 font-medium">{item.name}</span>
+                <span className="text-gray-700">{item.name}</span>
               )}
               {i < breadcrumb.length - 1 && (
-                <span className="mx-2 text-gray-400">›</span>
+                <span className="mx-2 text-gray-300">›</span>
               )}
             </span>
           ))}
@@ -124,7 +142,7 @@ export default function ProductDetails({ product }) {
 
         <div className="flex flex-col md:flex-row gap-8 md:gap-16">
           {/* ====================== GALERIA ZDJĘĆ ====================== */}
-          <div className="w-full md:w-1/3">
+          <div className="w-full md:w-1/2">
             {/* MOBILE: Swiper */}
             <div className="md:hidden relative group product-swiper-container">
               <Swiper
@@ -166,34 +184,26 @@ export default function ProductDetails({ product }) {
                 )}
               </Swiper>
 
-              {/* Custom CSS dla ładniejszych strzałek i kropek */}
               <style jsx global>{`
-                /* Kontener dla strzałek */
                 .product-swiper-container .swiper-button-next,
                 .product-swiper-container .swiper-button-prev {
-                  background: rgba(255, 255, 255, 0.7);
+                  background: rgba(255, 255, 255, 0.8);
                   backdrop-filter: blur(4px);
                   width: 30px;
                   height: 30px;
-                  padding: 5px;
                   border-radius: 50%;
-                  color: #000; /* Kolor strzałki */
+                  color: #000;
                   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-                  transition: all 0.2s ease;
                 }
-
-                /* Ukrycie strzałek, gdy nie ma więcej zdjęć */
                 .product-swiper-container .swiper-button-disabled {
                   display: none !important;
                 }
-
-                /* Stylowanie kropek na dole */
                 .product-swiper-container .swiper-pagination-bullet {
                   background: #000;
                   opacity: 0.2;
                 }
                 .product-swiper-container .swiper-pagination-bullet-active {
-                  background: #dc2626; /* Czerwony kolor z Twojego motywu */
+                  background: #dc2626;
                   opacity: 1;
                   width: 12px;
                   border-radius: 4px;
@@ -202,9 +212,8 @@ export default function ProductDetails({ product }) {
               `}</style>
             </div>
 
-            {/* DESKTOP: Miniaturki + główne zdjęcie z hover zoom */}
+            {/* DESKTOP: Miniaturki + główne zdjęcie */}
             <div className="hidden md:grid md:grid-cols-12 gap-4">
-              {/* Miniaturki po lewej */}
               <div className="flex flex-col gap-2 col-span-2">
                 {images.length > 0 ? (
                   images.map((image, i) => (
@@ -214,7 +223,7 @@ export default function ProductDetails({ product }) {
                       className={`relative aspect-square rounded-md overflow-hidden border-2 transition-all ${
                         mainImage === image
                           ? "border-red-600 shadow-md"
-                          : "border-gray-300 hover:border-gray-400"
+                          : "border-gray-200 hover:border-gray-400"
                       }`}
                     >
                       <SafeImage
@@ -228,11 +237,10 @@ export default function ProductDetails({ product }) {
                     </button>
                   ))
                 ) : (
-                  <div className="aspect-square bg-gray-100 rounded-md border-2 border-gray-300" />
+                  <div className="aspect-square bg-gray-100 rounded-md border-2 border-gray-200" />
                 )}
               </div>
 
-              {/* Główne zdjęcie z hover zoom */}
               <div className="relative aspect-4/5 bg-gray-100 rounded-md overflow-hidden col-span-10">
                 <div
                   className="group relative w-full h-full cursor-zoom-in"
@@ -243,9 +251,10 @@ export default function ProductDetails({ product }) {
                   }}
                   onMouseMove={(e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
-                    const x = ((e.clientX - rect.left) / rect.width) * 100;
-                    const y = ((e.clientY - rect.top) / rect.height) * 100;
-                    setMousePos({ x, y });
+                    setMousePos({
+                      x: ((e.clientX - rect.left) / rect.width) * 100,
+                      y: ((e.clientY - rect.top) / rect.height) * 100,
+                    });
                   }}
                   onClick={() => setIsZoomed(true)}
                 >
@@ -258,7 +267,6 @@ export default function ProductDetails({ product }) {
                     priority
                   />
 
-                  {/* Hover zoom lupa */}
                   {isHoverZoom &&
                     mainImage &&
                     mainImage !== "/placeholder.png" && (
@@ -288,121 +296,207 @@ export default function ProductDetails({ product }) {
           </div>
 
           {/* ====================== INFORMACJE O PRODUKCIE ====================== */}
-          <div className="w-full md:w-2/3">
-            <h1 className="text-3xl md:text-4xl uppercase mb-6">
-              {product.name}
-            </h1>
+          <div className="w-full md:w-1/2 flex flex-col gap-0">
+            {/* Nazwa + kategoria */}
+            <div className="mb-5">
+              {category && (
+                <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">
+                  {category.name}
+                </p>
+              )}
+              <h1 className="text-3xl md:text-4xl uppercase font-medium leading-tight text-gray-900">
+                {product.name}
+              </h1>
+            </div>
 
-            <div className="mb-6">
+            {/* Cena */}
+            <div className="mb-6 pb-6 border-b border-gray-100">
               {isPromoActive ? (
-                <div className="flex items-baseline gap-3">
+                <div className="flex items-baseline gap-3 flex-wrap">
                   <span className="text-3xl font-bold text-red-600">
                     {currentPrice?.toFixed(2)} PLN
                   </span>
-                  <span className="text-xl line-through text-gray-500">
+                  <span className="text-xl line-through text-gray-400">
                     {product.price.toFixed(2)} PLN
+                  </span>
+                  <span className="text-xs font-semibold uppercase tracking-wide bg-red-100 text-red-700 px-2 py-1 rounded">
+                    −{discount}%
                   </span>
                 </div>
               ) : (
-                <span className="text-3xl font-bold text-primary">
+                <span className="text-3xl font-bold text-gray-900">
                   {currentPrice?.toFixed(2)} PLN
                 </span>
               )}
 
               {product.lowestPrice && (
-                <div className="text-sm text-gray-500 mt-1">
+                <p className="text-xs text-gray-400 mt-2">
                   Najniższa cena z 30 dni:{" "}
                   <span
-                    className={`font-bold ${
-                      product.lowestPrice < currentPrice
-                        ? "text-red-600"
-                        : "text-gray-700"
-                    }`}
+                    className={`font-semibold ${product.lowestPrice < currentPrice ? "text-red-600" : "text-gray-600"}`}
                   >
                     {product.lowestPrice.toFixed(2)} PLN
                   </span>
-                </div>
+                </p>
               )}
             </div>
 
-            <p className="mt-6 text-gray-700">{product.description}</p>
+            {/* Opis krótki */}
+            {product.description && (
+              <div className="mb-6 pb-6 border-b border-gray-100">
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  {product.description}
+                </p>
+              </div>
+            )}
 
-            <form onSubmit={handleAddToCart} className="mt-6">
-              <div className="mb-4">
-                <label className="block text-lg font-medium mb-2">
-                  Wybierz rozmiar:
-                </label>
-                <select
-                  value={selectedSize}
-                  onChange={(e) => setSelectedSize(e.target.value)}
-                  className="border border-gray-300 rounded-md p-2 w-full max-w-xs"
-                  required
-                >
-                  <option value="" disabled>
-                    Wybierz rozmiar
-                  </option>
+            {/* Formularz */}
+            <form onSubmit={handleAddToCart} className="flex flex-col gap-6">
+              {/* Rozmiar — przyciski */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">
+                    Rozmiar
+                  </label>
+                  {selectedSize && (
+                    <span className="text-xs text-gray-400">
+                      {isSizeAvailable
+                        ? `${selectedSizeStock} szt. dostępnych`
+                        : "Niedostępny"}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
                   {product.sizes
                     ?.slice()
                     .sort((a, b) => a.size - b.size)
-                    .map((s) => (
-                      <option
-                        key={s.size}
-                        value={s.size}
-                        disabled={s.stock === 0}
-                      >
-                        Rozmiar {s.size}
-                        {s.stock === 0 && " (niedostępny)"}
-                      </option>
-                    ))}
-                </select>
+                    .map((s) => {
+                      const isSelected = selectedSize === s.size.toString();
+                      const isOut = s.stock === 0;
+                      return (
+                        <button
+                          key={s.size}
+                          type="button"
+                          onClick={() =>
+                            !isOut && setSelectedSize(s.size.toString())
+                          }
+                          className={`w-12 h-12 rounded-md text-sm font-medium transition-all duration-150
+                            ${
+                              isSelected
+                                ? "border-2 border-red-600 bg-red-50 text-red-700"
+                                : isOut
+                                  ? "border border-gray-200 text-gray-300 line-through cursor-not-allowed"
+                                  : "border border-gray-300 text-gray-700 hover:border-gray-500 hover:bg-gray-50"
+                            }`}
+                        >
+                          {s.size}
+                        </button>
+                      );
+                    })}
+                </div>
               </div>
 
-              <div className="mb-4">
-                <label className="block text-lg font-medium mb-2">Ilość:</label>
-                <input
-                  type="number"
-                  min="1"
-                  max={isSizeAvailable ? selectedSizeStock : 1}
-                  value={quantity}
-                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                  className="border border-gray-300 rounded-md p-2 w-full max-w-xs"
-                  disabled={!selectedSize || !isSizeAvailable}
-                  required
-                />
+              {/* Ilość — stepper */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">
+                  Ilość
+                </label>
+                <div className="flex items-center border border-gray-300 rounded-md w-fit overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => handleQuantityChange(-1)}
+                    disabled={quantity <= 1}
+                    className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 text-lg font-light disabled:opacity-30 transition-colors"
+                  >
+                    −
+                  </button>
+                  <span className="w-12 text-center text-sm font-semibold text-gray-900 border-x border-gray-300 leading-[40px] select-none">
+                    {quantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleQuantityChange(1)}
+                    disabled={!isSizeAvailable || quantity >= selectedSizeStock}
+                    className="w-10 h-10 bg-gray-50 hover:bg-gray-100 text-gray-600 text-lg font-light disabled:opacity-30 transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
 
-              <div className="flex flex-wrap gap-4 items-center">
+              {/* CTA */}
+              <div className="flex gap-3 items-center flex-wrap">
                 <button
                   type="submit"
-                  className={`px-6 py-3 rounded-md text-white transition-all duration-200 ${
-                    isAdded
-                      ? "bg-green-600"
-                      : "bg-red-600 hover:bg-red-700 disabled:bg-gray-400"
-                  }`}
                   disabled={isAdded || !selectedSize || !isSizeAvailable}
+                  className={`flex-1 min-w-[180px] py-4 px-6 rounded-md text-sm font-semibold uppercase tracking-wider text-white transition-all duration-200
+                    ${
+                      isAdded
+                        ? "bg-green-600"
+                        : "bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    }`}
                 >
-                  {isAdded ? "Dodano!" : "Dodaj do koszyka"}
+                  {isAdded ? "✓ Dodano do koszyka" : "Dodaj do koszyka"}
                 </button>
 
                 {showCartLink && (
                   <Link
                     href="/koszyk"
-                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                    className="py-4 px-6 rounded-md text-sm font-semibold uppercase tracking-wider bg-gray-900 text-white hover:bg-gray-700 transition-colors"
                   >
-                    Przejdź do koszyka
+                    Przejdź do koszyka →
                   </Link>
                 )}
               </div>
+
+              {/* Informacje o dostawie */}
+              <div className="grid grid-cols-1 gap-2 pt-2">
+                <div className="flex items-center gap-3 text-xs text-gray-500">
+                  <Truck size={14} className="text-gray-400 shrink-0" />
+                  Darmowa dostawa od 200 PLN
+                </div>
+                <div className="flex items-center gap-3 text-xs text-gray-500">
+                  <RotateCcw size={14} className="text-gray-400 shrink-0" />
+                  Zwrot w ciągu 30 dni
+                </div>
+                <div className="flex items-center gap-3 text-xs text-gray-500">
+                  <ShieldCheck size={14} className="text-gray-400 shrink-0" />
+                  Bezpieczna płatność
+                </div>
+              </div>
             </form>
 
-            {product.description2 && (
-              <p className="mt-10 text-gray-700">{product.description2}</p>
-            )}
-            {product.additionalInfo && (
-              <p className="mt-10 text-gray-700">{product.additionalInfo}</p>
+            {/* Dodatkowy opis — rozwijany */}
+            {(product.description2 || product.additionalInfo) && (
+              <div className="mt-6 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setDescExpanded((v) => !v)}
+                  className="flex items-center justify-between w-full py-4 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+                >
+                  <span className="uppercase tracking-widest text-xs font-semibold text-gray-500">
+                    Szczegóły produktu
+                  </span>
+                  {descExpanded ? (
+                    <ChevronUp size={16} className="text-gray-400" />
+                  ) : (
+                    <ChevronDown size={16} className="text-gray-400" />
+                  )}
+                </button>
+
+                {descExpanded && (
+                  <div className="pb-4 flex flex-col gap-3 text-sm text-gray-600 leading-relaxed">
+                    {product.description2 && <p>{product.description2}</p>}
+                    {product.additionalInfo && <p>{product.additionalInfo}</p>}
+                  </div>
+                )}
+              </div>
             )}
 
-            <SizeChart />
+            {/* Tabela rozmiarów */}
+            <div className="mt-2">
+              <SizeChart />
+            </div>
           </div>
         </div>
       </div>
@@ -413,14 +507,12 @@ export default function ProductDetails({ product }) {
           className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 cursor-zoom-out"
           onClick={() => setIsZoomed(false)}
         >
-          {/* Przycisk X */}
           <button
             className="absolute top-4 right-4 z-10 text-white/70 hover:text-white hover:bg-white/10 rounded-full p-2 transition-all"
             onClick={() => setIsZoomed(false)}
           >
             <X size={28} />
           </button>
-
           <div
             className="relative max-w-5xl max-h-full"
             onClick={(e) => e.stopPropagation()}
@@ -440,14 +532,14 @@ export default function ProductDetails({ product }) {
       {/* PARTNER TILE */}
       {product.showPartnerTile && (
         <div className="max-w-7xl mx-auto my-16 px-4">
-          <div className="border-t-2 border-gray-200 pt-12">
-            <h2 className="text-2xl md:text-3xl uppercase text-center mb-10 text-gray-900">
+          <div className="border-t-2 border-gray-100 pt-12">
+            <h2 className="text-2xl md:text-3xl uppercase text-center mb-10 text-gray-900 font-medium">
               {product.partnerTitle}
             </h2>
 
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div className="flex justify-center">
-                <div className="relative aspect-4/5 w-full max-w-md bg-gray-100 rounded-md overflow-hidden border-2 border-gray-300">
+                <div className="relative aspect-4/5 w-full max-w-md bg-gray-100 rounded-md overflow-hidden">
                   <SafeImage
                     src={product.partnerImage}
                     fill
@@ -461,10 +553,10 @@ export default function ProductDetails({ product }) {
 
               <div className="text-center md:text-left space-y-6">
                 <div>
-                  <h3 className="text-2xl md:text-3xl uppercase mb-4">
+                  <h3 className="text-2xl md:text-3xl uppercase mb-4 font-medium">
                     {product.partnerName}
                   </h3>
-                  <p className="text-gray-700 leading-relaxed">
+                  <p className="text-gray-600 leading-relaxed text-sm">
                     Idealny komplet dla pary – te same ciepłe, wełniane kapcie
                     <br />w wersji{" "}
                     {product.partnerTitle === "Kup też dla Niego"
@@ -472,13 +564,12 @@ export default function ProductDetails({ product }) {
                       : "damskiej"}
                   </p>
                 </div>
-
-                <a
+                <Link
                   href={product.partnerUrl}
-                  className="inline-block px-8 py-4 bg-red-600 text-white font-medium rounded-md hover:bg-red-700 transition uppercase tracking-wider"
+                  className="inline-block px-8 py-4 bg-red-600 text-white text-sm font-semibold rounded-md hover:bg-red-700 transition uppercase tracking-wider"
                 >
                   Pokaż drugą parę →
-                </a>
+                </Link>
               </div>
             </div>
           </div>

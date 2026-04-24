@@ -1,14 +1,10 @@
-'use client'
+"use client";
 import { useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 const SizeChart = () => {
   const [isOpen, setIsOpen] = useState(false);
 
-  const toggleChart = () => {
-    setIsOpen(!isOpen);
-  };
-
-  // Dane rozmiarów
   const sizes = [
     { eu: 26, insole: 16.5 },
     { eu: 27, insole: 17.0 },
@@ -34,32 +30,40 @@ const SizeChart = () => {
   ];
 
   return (
-    <div className="mt-4">
+    <div className="border-t border-gray-100">
       <button
-        onClick={toggleChart}
-        className="w-full text-left bg-gray-200 p-3 rounded-lg font-semibold text-lg focus:outline-none flex justify-between items-center"
+        onClick={() => setIsOpen((v) => !v)}
+        className="flex items-center justify-between w-full py-4 hover:opacity-70 transition-opacity"
       >
-        <span>Tabela rozmiarów</span>
-        <span>{isOpen ? "−" : "+"}</span>
+        <span className="uppercase tracking-widest text-xs font-semibold text-gray-500">
+          Tabela rozmiarów
+        </span>
+        {isOpen ? (
+          <ChevronUp size={15} className="text-gray-400" />
+        ) : (
+          <ChevronDown size={15} className="text-gray-400" />
+        )}
       </button>
+
       {isOpen && (
-        <div className="mt-2 border border-gray-300 rounded-lg overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="p-1">Rozmiar EU</th>
-                <th className="p-1">Długość wkładki (cm)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sizes.map((size) => (
-                <tr key={size.eu} className="border-t">
-                  <td className="p-1">{size.eu}</td>
-                  <td className="p-1">{size.insole}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="pb-6">
+          <dl className="grid grid-cols-1 divide-y divide-gray-100">
+            <div className="flex justify-between items-baseline py-2 gap-4">
+              <dt className="text-xs text-gray-400">Rozmiar EU</dt>
+              <dd className="text-xs text-gray-400">Długość wkładki (cm)</dd>
+            </div>
+            {sizes.map((size) => (
+              <div
+                key={size.eu}
+                className="flex justify-between items-baseline py-2 gap-4"
+              >
+                <dt className="text-xs text-gray-400">{size.eu}</dt>
+                <dd className="text-sm text-gray-700">
+                  {size.insole.toFixed(1)}
+                </dd>
+              </div>
+            ))}
+          </dl>
         </div>
       )}
     </div>
