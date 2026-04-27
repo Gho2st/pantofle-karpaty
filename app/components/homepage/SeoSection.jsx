@@ -6,33 +6,18 @@ import { motion } from "framer-motion";
 const topics = [
   {
     href: "/kategorie/dla-dzieci",
-    heading: "Obuwie dziecięce — zdrowy rozwój stopy",
-    body: "Kapcie, pantofle i klapki dziecięce wykonane z miękkiej skóry naturalnej i owczej wełny. Pozwalają stopie swobodnie oddychać i prawidłowo się rozwijać. Każda para szyta ręcznie, bez klejów chemicznych i plastikowych wypełnień. Rozmiary od 26 do 35.",
+    heading: "Obuwie dziecięce — wygoda i zdrowy rozwój stopy",
+    body: "Pantofle i kapcie dla dzieci w rozmiarach 26–35. Szyjemy zarówno ze skóry naturalnej z wkładką skórzaną, jak i z wysokiej jakości materiałów syntetycznych — miękkich, przewiewnych i łatwych w pielęgnacji. Każda para tworzona z dbałością o komfort i bezpieczeństwo dziecka.",
   },
   {
     href: "/kategorie/dla-kobiet",
-    heading: "Obuwie damskie ze skóry — styl i komfort",
-    body: "Kapcie domowe, klapki typu mule i sandały skórzane dla kobiet. Łączą tradycyjne rzemiosło z nowoczesną sylwetką — dostępne w welurze, zamszu i gładkiej skórze licowej. Idealne do codziennego noszenia i jako elegancki prezent.",
+    heading: "Obuwie damskie — styl i komfort na co dzień",
+    body: "Kapcie, klapki mule i sandały dla kobiet — dostępne w wersjach ze skóry naturalnej (welur, zamsz, lico) oraz z trwałych materiałów syntetycznych. Łączymy tradycyjne rzemiosło z nowoczesnym krojem. Idealne do noszenia w domu i jako elegancki prezent.",
   },
   {
     href: "/kategorie/dla-mezczyzn",
     heading: "Obuwie męskie — solidne i ponadczasowe",
-    body: "Pantofle, klapki skórzane i sandały męskie z naturalnej skóry bydlęcej lub weluru. Mocna podeszwa, wkładka skórzana i prosty krój, który nie wychodzi z mody. Dostępne w rozmiarach 40–46, wytrzymują lata użytkowania.",
-  },
-  {
-    href: "/kategorie",
-    heading: "Klapki skórzane — komfort na co dzień",
-    body: "Nasze klapki ze skóry naturalnej to solidna alternatywa dla masowo produkowanego obuwia syntetycznego. Miękkie, dopasowujące się do stopy, z anatomiczną wkładką. Dostępne w wersjach damskiej i męskiej — idealne na lato i do noszenia w domu.",
-  },
-  {
-    href: "/kategorie",
-    heading: "Pantofle regionalne i góralskie — tradycja z Karpat",
-    body: "Pantofle regionalne inspirowane folklorem karpackim, szyte technikami przekazywanymi z pokolenia na pokolenie. Chętnie wybierane jako pamiątka z Polski i prezent dla bliskich za granicą. Wysyłamy do całej Europy.",
-  },
-  {
-    href: "/kategorie",
-    heading: "Polski producent obuwia ze skóry naturalnej",
-    body: "Kapcie, klapki, sandały i pantofle regionalne — wszystko wytwarzamy ręcznie w naszym warsztacie w Męcinie. Sprzedajemy bezpośrednio, bez pośredników. Materiały: skóra bydlęca, welur, zamsz, owcza wełna. Dostawa do 12 krajów Europy.",
+    body: "Pantofle, klapki i sandały męskie w rozmiarach 40–46. W ofercie modele ze skóry bydlęcej i weluru oraz wersje z materiałów syntetycznych — wszystkie z mocną podeszwą i wkładką zapewniającą komfort. Proste wzornictwo, które nie wychodzi z mody.",
   },
 ];
 
@@ -51,10 +36,11 @@ export default function SeoSection() {
             <span className="text-red-700"> prosto z warsztatu.</span>
           </h2>
           <p className="text-base md:text-lg text-gray-600 leading-relaxed max-w-2xl mx-auto">
-            Pantofle Karpaty to rodzinny producent obuwia ze skóry naturalnej —
-            kapci, klapek, sandałów i pantofli regionalnych. Każda para szyta
-            ręcznie w Polsce, sprzedawana bez pośredników, wysyłana do całej
-            Europy.
+            Pantofle Karpaty to rodzinny producent obuwia — kapci, klapek,
+            sandałów i pantofli regionalnych. Produkujemy zarówno ze skóry
+            naturalnej, jak i z wykorzystaniem wysokiej jakości materiałów
+            syntetycznych. Każda para szyta ręcznie w Polsce, sprzedawana bez
+            pośredników, wysyłana do całej Europy
           </p>
         </div>
 
@@ -62,7 +48,7 @@ export default function SeoSection() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {topics.map((topic, index) => (
             <motion.article
-              key={topic.href}
+              key={index}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -92,8 +78,7 @@ export default function SeoSection() {
         <p className="text-sm text-gray-400 leading-relaxed max-w-3xl mx-auto text-center mt-12">
           Szukasz kapci skórzanych, klapek ze skóry naturalnej, pantofli
           regionalnych lub góralskich? Oferujemy darmową dostawę od 200 zł i 30
-          dni na zwrot. Zamówienia złożone do 14:00 wysyłamy tego samego dnia
-          roboczego.
+          dni na zwrot. Wysyłka: następny dzień roboczy
         </p>
       </div>
     </section>

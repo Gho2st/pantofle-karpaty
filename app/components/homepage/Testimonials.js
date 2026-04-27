@@ -39,9 +39,6 @@ export default function Testimonials() {
           <h2 className="text-4xl lg:text-5xl font-light text-gray-900">
             Co mówią nasi klienci?
           </h2>
-          <p className="mt-3 text-gray-600 text-lg">
-            Zaufanie tysięcy zadowolonych osób
-          </p>
         </div>
 
         {/* Opinie */}

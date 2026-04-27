@@ -7,15 +7,18 @@ import { useCategories } from "@/app/context/categoriesContext";
 
 const categoryMeta = {
   "dla-dzieci": {
-    description: "Miękka skóra, naturalna wełna, zdrowy rozwój stopy.",
+    description:
+      "Skóra naturalna, wełna i materiały syntetyczne wysokiej jakości — dla zdrowego rozwoju stopy.",
     cta: "Kolekcja dziecięca",
   },
   "dla-kobiet": {
-    description: "Kapcie, klapki i sandały ze skóry — elegancja na co dzień.",
+    description:
+      "Kapcie, klapki i sandały — ze skóry naturalnej lub syntetycznych materiałów wysokiej jakości.",
     cta: "Kolekcja damska",
   },
   "dla-mezczyzn": {
-    description: "Solidne wykonanie, naturalne materiały, ponadczasowy styl.",
+    description:
+      "Solidne wykonanie ze skóry naturalnej lub materiałów syntetycznych — ponadczasowy styl.",
     cta: "Kolekcja męska",
   },
   regionalne: {

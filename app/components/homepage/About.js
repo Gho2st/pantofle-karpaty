@@ -21,22 +21,23 @@ export default function About() {
 
             <div className="space-y-5 text-base md:text-lg leading-relaxed text-gray-600 max-w-2xl">
               <p>
-                Jesteśmy rodzinnym producentem pantofli z{" "}
-                <strong className="text-gray-900 font-medium">
-                  naturalnej skóry i owczej wełny
-                </strong>
-                . Od lat łączymy góralskie rzemiosło z nowoczesnym komfortem.
+                Jesteśmy rodzinnym producentem pantofli, łączącym góralskie
+                rzemiosło z nowoczesnym podejściem do wygody i designu. W naszej
+                ofercie znajdują się zarówno modele wykonane ze skóry naturalnej
+                i owczej wełny, jak i produkty z wykorzystaniem wysokiej jakości
+                materiałów syntetycznych. Od lat dbamy o to, aby każdy model był
+                komfortowy, trwały i dopasowany do codziennego użytkowania.
+                Każda para przechodzi przez ręce naszych rzemieślników.
               </p>
 
               <p>
-                Każda para przechodzi przez ręce naszych mistrzów kaletnictwa.
-                Dbamy o każdy detal — od selekcji surowców, przez precyzyjne
-                szycie, aż po końcową kontrolę jakości.
+                Zwracamy uwagę na każdy detal — od starannego doboru materiałów,
+                przez precyzyjne wykonanie, aż po końcową kontrolę jakości.
               </p>
 
               <div className="pl-4 border-l-2 border-red-200 italic text-gray-500 py-1">
-                "Zaufanie tysięcy klientów z Niemiec, Francji i Wielkiej
-                Brytanii to nasz najlepszy certyfikat jakości."
+                Zaufanie tysięcy klientów z Niemiec, Francji i Wielkiej Brytanii
+                to nasz najlepszy dowód jakości.
               </div>
             </div>
 
