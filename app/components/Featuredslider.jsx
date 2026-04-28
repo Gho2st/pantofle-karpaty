@@ -73,7 +73,7 @@ export default function FeaturedSlider({ products }) {
           </div>
         </div>
 
-        {/* Scroll track — lekko wychodzi poza kontener po prawej */}
+        {/* Scroll track */}
         <div className="relative">
           <div
             ref={scrollRef}
@@ -124,7 +124,6 @@ function ProductCard({ product }) {
 
   const images = Array.isArray(product.images) ? product.images : [];
   const primary = images[0] || "/pantofle/pantofle.jpg";
-  //   const secondary = images[1] || primary;
 
   return (
     <div
@@ -136,7 +135,6 @@ function ProductCard({ product }) {
       }}
     >
       <Link href={`/produkty/${product.slug}`} className="block">
-        {/* Zdjęcie */}
         <div className="relative aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden mb-3">
           <Image
             src={primary}
@@ -152,11 +150,9 @@ function ProductCard({ product }) {
             </div>
           )}
 
-          {/* Delikatny overlay */}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/[0.06] transition-colors duration-500 ease-out" />
         </div>
 
-        {/* Tekst */}
         <h3 className="text-sm font-medium text-gray-900 group-hover:text-red-700 transition-colors leading-snug mb-1 line-clamp-1">
           {product.name}
         </h3>
