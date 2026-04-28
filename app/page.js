@@ -2,7 +2,7 @@ import Baner from "./components/homepage/Baner";
 import About from "./components/homepage/About";
 import Testimonials from "./components/homepage/Testimonials";
 import SeoSection from "./components/homepage/SeoSection";
-import FeaturedSliderServer from "./components/FeaturedSliderServer";
+import FeaturedSliderServer from "./components/FeaturedServerSlider";
 import ShoeViewer from "./components/homepage/Shoeviewer";
 
 export const metadata = {

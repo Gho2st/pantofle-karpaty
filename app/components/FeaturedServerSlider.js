@@ -1,5 +1,5 @@
 import prisma from "@/app/lib/prisma";
-import FeaturedSlider from "./FeaturedSlider";
+import FeaturedSlider from "./FeaturedClientSlider";
 
 async function getFeaturedProducts(total = 20) {
   const featured = await prisma.product.findMany({
