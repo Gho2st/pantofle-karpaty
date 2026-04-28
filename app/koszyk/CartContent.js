@@ -12,7 +12,7 @@ import {
   ShoppingCart,
   Tag,
 } from "lucide-react";
-import Collection from "../components/homepage/Collection";
+import Collection from "../components/Collection";
 import LoadingOverlay from "./LoadingOverlay";
 import CartSkeleton from "./CartSkeleton";
 import QuantityInput from "./QuantityInput";

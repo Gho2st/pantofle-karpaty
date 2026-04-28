@@ -118,7 +118,7 @@ export default function ClientNav({ initialCategories }) {
         <div className="hidden md:flex items-center space-x-6">
           <ul className="flex space-x-1 text-lg font-medium items-center ">
             <li>
-              <Link href="/" className={baseMenuItemClasses} >
+              <Link href="/" className={baseMenuItemClasses}>
                 Strona Główna
               </Link>
             </li>
@@ -159,7 +159,11 @@ export default function ClientNav({ initialCategories }) {
                   )}
               </li>
             ))}
-
+            <li>
+              <Link href="/blog" className={baseMenuItemClasses}>
+                Blog
+              </Link>
+            </li>
             <li>
               <Link href="/kontakt" className={baseMenuItemClasses}>
                 Kontakt

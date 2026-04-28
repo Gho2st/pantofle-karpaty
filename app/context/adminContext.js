@@ -46,7 +46,7 @@ export function AdminProvider({ children }) {
     try {
       const res = await fetch(
         `/api/get-category${parentId ? `?parentId=${parentId}` : ""}`,
-        { cache: "no-store" }
+        { cache: "no-store" },
       );
       if (!res.ok) throw new Error("Nie udało się pobrać kategorii");
       const { categories: data } = await res.json();
@@ -83,7 +83,7 @@ export function AdminProvider({ children }) {
       const updated = findCategoryById(newCategories, selectedCategory.id);
       if (updated) setSelectedCategory(updated);
     },
-    [selectedCategory, findCategoryById]
+    [selectedCategory, findCategoryById],
   );
 
   // === Edycja kategorii ===
@@ -117,7 +117,7 @@ export function AdminProvider({ children }) {
         toast.error(err.message);
       }
     },
-    [editingCategory, fetchCategories, refreshSelectedCategory]
+    [editingCategory, fetchCategories, refreshSelectedCategory],
   );
 
   // === Edycja produktu ===
@@ -152,6 +152,13 @@ export function AdminProvider({ children }) {
           formData.append("sortOrder", productData.sortOrder.toString());
         }
 
+        // Polecany produkt
+        formData.append("featured", productData.featured ? "true" : "false");
+
+        // Warianty kolorystyczne
+        formData.append("colorHex", productData.colorHex || "");
+        formData.append("colorGroup", productData.colorGroup || "");
+
         if (Array.isArray(productData.sizes))
           formData.append("sizes", JSON.stringify(productData.sizes));
 
@@ -161,12 +168,12 @@ export function AdminProvider({ children }) {
         )
           formData.append(
             "imagesToRemove",
-            JSON.stringify(productData.imagesToRemove)
+            JSON.stringify(productData.imagesToRemove),
           );
 
         if (Array.isArray(productData.imagesToAdd))
           productData.imagesToAdd.forEach((file) =>
-            formData.append("imagesToAdd", file)
+            formData.append("imagesToAdd", file),
           );
 
         const res = await fetch(`/api/update-product/${productData.id}`, {
@@ -185,7 +192,7 @@ export function AdminProvider({ children }) {
         toast.error(err.message);
       }
     },
-    [fetchCategories, refreshSelectedCategory, fetchCart]
+    [fetchCategories, refreshSelectedCategory, fetchCart],
   );
 
   // === Dodawanie produktu ===
@@ -207,7 +214,7 @@ export function AdminProvider({ children }) {
         toast.error(err.message);
       }
     },
-    [fetchCategories, findCategoryById, fetchCart]
+    [fetchCategories, findCategoryById, fetchCart],
   );
 
   // === Dodawanie kategorii ===
@@ -233,7 +240,7 @@ export function AdminProvider({ children }) {
         toast.error(err.message);
       }
     },
-    [fetchCategories, selectedCategory, findCategoryById]
+    [fetchCategories, selectedCategory, findCategoryById],
   );
 
   // === Usuwanie ===
@@ -249,7 +256,7 @@ export function AdminProvider({ children }) {
         if (!res.ok)
           throw new Error(
             data.error ||
-              `Błąd usuwania ${type === "category" ? "kategorii" : "produktu"}`
+              `Błąd usuwania ${type === "category" ? "kategorii" : "produktu"}`,
           );
 
         const updated = await fetchCategories();
@@ -262,14 +269,14 @@ export function AdminProvider({ children }) {
         if (type === "product") await fetchCart();
         //  TOAST PO USUNIĘCIU
         toast.success(
-          type === "category" ? "Kategoria usunięta!" : "Produkt usunięty!"
+          type === "category" ? "Kategoria usunięta!" : "Produkt usunięty!",
         );
         window.dispatchEvent(new Event("menu-updated"));
       } catch (err) {
         toast.error(err.message);
       }
     },
-    [fetchCategories, selectedCategory, refreshSelectedCategory, fetchCart]
+    [fetchCategories, selectedCategory, refreshSelectedCategory, fetchCart],
   );
 
   // === Przywrócenie produktu ===
@@ -287,7 +294,7 @@ export function AdminProvider({ children }) {
         toast.error(err.message);
       }
     },
-    [fetchCategories, refreshSelectedCategory]
+    [fetchCategories, refreshSelectedCategory],
   );
 
   useEffect(() => {
@@ -350,7 +357,7 @@ export function AdminProvider({ children }) {
       handleDelete,
       handleRestoreProduct,
       refreshSelectedCategory,
-    ]
+    ],
   );
 
   return (

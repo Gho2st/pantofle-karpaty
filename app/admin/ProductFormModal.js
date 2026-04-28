@@ -19,6 +19,9 @@ export default function ProductFormModal() {
         imagesToRemove: [],
         promoPrice: editingProduct.promoPrice || null,
         slug: editingProduct.slug || generateSlug(editingProduct.name),
+        featured: editingProduct.featured || false,
+        colorHex: editingProduct.colorHex || "",
+        colorGroup: editingProduct.colorGroup || "",
       });
     } else {
       setProductData(null);
@@ -28,15 +31,17 @@ export default function ProductFormModal() {
   if (!productData) return null;
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setProductData((prev) => ({
       ...prev,
       [name]:
-        name === "price" || name === "promoPrice" || name === "sortOrder"
-          ? value === ""
-            ? null
-            : parseInt(value) || ""
-          : value,
+        type === "checkbox"
+          ? checked
+          : name === "price" || name === "promoPrice" || name === "sortOrder"
+            ? value === ""
+              ? null
+              : parseInt(value) || ""
+            : value,
       ...(name === "name" && { slug: generateSlug(value) }),
     }));
   };
@@ -96,17 +101,16 @@ export default function ProductFormModal() {
       toast.error("Stan magazynowy nie może być mniejszy niż 0");
       return;
     }
-    setProductData((prev) => {
-      const updatedSizes = prev.sizes.map((item) =>
+    setProductData((prev) => ({
+      ...prev,
+      sizes: prev.sizes.map((item) =>
         item.size === size ? { ...item, stock: item.stock + adjustment } : item,
-      );
-      return { ...prev, sizes: updatedSizes };
-    });
+      ),
+    }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Wysyłanie danych z formularza:", productData);
     if (!productData.name || !productData.price) {
       toast.error("Nazwa i cena produktu są wymagane");
       return;
@@ -118,8 +122,6 @@ export default function ProductFormModal() {
       toast.error("Cena regularna musi być dodatnią liczbą");
       return;
     }
-
-    // Walidacja ceny promocyjnej
     if (productData.promoPrice !== null) {
       const promo = parseFloat(productData.promoPrice);
       if (isNaN(promo) || promo <= 0) {
@@ -132,28 +134,32 @@ export default function ProductFormModal() {
       }
     }
     if (!productData.id || isNaN(parseInt(productData.id))) {
-      console.error("Nieprawidłowe ID produktu:", productData.id);
       toast.error("Błąd: Nieprawidłowe ID produktu");
       return;
     }
     if (!productData.categoryId || isNaN(parseInt(productData.categoryId))) {
-      console.error("Nieprawidłowe ID kategorii:", productData.categoryId);
       toast.error("Błąd: Nieprawidłowe ID kategorii");
       return;
     }
     handleEditProduct({
       ...productData,
       sortOrder: productData.sortOrder ? parseInt(productData.sortOrder) : null,
+      colorHex: productData.colorHex || null,
+      colorGroup: productData.colorGroup || null,
     });
     setEditingProduct(null);
   };
 
+  const inputClass =
+    "w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200";
+  const labelClass = "block text-sm font-medium text-gray-700 mb-1";
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white p-6 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-6">
           <h3 className="text-xl font-bold text-gray-800">
-            Edytuj produkt: {productData.name}
+            Edytuj: {productData.name}
           </h3>
           <button
             onClick={() => setEditingProduct(null)}
@@ -162,114 +168,88 @@ export default function ProductFormModal() {
             <X size={24} />
           </button>
         </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Nazwa + slug */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nazwa produktu
-            </label>
+            <label className={labelClass}>Nazwa produktu</label>
             <input
               type="text"
               name="name"
               value={productData.name || ""}
               onChange={handleChange}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+              className={inputClass}
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Slug (opcjonalny)
-            </label>
+            <label className={labelClass}>Slug</label>
             <input
               type="text"
               name="slug"
               value={productData.slug || ""}
               onChange={handleChange}
-              placeholder="np. nowy-produkt"
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+              className={inputClass}
             />
           </div>
-          {/* CENA + PROMOCJA */}
-          <div className="space-y-4">
-            {/* Cena regularna */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cena regularna (PLN)
-              </label>
-              <input
-                type="number"
-                name="price"
-                value={productData.price || ""}
-                onChange={handleChange}
-                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                min="0"
-                step="0.01"
-                required
-              />
-            </div>
 
-            {/* Włącz promocję */}
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="enablePromo"
-                checked={
-                  productData.promoPrice !== null &&
-                  productData.promoPrice !== undefined
-                }
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setProductData((prev) => ({ ...prev, promoPrice: "" }));
-                  } else {
-                    setProductData((prev) => ({ ...prev, promoPrice: null }));
-                  }
-                }}
-                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-              />
-              <label
-                htmlFor="enablePromo"
-                className="text-sm font-medium text-gray-700 cursor-pointer"
-              >
-                Włącz cenę promocyjną
-              </label>
-            </div>
+          {/* Cena + promocja */}
+          <div>
+            <label className={labelClass}>Cena regularna (PLN)</label>
+            <input
+              type="number"
+              name="price"
+              value={productData.price || ""}
+              onChange={handleChange}
+              className={inputClass}
+              min="0"
+              step="0.01"
+              required
+            />
+          </div>
 
-            {/* Pole cena promocyjna – tylko jeśli włączona */}
-            {productData.promoPrice !== null && (
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="enablePromo"
+              checked={
+                productData.promoPrice !== null &&
+                productData.promoPrice !== undefined
+              }
+              onChange={(e) =>
+                setProductData((prev) => ({
+                  ...prev,
+                  promoPrice: e.target.checked ? "" : null,
+                }))
+              }
+              className="w-4 h-4 text-blue-600 rounded"
+            />
+            <label
+              htmlFor="enablePromo"
+              className="text-sm font-medium text-gray-700 cursor-pointer"
+            >
+              Włącz cenę promocyjną
+            </label>
+          </div>
+
+          {productData.promoPrice !== null && (
+            <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Cena promocyjna (PLN) <span className="text-red-600">*</span>
-                </label>
+                <label className={labelClass}>Cena promocyjna (PLN)</label>
                 <input
                   type="number"
                   name="promoPrice"
                   value={productData.promoPrice || ""}
                   onChange={handleChange}
-                  className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 transition duration-200 ${
-                    productData.promoPrice >= productData.price
-                      ? "border-red-500 focus:ring-red-500"
-                      : "border-gray-300 focus:ring-blue-500"
-                  }`}
+                  className={`${inputClass} ${productData.promoPrice >= productData.price ? "border-red-500" : ""}`}
                   min="0"
                   step="0.01"
-                  placeholder="musi być niższa niż cena regularna"
                   required
                 />
-                {productData.promoPrice >= productData.price &&
-                  productData.promoPrice > 0 && (
-                    <p className="text-red-600 text-xs mt-1">
-                      Cena promocyjna musi być niższa niż regularna!
-                    </p>
-                  )}
               </div>
-            )}
-
-            {productData.promoPrice !== null && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Promocja od
-                  </label>
+                  <label className={labelClass}>Promocja od</label>
                   <input
                     type="datetime-local"
                     name="promoStartDate"
@@ -279,13 +259,11 @@ export default function ProductFormModal() {
                         : ""
                     }
                     onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-md"
+                    className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Promocja do
-                  </label>
+                  <label className={labelClass}>Promocja do</label>
                   <input
                     type="datetime-local"
                     name="promoEndDate"
@@ -295,18 +273,101 @@ export default function ProductFormModal() {
                         : ""
                     }
                     onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-md"
+                    className={inputClass}
                   />
                 </div>
               </div>
+            </>
+          )}
+
+          {/* ── FEATURED + KOLOR ── */}
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-4">
+            <h4 className="text-sm font-semibold text-amber-800 uppercase tracking-wide">
+              Wyróżnienie i warianty
+            </h4>
+
+            {/* Featured */}
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="featured"
+                name="featured"
+                checked={productData.featured || false}
+                onChange={handleChange}
+                className="w-5 h-5 text-amber-600 rounded focus:ring-amber-500"
+              />
+              <label
+                htmlFor="featured"
+                className="text-sm font-medium text-gray-700 cursor-pointer"
+              >
+                ⭐ Produkt polecany (Featured)
+                <span className="block text-xs font-normal text-gray-500">
+                  Pojawi się w sliderze „Wybrane dla Ciebie" na stronie głównej
+                </span>
+              </label>
+            </div>
+
+            {/* Kolor */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>
+                  Kolor (hex)
+                  <span className="block text-xs font-normal text-gray-500">
+                    np. #3b2314
+                  </span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    name="colorHex"
+                    value={productData.colorHex || "#ffffff"}
+                    onChange={handleChange}
+                    className="w-10 h-10 rounded border border-gray-300 cursor-pointer p-0.5"
+                  />
+                  <input
+                    type="text"
+                    name="colorHex"
+                    value={productData.colorHex || ""}
+                    onChange={handleChange}
+                    placeholder="#3b2314"
+                    className="flex-1 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>
+                  Grupa kolorystyczna
+                  <span className="block text-xs font-normal text-gray-500">
+                    np. klapki-zamszowe
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  name="colorGroup"
+                  value={productData.colorGroup || ""}
+                  onChange={handleChange}
+                  placeholder="np. klapki-zamszowe"
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            {productData.colorHex && (
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div
+                  className="w-5 h-5 rounded-full border border-gray-300"
+                  style={{ background: productData.colorHex }}
+                />
+                Podgląd koloru
+              </div>
             )}
           </div>
-          {/* === NOWE POLE: KOLEJNOŚĆ WYŚWIETLANIA === */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Kolejność wyświetlania w kategorii
-              <span className="block text-xs font-normal text-gray-500 mt-1">
-                Im mniejsza liczba → tym wyżej na liście (np. 1,2,3...).
+
+          {/* Kolejność */}
+          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+            <label className={labelClass}>
+              Kolejność w kategorii
+              <span className="block text-xs font-normal text-gray-500">
+                Im mniejsza liczba → tym wyżej (np. 1, 2, 3...)
               </span>
             </label>
             <input
@@ -314,88 +375,90 @@ export default function ProductFormModal() {
               name="sortOrder"
               value={productData.sortOrder ?? ""}
               onChange={handleChange}
-              placeholder="np. 5 (opcjonalne)"
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200"
+              placeholder="opcjonalne"
+              className={inputClass}
               min="1"
               step="1"
             />
           </div>
+
+          {/* Opisy */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Opis produktu (opcjonalny)
-            </label>
+            <label className={labelClass}>Opis produktu</label>
             <textarea
               name="description"
               value={productData?.description || ""}
               onChange={handleChange}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+              className={inputClass}
               rows="4"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Dodatkowy opis (opcjonalny)
-            </label>
+            <label className={labelClass}>Dodatkowy opis</label>
             <textarea
               name="description2"
               value={productData?.description2 || ""}
               onChange={handleChange}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+              className={inputClass}
               rows="4"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Dodatkowe informacje (opcjonalne)
-            </label>
+            <label className={labelClass}>Dodatkowe informacje</label>
             <textarea
               name="additionalInfo"
               value={productData?.additionalInfo || ""}
               onChange={handleChange}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+              className={inputClass}
               rows="4"
             />
           </div>
+
+          {/* Zdjęcia */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Zdjęcia produktu
-            </label>
+            <label className={labelClass}>Zdjęcia produktu</label>
             <input
               type="file"
               accept="image/*"
               multiple
               onChange={handleImageChange}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+              className={inputClass}
             />
             {(productData.images?.length > 0 ||
               productData.imagesToAdd?.length > 0) && (
-              <ul className="mt-2 list-disc pl-5">
+              <ul className="mt-2 space-y-1">
                 {productData.images?.map((url, index) => (
-                  <li key={`existing-${index}`} className="text-gray-600">
+                  <li
+                    key={`existing-${index}`}
+                    className="flex items-center justify-between text-sm text-gray-600"
+                  >
                     <a
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-500 hover:underline"
+                      className="text-blue-500 hover:underline truncate max-w-[80%]"
                     >
                       Zdjęcie {index + 1}
                     </a>
                     <button
                       type="button"
                       onClick={() => handleRemoveImage(index, true)}
-                      className="ml-2 text-red-500 hover:text-red-700"
+                      className="text-red-500 hover:text-red-700 ml-2"
                     >
                       Usuń
                     </button>
                   </li>
                 ))}
                 {productData.imagesToAdd?.map((file, index) => (
-                  <li key={`new-${index}`} className="text-gray-600">
-                    {file.name}
+                  <li
+                    key={`new-${index}`}
+                    className="flex items-center justify-between text-sm text-gray-600"
+                  >
+                    <span className="truncate max-w-[80%]">{file.name}</span>
                     <button
                       type="button"
                       onClick={() => handleRemoveImage(index, false)}
-                      className="ml-2 text-red-500 hover:text-red-700"
+                      className="text-red-500 hover:text-red-700 ml-2"
                     >
                       Usuń
                     </button>
@@ -404,86 +467,86 @@ export default function ProductFormModal() {
               </ul>
             )}
           </div>
+
+          {/* Rozmiary */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Rozmiary i stany magazynowe
-            </label>
-            <div className="flex flex-col sm:flex-row gap-2 mb-2">
+            <label className={labelClass}>Rozmiary i stany magazynowe</label>
+            <div className="flex gap-2 mb-2">
               <input
                 type="text"
                 value={newSize}
                 onChange={(e) => setNewSize(e.target.value)}
-                placeholder="Rozmiar (np. 38)"
-                className="flex-1 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Rozmiar"
+                className="flex-1 p-3 border border-gray-300 rounded-md"
               />
               <input
                 type="number"
                 value={newStock}
                 onChange={(e) => setNewStock(e.target.value)}
-                placeholder="Stan magazynowy"
-                className="flex-1 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Stan"
+                className="flex-1 p-3 border border-gray-300 rounded-md"
                 min="0"
               />
               <button
                 type="button"
                 onClick={handleAddSize}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 Dodaj
               </button>
             </div>
-            <div className="mt-2">
-              {productData.sizes?.length > 0 ? (
-                <ul className="list-disc pl-5 space-y-1">
-                  {productData.sizes.map((item) => (
-                    <li
-                      key={item.size}
-                      className="flex flex-wrap items-center gap-2 text-gray-600"
+            {productData.sizes?.length > 0 ? (
+              <ul className="space-y-1">
+                {productData.sizes.map((item) => (
+                  <li
+                    key={item.size}
+                    className="flex flex-wrap items-center gap-2 text-sm text-gray-600 py-1"
+                  >
+                    <span className="font-medium">
+                      Rozmiar {item.size}: {item.stock} szt.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleAdjustStock(item.size, 1)}
+                      className="px-2 py-0.5 bg-green-500 text-white rounded hover:bg-green-600"
                     >
-                      <span>
-                        Rozmiar: {item.size}, Stan: {item.stock}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleAdjustStock(item.size, 1)}
-                        className="px-2 py-1 bg-green-500 text-white rounded-md hover:bg-green-600"
-                      >
-                        +
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleAdjustStock(item.size, -1)}
-                        className="px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 disabled:bg-gray-400"
-                        disabled={item.stock <= 0}
-                      >
-                        −
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveSize(item.size)}
-                        className="ml-auto text-red-500 hover:text-red-700"
-                      >
-                        Usuń
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-gray-600">Brak dodanych rozmiarów</p>
-              )}
-            </div>
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAdjustStock(item.size, -1)}
+                      disabled={item.stock <= 0}
+                      className="px-2 py-0.5 bg-red-500 text-white rounded hover:bg-red-600 disabled:bg-gray-300"
+                    >
+                      −
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSize(item.size)}
+                      className="ml-auto text-red-500 hover:text-red-700 text-xs"
+                    >
+                      Usuń
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-500 text-sm">Brak rozmiarów</p>
+            )}
           </div>
+
+          {/* Przyciski */}
           <div className="flex gap-3 pt-4 border-t">
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200"
+              className="px-6 py-2.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition font-medium"
             >
               Zapisz zmiany
             </button>
             <button
               type="button"
               onClick={() => setEditingProduct(null)}
-              className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition duration-200"
+              className="px-6 py-2.5 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
             >
               Anuluj
             </button>

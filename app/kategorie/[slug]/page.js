@@ -1,4 +1,4 @@
-// app/kategorie/[slug]/page.tsx
+// app/kategorie/[slug]/page.jsx
 import prisma from "@/app/lib/prisma";
 import { notFound } from "next/navigation";
 import CollectionTitle from "@/app/components/CollectionTitle";
@@ -20,8 +20,6 @@ const CATEGORY_SEO = {
       "Pantofelki dla dzieci z Karpat – kolorowe, mięciutkie, ręcznie robione z wełny. Bezpieczne, ciepłe i pełne karpackich wzorów. Idealne na prezent, do przedszkola i na zimowe wieczory w domu.",
   },
 };
-
-// ─── Jedno zapytanie, współdzielone przez metadata i page ─────────────────────
 
 async function getCategoryPageData(slug) {
   const mainCategory = await prisma.category.findFirst({
@@ -45,7 +43,6 @@ async function getCategoryPageData(slug) {
       },
       orderBy: { name: "asc" },
     }),
-
     prisma.product.findMany({
       where: { categoryId: mainCategory.id, deletedAt: null },
       select: {
@@ -63,8 +60,6 @@ async function getCategoryPageData(slug) {
 
   return { mainCategory, subcategories, directProducts };
 }
-
-// ─── Metadata ─────────────────────────────────────────────────────────────────
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
@@ -84,7 +79,13 @@ export async function generateMetadata({ params }) {
   };
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+function getGridClass(count) {
+  if (count === 1) return "flex justify-center";
+  if (count === 2) return "grid grid-cols-2 max-w-xl mx-auto";
+  if (count === 3) return "grid grid-cols-3 max-w-6xl mx-auto";
+  if (count === 4) return "grid grid-cols-2 md:grid-cols-4 max-w-7xl mx-auto";
+  return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4";
+}
 
 export default async function CategoryPage({ params }) {
   const { slug } = await params;
@@ -99,18 +100,18 @@ export default async function CategoryPage({ params }) {
       "Ręcznie robione pantofle z Karpat – ciepłe, naturalne, pełne tradycji i pasji.",
   };
 
+  const items = subcategories.length > 0 ? subcategories : directProducts;
+  const gridClass = getGridClass(items.length);
+
   return (
-    <div className="max-w-5xl 2xl:max-w-7xl text-center mx-auto my-16 2xl:my-24">
+    <div className="max-w-5xl 2xl:max-w-7xl text-center mx-auto my-16 2xl:my-24 px-4">
       <h1 className="text-5xl font-light uppercase">{mainCategory.name}</h1>
 
-      <p className="my-8 px-4 lg:px-0 font-light xl:text-lg max-w-4xl mx-auto leading-relaxed">
+      <p className="my-8 font-light xl:text-lg max-w-4xl mx-auto leading-relaxed">
         {mainCategory.description || seo.description}
       </p>
 
-      <div
-        id="categories"
-        className="px-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10"
-      >
+      <div id="categories" className={`${gridClass} gap-10`}>
         {subcategories.length > 0 ? (
           subcategories.map((category) => (
             <CollectionTitle

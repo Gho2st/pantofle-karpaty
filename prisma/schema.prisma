@@ -70,7 +70,9 @@ model Product {
   promoStartDate DateTime?
   promoEndDate   DateTime?
   sortOrder      Int? // null domyslna wartosc
-
+  featured       Boolean     @default(false)
+  colorHex       String?
+  colorGroup     String?
   @@unique([slug, deletedAt]) // KLUCZ: unikalny TYLKO wśród aktywnych!
 }
 

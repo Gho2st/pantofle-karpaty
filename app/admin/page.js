@@ -7,6 +7,7 @@ import DiscountCodes from "./DiscountCodes";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Menu, X } from "lucide-react";
+import BlogAdmin from "./blogAdmin";
 
 export default function Admin({ session }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -20,6 +21,8 @@ export default function Admin({ session }) {
         return <Orders />;
       case "discounts":
         return <DiscountCodes />;
+      case "blog":
+        return <BlogAdmin />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-full text-center p-8">
@@ -81,6 +84,7 @@ export default function Admin({ session }) {
             {menuItem("orders", "Zamówienia")}
             {menuItem("categories", "Kategorie")}
             {menuItem("discounts", "Kody rabatowe")}
+            {menuItem("blog", "Blog")}
           </nav>
         </div>
       </aside>

@@ -14,15 +14,9 @@ export const metadata = {
 export default function Contact() {
   return (
     <>
-      <section>
-        <Form />
-      </section>
-      <section>
-        <Hurt />
-      </section>
-      <section>
-        <Map />
-      </section>
+      <Form />
+      <Hurt />
+      <Map />
     </>
   );
 }

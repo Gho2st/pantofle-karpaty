@@ -341,6 +341,36 @@ export default function ProductDetails({ product }) {
               )}
             </div>
 
+            {/* Warianty kolorystyczne */}
+            {product.colorVariants?.length > 0 && (
+              <div className="mb-6 pb-6 border-b border-gray-100">
+                <p className="text-xs uppercase tracking-widest text-gray-400 mb-3">
+                  Kolor —{" "}
+                  <span className="text-gray-700 normal-case font-medium">
+                    {product.name}
+                  </span>
+                </p>
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* Aktywny — bieżący produkt */}
+                  <div
+                    className="w-8 h-8 rounded-full ring-2 ring-offset-2 ring-gray-900 scale-110 cursor-default"
+                    style={{ background: product.colorHex || "#e5e7eb" }}
+                    title={product.name}
+                  />
+                  {/* Pozostałe warianty */}
+                  {product.colorVariants.map((v) => (
+                    <Link
+                      key={v.id}
+                      href={`/produkty/${v.slug}`}
+                      title={v.name}
+                      className="w-8 h-8 rounded-full ring-1 ring-gray-200 hover:scale-110 hover:ring-gray-400 transition-all duration-200"
+                      style={{ background: v.colorHex || "#e5e7eb" }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Opis krótki */}
             {product.description && (
               <div className="mb-6 pb-6 border-b border-gray-100">

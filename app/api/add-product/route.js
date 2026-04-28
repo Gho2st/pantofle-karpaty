@@ -59,7 +59,7 @@ function validateFile(file) {
 
   if (!ALLOWED_MIME_TYPES.includes(file.type)) {
     throw new Error(
-      `Nieobsługiwany typ pliku: ${file.type}. Dozwolone: JPEG, PNG, WebP`
+      `Nieobsługiwany typ pliku: ${file.type}. Dozwolone: JPEG, PNG, WebP`,
     );
   }
 }
@@ -78,7 +78,7 @@ export async function POST(request) {
   if (!session || session.user.role !== "ADMIN") {
     return NextResponse.json(
       { error: "Nieautoryzowany dostęp" },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -94,11 +94,14 @@ export async function POST(request) {
     const sizes = sizesJson ? JSON.parse(sizesJson) : null;
     const categoryId = formData.get("categoryId");
     const files = formData.getAll("files");
+    const featured = formData.get("featured") === "true";
+    const colorHex = formData.get("colorHex") || null;
+    const colorGroup = formData.get("colorGroup") || null;
 
     if (!name || !price || !categoryId) {
       return NextResponse.json(
         { error: "Nazwa, cena i ID kategorii są wymagane" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -113,7 +116,7 @@ export async function POST(request) {
     if (existingActiveProduct) {
       return NextResponse.json(
         { error: `Slug "${slug}" jest już używany przez aktywny produkt` },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -124,7 +127,7 @@ export async function POST(request) {
     if (!category) {
       return NextResponse.json(
         { error: "Kategoria nie została znaleziona" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -132,7 +135,7 @@ export async function POST(request) {
     if (isNaN(parsedPrice) || parsedPrice <= 0) {
       return NextResponse.json(
         { error: "Cena musi być dodatnią liczbą" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -142,7 +145,7 @@ export async function POST(request) {
     if (!files || files.length === 0) {
       return NextResponse.json(
         { error: "Musisz dodać przynajmniej jedno zdjęcie produktu" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -175,6 +178,9 @@ export async function POST(request) {
         sizes: sizes || null,
         images: imageUrls.length > 0 ? imageUrls : null,
         categoryId: parseInt(categoryId),
+        featured,
+        colorGroup,
+        colorHex,
       },
     });
 
@@ -186,7 +192,7 @@ export async function POST(request) {
     console.error("Błąd podczas dodawania produktu:", error);
     return NextResponse.json(
       { error: error.message || "Błąd serwera podczas dodawania produktu" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

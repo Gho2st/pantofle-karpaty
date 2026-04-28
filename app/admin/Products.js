@@ -25,6 +25,9 @@ export default function Products() {
     description2: "",
     additionalInfo: "",
     sizes: [],
+    featured: false,
+    colorHex: "",
+    colorGroup: "",
   });
   const [newProductImages, setNewProductImages] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
@@ -41,10 +44,15 @@ export default function Products() {
   }, [newProduct.name]);
 
   const handleNewProductChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setNewProduct((prev) => ({
       ...prev,
-      [name]: name === "price" ? parseFloat(value) || "" : value,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : name === "price"
+            ? parseFloat(value) || ""
+            : value,
     }));
   };
 
@@ -94,7 +102,16 @@ export default function Products() {
       formData.append("additionalInfo", newProduct.additionalInfo || "");
       formData.append("sizes", JSON.stringify(newProduct.sizes));
       formData.append("categoryId", selectedCategory.id);
+      formData.append("featured", newProduct.featured ? "true" : "false");
+      formData.append("colorHex", newProduct.colorHex || "");
+      formData.append("colorGroup", newProduct.colorGroup || "");
       newProductImages.forEach((file) => formData.append("files", file));
+
+      if (newProductImages.length === 0) {
+        toast.error("Dodaj przynajmniej jedno zdjęcie produktu");
+        setIsAdding(false);
+        return;
+      }
 
       await handleAddProduct(selectedCategory.id, formData);
 
@@ -107,6 +124,9 @@ export default function Products() {
         description2: "",
         additionalInfo: "",
         sizes: [],
+        featured: false,
+        colorHex: "",
+        colorGroup: "",
       });
       setNewProductImages([]);
       setShowAddForm(false);
@@ -141,7 +161,7 @@ export default function Products() {
   // === FILTROWANIE PRODUKTÓW ===
   const filteredProducts =
     selectedCategory?.products?.filter((p) =>
-      showDeleted ? p.deletedAt : !p.deletedAt
+      showDeleted ? p.deletedAt : !p.deletedAt,
     ) || [];
 
   // === KOMPONENT CENY Z PROMOCJĄ ===
@@ -403,6 +423,86 @@ export default function Products() {
               )}
             </div>
           </div>
+          {/* Wyróżnienie i kolory */}
+          <div className="sm:col-span-2 p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-4">
+            <h4 className="text-sm font-semibold text-amber-800 uppercase tracking-wide">
+              Wyróżnienie i warianty
+            </h4>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="new-featured"
+                name="featured"
+                checked={newProduct.featured}
+                onChange={handleNewProductChange}
+                className="w-5 h-5 text-amber-600 rounded"
+              />
+              <label
+                htmlFor="new-featured"
+                className="text-sm font-medium text-gray-700 cursor-pointer"
+              >
+                ⭐ Produkt polecany (Featured)
+                <span className="block text-xs font-normal text-gray-500">
+                  Pojawi się w sliderze na stronie głównej
+                </span>
+              </label>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Kolor (hex)
+                  <span className="block text-xs font-normal text-gray-500">
+                    np. #3b2314
+                  </span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    name="colorHex"
+                    value={newProduct.colorHex || "#ffffff"}
+                    onChange={handleNewProductChange}
+                    className="w-10 h-10 rounded border border-gray-300 cursor-pointer p-0.5"
+                  />
+                  <input
+                    type="text"
+                    name="colorHex"
+                    value={newProduct.colorHex}
+                    onChange={handleNewProductChange}
+                    placeholder="#3b2314"
+                    className="flex-1 p-3 border border-gray-300 rounded-md font-mono text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Grupa kolorystyczna
+                  <span className="block text-xs font-normal text-gray-500">
+                    np. klapki-zamszowe
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  name="colorGroup"
+                  value={newProduct.colorGroup}
+                  onChange={handleNewProductChange}
+                  placeholder="np. klapki-zamszowe"
+                  className="w-full p-3 border border-gray-300 rounded-md"
+                />
+              </div>
+            </div>
+
+            {newProduct.colorHex && (
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div
+                  className="w-5 h-5 rounded-full border border-gray-300"
+                  style={{ background: newProduct.colorHex }}
+                />
+                Podgląd koloru
+              </div>
+            )}
+          </div>
           <div className="flex gap-3 mt-6">
             <button
               type="submit"
@@ -444,6 +544,9 @@ export default function Products() {
                   description2: "",
                   additionalInfo: "",
                   sizes: [],
+                  featured: false,
+                  colorHex: "",
+                  colorGroup: "",
                 });
                 setNewProductImages([]);
                 setShowAddForm(false);

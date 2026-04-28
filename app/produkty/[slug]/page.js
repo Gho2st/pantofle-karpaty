@@ -38,6 +38,8 @@ async function getProductData(slug) {
         additionalInfo: true,
         images: true,
         sizes: true,
+        colorHex: true,
+        colorGroup: true,
         category: {
           select: {
             id: true,
@@ -53,6 +55,24 @@ async function getProductData(slug) {
 
   if (!product) return null;
 
+  // Pobierz warianty kolorystyczne
+  const colorVariants = product.colorGroup
+    ? await prisma.product.findMany({
+        where: {
+          colorGroup: product.colorGroup,
+          deletedAt: null,
+          id: { not: product.id },
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          colorHex: true,
+          images: true,
+        },
+      })
+    : [];
+
   const partner = partnerSlug
     ? await prisma.product.findFirst({
         where: { slug: partnerSlug, deletedAt: null },
@@ -60,7 +80,7 @@ async function getProductData(slug) {
       })
     : null;
 
-  return { product, partner, partnerSlug };
+  return { product, partner, partnerSlug, colorVariants };
 }
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
@@ -94,7 +114,7 @@ export default async function ProductPage({ params }) {
 
   if (!data) notFound();
 
-  const { product, partner, partnerSlug } = data;
+  const { product, partner, partnerSlug, colorVariants } = data;
 
   const images = fixJsonField(product.images);
   const sizes = fixJsonField(product.sizes);
@@ -106,6 +126,7 @@ export default async function ProductPage({ params }) {
         ...product,
         images,
         sizes,
+        colorVariants,
         showPartnerTile: !!partner,
         partnerUrl: partnerSlug ? `/produkty/${partnerSlug}` : null,
         partnerImage,

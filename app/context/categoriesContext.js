@@ -59,7 +59,7 @@ export function useCategories() {
   const context = useContext(CategoriesContext);
   if (context === undefined) {
     throw new Error(
-      "useCategories musi być używane wewnątrz CategoriesProvider"
+      "useCategories musi być używane wewnątrz CategoriesProvider",
     );
   }
   return context;

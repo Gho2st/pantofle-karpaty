@@ -38,7 +38,7 @@ async function uploadFileToS3(fileBuffer, fileName, contentType) {
 async function deleteFileFromS3(imageUrl) {
   console.log(`Próba usunięcia obrazu z S3: ${imageUrl}`);
   const key = imageUrl.split(
-    `https://${BUCKET_NAME}.s3.eu-central-1.amazonaws.com/`
+    `https://${BUCKET_NAME}.s3.eu-central-1.amazonaws.com/`,
   )[1];
   if (!key) {
     throw new Error(`Nieprawidłowy URL S3: ${imageUrl}`);
@@ -85,7 +85,7 @@ export async function PUT(request, { params }) {
   if (!session || session.user.role !== "ADMIN") {
     return NextResponse.json(
       { error: "Nieautoryzowany dostęp" },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
@@ -95,7 +95,7 @@ export async function PUT(request, { params }) {
     if (isNaN(productId)) {
       return NextResponse.json(
         { error: "ID produktu musi być liczbą" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -114,6 +114,9 @@ export async function PUT(request, { params }) {
     const promoStartDate = formData.get("promoStartDate") || null;
     const promoEndDate = formData.get("promoEndDate") || null;
     const sortOrder = formData.get("sortOrder");
+    const featured = formData.get("featured") === "true";
+    const colorHex = formData.get("colorHex") || null;
+    const colorGroup = formData.get("colorGroup") || null;
 
     // === WALIDACJA SLUG (KLUCZOWA ZMIANA!) ===
     const existingActiveProduct = await prisma.product.findFirst({
@@ -127,7 +130,7 @@ export async function PUT(request, { params }) {
     if (existingActiveProduct) {
       return NextResponse.json(
         { error: `Slug "${slug}" jest już używany przez inny aktywny produkt` },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -135,7 +138,7 @@ export async function PUT(request, { params }) {
     if (!name || !price) {
       return NextResponse.json(
         { error: "Nazwa i cena produktu są wymagane" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -143,7 +146,7 @@ export async function PUT(request, { params }) {
     if (isNaN(parsedPrice) || parsedPrice <= 0) {
       return NextResponse.json(
         { error: "Cena musi być dodatnią liczbą" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -154,13 +157,13 @@ export async function PUT(request, { params }) {
       if (isNaN(parsedPromoPrice) || parsedPromoPrice <= 0) {
         return NextResponse.json(
           { error: "Cena promocyjna musi być dodatnią liczbą" },
-          { status: 400 }
+          { status: 400 },
         );
       }
       if (parsedPromoPrice >= parsedPrice) {
         return NextResponse.json(
           { error: "Cena promocyjna musi być niższa niż regularna" },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -172,7 +175,7 @@ export async function PUT(request, { params }) {
       if (!category) {
         return NextResponse.json(
           { error: "Kategoria nie została znaleziona" },
-          { status: 404 }
+          { status: 404 },
         );
       }
     }
@@ -182,7 +185,7 @@ export async function PUT(request, { params }) {
     } catch (e) {
       return NextResponse.json(
         { error: "Nieprawidłowy format rozmiarów" },
-        { status: 400 }
+        { status: 400 },
       );
     }
     validateSizes(sizes);
@@ -192,7 +195,7 @@ export async function PUT(request, { params }) {
     } catch (e) {
       return NextResponse.json(
         { error: "Nieprawidłowy format imagesToRemove" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -203,7 +206,7 @@ export async function PUT(request, { params }) {
     if (!product) {
       return NextResponse.json(
         { error: "Produkt nie został znaleziony" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -218,7 +221,7 @@ export async function PUT(request, { params }) {
         }
       }
       updatedImages = updatedImages.filter(
-        (url) => !imagesToRemove.includes(url)
+        (url) => !imagesToRemove.includes(url),
       );
     }
 
@@ -257,6 +260,9 @@ export async function PUT(request, { params }) {
         images: updatedImages,
         categoryId: categoryId ? parseInt(categoryId) : product.categoryId,
         sortOrder: sortOrder ? parseInt(sortOrder) : null,
+        featured,
+        colorHex,
+        colorGroup,
       },
     });
 
@@ -268,7 +274,7 @@ export async function PUT(request, { params }) {
     console.error("Błąd podczas aktualizacji produktu:", error.stack);
     return NextResponse.json(
       { error: error.message || "Błąd serwera podczas aktualizacji produktu" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

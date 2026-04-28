@@ -1,4 +1,4 @@
-import Collection from "../components/homepage/Collection";
+import Collection from "../components/Collection";
 
 export const metadata = {
   title: "Kategorie odzieży: Męska, Damska, Dziecięca | Pantofle Karpaty",

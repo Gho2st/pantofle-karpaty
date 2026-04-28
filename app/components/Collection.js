@@ -1,6 +1,6 @@
 "use client";
 
-import CollectionTitle from "../CollectionTitle";
+import CollectionTitle from "./CollectionTitle";
 import { useCategories } from "@/app/context/categoriesContext";
 
 export default function Collection() {
