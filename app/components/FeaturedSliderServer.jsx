@@ -1,8 +1,6 @@
-// app/components/FeaturedSliderServer.jsx
 import prisma from "@/app/lib/prisma";
 import FeaturedSlider from "./FeaturedSlider";
 
-// pobieranie produktow featured
 async function getFeaturedProducts(total = 20) {
   const featured = await prisma.product.findMany({
     where: { featured: true, deletedAt: null },
