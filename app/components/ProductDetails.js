@@ -371,7 +371,7 @@ export default function ProductDetails({ product }) {
               </div>
             )}
 
-            {/* Opis krótki */}
+            {/* Opis krótki s */}
             {product.description && (
               <div className="mb-6 pb-6 border-b border-gray-100">
                 <p className="text-gray-600 text-sm leading-relaxed">
