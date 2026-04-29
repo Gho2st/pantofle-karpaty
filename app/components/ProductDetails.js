@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "react-toastify";
 import { useCart } from "@/app/context/cartContext";
 import SizeChart from "@/app/components/Sizes";
@@ -12,14 +12,9 @@ import {
   ShieldCheck,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-
-// Import Swiper
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Pagination } from "swiper/modules";
-import "swiper/css";
-import "swiper/css/navigation";
-import "swiper/css/pagination";
 
 // ====================== BEZPIECZNY KOMPONENT IMAGE ======================
 function SafeImage({ src, alt, ...props }) {
@@ -27,8 +22,116 @@ function SafeImage({ src, alt, ...props }) {
     src && typeof src === "string" && src.trim() !== ""
       ? src
       : "/placeholder.png";
-
   return <Image src={finalSrc} alt={alt || "Zdjęcie produktu"} {...props} />;
+}
+
+// ====================== MOBILNY SLIDER ======================
+function MobileSlider({ images, productName, onImageClick }) {
+  const [current, setCurrent] = useState(0);
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
+  const isDragging = useRef(false);
+
+  const prev = useCallback(() => {
+    setCurrent((c) => (c - 1 + images.length) % images.length);
+  }, [images.length]);
+
+  const next = useCallback(() => {
+    setCurrent((c) => (c + 1) % images.length);
+  }, [images.length]);
+
+  const onTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    isDragging.current = false;
+  };
+
+  const onTouchMove = (e) => {
+    if (touchStartX.current === null) return;
+    const dx = Math.abs(e.touches[0].clientX - touchStartX.current);
+    const dy = Math.abs(e.touches[0].clientY - touchStartY.current);
+    if (dx > dy && dx > 8) isDragging.current = true;
+  };
+
+  const onTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (isDragging.current && Math.abs(dx) > 40) {
+      dx < 0 ? next() : prev();
+    }
+    touchStartX.current = null;
+    touchStartY.current = null;
+    isDragging.current = false;
+  };
+
+  if (!images.length) {
+    return (
+      <div className="relative aspect-[4/5] bg-gray-100 rounded-xl flex items-center justify-center">
+        <span className="text-gray-400 text-sm">Brak zdjęć</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative aspect-[4/5] bg-gray-100 rounded-xl overflow-hidden select-none">
+      {/* Zdjęcia */}
+      {images.map((src, i) => (
+        <div
+          key={i}
+          className="absolute inset-0 transition-opacity duration-300"
+          style={{
+            opacity: current === i ? 1 : 0,
+            pointerEvents: current === i ? "auto" : "none",
+          }}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onClick={() => !isDragging.current && onImageClick(src)}
+        >
+          <SafeImage
+            src={src}
+            fill
+            sizes="100vw"
+            style={{ objectFit: "cover" }}
+            alt={`${productName} - zdjęcie ${i + 1}`}
+            priority={i === 0}
+            className="cursor-zoom-in"
+          />
+        </div>
+      ))}
+
+      {/* Strzałki — tylko gdy >1 zdjęcie */}
+      {images.length > 1 && (
+        <>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              prev();
+            }}
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm text-gray-800 shadow-sm hover:bg-white transition-colors"
+            aria-label="Poprzednie zdjęcie"
+          >
+            <ChevronLeft size={18} strokeWidth={1.8} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              next();
+            }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm text-gray-800 shadow-sm hover:bg-white transition-colors"
+            aria-label="Następne zdjęcie"
+          >
+            <ChevronRight size={18} strokeWidth={1.8} />
+          </button>
+
+          {/* Licznik */}
+          <div className="absolute bottom-3 right-3 z-10 text-xs font-medium text-white/80 bg-black/30 backdrop-blur-sm px-2 py-0.5 rounded-full tabular-nums">
+            {current + 1}/{images.length}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 // ====================== GŁÓWNY KOMPONENT ======================
@@ -89,7 +192,6 @@ export default function ProductDetails({ product }) {
   const handleAddToCart = async (e) => {
     e.preventDefault();
     if (!selectedSize) return toast.error("Wybierz rozmiar");
-
     try {
       await addToCart(product.id, selectedSize, quantity);
       setIsAdded(true);
@@ -143,73 +245,16 @@ export default function ProductDetails({ product }) {
         <div className="flex flex-col md:flex-row gap-8 md:gap-16">
           {/* ====================== GALERIA ZDJĘĆ ====================== */}
           <div className="w-full md:w-1/2">
-            {/* MOBILE: Swiper */}
-            <div className="md:hidden relative group product-swiper-container">
-              <Swiper
-                modules={[Navigation, Pagination]}
-                spaceBetween={10}
-                slidesPerView={1}
-                pagination={{ clickable: true }}
-                navigation={true}
-                loop={images.length > 1}
-                className="rounded-md overflow-hidden"
-              >
-                {images.length > 0 ? (
-                  images.map((image, i) => (
-                    <SwiperSlide key={i}>
-                      <div
-                        className="relative aspect-4/5 bg-gray-100 cursor-zoom-in"
-                        onClick={() => {
-                          setMainImage(image);
-                          setIsZoomed(true);
-                        }}
-                      >
-                        <SafeImage
-                          src={image}
-                          fill
-                          sizes="100vw"
-                          style={{ objectFit: "cover" }}
-                          alt={`${product.name} - zdjęcie ${i + 1}`}
-                          priority={i === 0}
-                        />
-                      </div>
-                    </SwiperSlide>
-                  ))
-                ) : (
-                  <SwiperSlide>
-                    <div className="relative aspect-4/5 bg-gray-100 rounded-md flex items-center justify-center">
-                      <span className="text-gray-400">Brak zdjęć</span>
-                    </div>
-                  </SwiperSlide>
-                )}
-              </Swiper>
-
-              <style jsx global>{`
-                .product-swiper-container .swiper-button-next,
-                .product-swiper-container .swiper-button-prev {
-                  background: rgba(255, 255, 255, 0.8);
-                  backdrop-filter: blur(4px);
-                  width: 30px;
-                  height: 30px;
-                  border-radius: 50%;
-                  color: #000;
-                  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-                }
-                .product-swiper-container .swiper-button-disabled {
-                  display: none !important;
-                }
-                .product-swiper-container .swiper-pagination-bullet {
-                  background: #000;
-                  opacity: 0.2;
-                }
-                .product-swiper-container .swiper-pagination-bullet-active {
-                  background: #dc2626;
-                  opacity: 1;
-                  width: 12px;
-                  border-radius: 4px;
-                  transition: width 0.3s ease;
-                }
-              `}</style>
+            {/* MOBILE: własny slider */}
+            <div className="md:hidden">
+              <MobileSlider
+                images={images}
+                productName={product.name}
+                onImageClick={(src) => {
+                  setMainImage(src);
+                  setIsZoomed(true);
+                }}
+              />
             </div>
 
             {/* DESKTOP: Miniaturki + główne zdjęcie */}
@@ -333,7 +378,11 @@ export default function ProductDetails({ product }) {
                 <p className="text-xs text-gray-400 mt-2">
                   Najniższa cena z 30 dni:{" "}
                   <span
-                    className={`font-semibold ${product.lowestPrice < currentPrice ? "text-red-600" : "text-gray-600"}`}
+                    className={`font-semibold ${
+                      product.lowestPrice < currentPrice
+                        ? "text-red-600"
+                        : "text-gray-600"
+                    }`}
                   >
                     {product.lowestPrice.toFixed(2)} PLN
                   </span>
@@ -351,13 +400,11 @@ export default function ProductDetails({ product }) {
                   </span>
                 </p>
                 <div className="flex items-center gap-3 flex-wrap">
-                  {/* Aktywny — bieżący produkt */}
                   <div
                     className="w-8 h-8 rounded-full ring-2 ring-offset-2 ring-gray-900 scale-110 cursor-default"
                     style={{ background: product.colorHex || "#e5e7eb" }}
                     title={product.name}
                   />
-                  {/* Pozostałe warianty */}
                   {product.colorVariants.map((v) => (
                     <Link
                       key={v.id}
@@ -371,7 +418,7 @@ export default function ProductDetails({ product }) {
               </div>
             )}
 
-            {/* Opis krótki s */}
+            {/* Opis krótki */}
             {product.description && (
               <div className="mb-6 pb-6 border-b border-gray-100">
                 <p className="text-gray-600 text-sm leading-relaxed">
@@ -382,7 +429,7 @@ export default function ProductDetails({ product }) {
 
             {/* Formularz */}
             <form onSubmit={handleAddToCart} className="flex flex-col gap-6">
-              {/* Rozmiar — przyciski */}
+              {/* Rozmiar */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">
@@ -410,14 +457,13 @@ export default function ProductDetails({ product }) {
                           onClick={() =>
                             !isOut && setSelectedSize(s.size.toString())
                           }
-                          className={`w-12 h-12 rounded-md text-sm font-medium transition-all duration-150
-                            ${
-                              isSelected
-                                ? "border-2 border-red-600 bg-red-50 text-red-700"
-                                : isOut
-                                  ? "border border-gray-200 text-gray-300 line-through cursor-not-allowed"
-                                  : "border border-gray-300 text-gray-700 hover:border-gray-500 hover:bg-gray-50"
-                            }`}
+                          className={`w-12 h-12 rounded-md text-sm font-medium transition-all duration-150 ${
+                            isSelected
+                              ? "border-2 border-red-600 bg-red-50 text-red-700"
+                              : isOut
+                                ? "border border-gray-200 text-gray-300 line-through cursor-not-allowed"
+                                : "border border-gray-300 text-gray-700 hover:border-gray-500 hover:bg-gray-50"
+                          }`}
                         >
                           {s.size}
                         </button>
@@ -426,7 +472,7 @@ export default function ProductDetails({ product }) {
                 </div>
               </div>
 
-              {/* Ilość — stepper */}
+              {/* Ilość */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">
                   Ilość
@@ -459,12 +505,11 @@ export default function ProductDetails({ product }) {
                 <button
                   type="submit"
                   disabled={isAdded || !selectedSize || !isSizeAvailable}
-                  className={`flex-1 min-w-[180px] py-4 px-6 rounded-md text-sm font-semibold uppercase tracking-wider text-white transition-all duration-200
-                    ${
-                      isAdded
-                        ? "bg-green-600"
-                        : "bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                    }`}
+                  className={`flex-1 min-w-[180px] py-4 px-6 rounded-md text-sm font-semibold uppercase tracking-wider text-white transition-all duration-200 ${
+                    isAdded
+                      ? "bg-green-600"
+                      : "bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  }`}
                 >
                   {isAdded ? "✓ Dodano do koszyka" : "Dodaj do koszyka"}
                 </button>
@@ -479,7 +524,7 @@ export default function ProductDetails({ product }) {
                 )}
               </div>
 
-              {/* Informacje o dostawie */}
+              {/* Dostawa */}
               <div className="grid grid-cols-1 gap-2 pt-2">
                 <div className="flex items-center gap-3 text-xs text-gray-500">
                   <Truck size={14} className="text-gray-400 shrink-0" />
@@ -496,7 +541,7 @@ export default function ProductDetails({ product }) {
               </div>
             </form>
 
-            {/* Dodatkowy opis — rozwijany */}
+            {/* Szczegóły — rozwijane */}
             {(product.description2 || product.additionalInfo) && (
               <div className="mt-6 border-t border-gray-100">
                 <button
