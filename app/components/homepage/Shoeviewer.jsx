@@ -3,10 +3,6 @@ import { useRef, useState, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
-// ====================== PRZYKŁADOWE DANE ======================
-// Podmień na własne dane — każdy wariant to osobny produkt w bazie
-// images: [bok, profil, góra] — ścieżki do zdjęć
-
 const DEFAULT_VARIANTS = [
   {
     label: "Ciemny brąz",
@@ -18,7 +14,6 @@ const DEFAULT_VARIANTS = [
       "https://pantofle-karpaty.s3.eu-central-1.amazonaws.com/products/fd539bc8-d352-4828-90a0-301438e27868-Photoroom_20260420_230638.JPG",
     ],
   },
-
   {
     label: "Szare",
     color: "#c8a97a",
@@ -57,79 +52,11 @@ export default function ShoeViewer({ variants = DEFAULT_VARIANTS }) {
   };
 
   return (
-    <section className="w-full bg-[#f7f5f2] py-16 lg:py-24 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-          {/* Lewa — tekst */}
-          <div className="order-2 lg:order-1">
-            <span className="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-600 px-4 py-1.5 rounded-full text-xs font-medium tracking-wide uppercase mb-6">
-              Nowość
-            </span>
-            <h2 className="text-4xl md:text-5xl xl:text-6xl font-serif font-medium leading-[1.05] text-gray-900 mb-5">
-              Klapki z naturalnego
-              <br />
-              <span className="text-red-700">zamszu.</span>
-            </h2>
-            <p className="text-base text-gray-500 leading-relaxed mb-8 max-w-sm">
-              Ręcznie szyte w Męcinie. Podeszwa korkowa, wkładka ze skóry
-              naturalnej, klamra ze stali nierdzewnej.
-            </p>
-
-            {/* Właściwości */}
-            <div className="flex flex-wrap gap-6 mb-8 text-sm">
-              {[
-                { label: "Materiał", value: "Welur bydlęcy" },
-                { label: "Podeszwa", value: "Korek + guma" },
-                { label: "Wkładka", value: "Skóra naturalna" },
-              ].map((item) => (
-                <div key={item.label}>
-                  <p className="text-xs uppercase tracking-widest text-gray-400 mb-0.5">
-                    {item.label}
-                  </p>
-                  <p className="font-medium text-gray-900">{item.value}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Wybór koloru */}
-            <div className="mb-8">
-              <p className="text-xs uppercase tracking-widest text-gray-400 mb-3">
-                Kolor —{" "}
-                <span className="text-gray-700 normal-case font-medium">
-                  {variant.label}
-                </span>
-              </p>
-              <div className="flex items-center gap-3">
-                {variants.map((v, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleVariantChange(i)}
-                    title={v.label}
-                    className={`w-8 h-8 rounded-full transition-all duration-200 ${
-                      activeVariant === i
-                        ? "ring-2 ring-offset-2 ring-gray-900 scale-110"
-                        : "ring-1 ring-gray-200 hover:scale-105"
-                    }`}
-                    style={{ background: v.color }}
-                    aria-label={v.label}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <Link
-              href={variant.href}
-              className="group inline-flex items-center gap-3 bg-gray-900 hover:bg-red-700 transition-all duration-300 text-white font-medium px-8 py-4 rounded-xl"
-            >
-              Zobacz produkt
-              <span className="group-hover:translate-x-1 transition-transform">
-                →
-              </span>
-            </Link>
-          </div>
-
-          {/* Prawa — viewer */}
-          <div className="order-1 lg:order-2 flex flex-col items-center gap-6">
+    <section className="w-full bg-[#f7f5f2] py-10 lg:py-24 overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-20 items-center">
+          {/* === PRAWA — viewer (na mobile PIERWSZA) === */}
+          <div className="order-1 lg:order-2 flex flex-col items-center gap-4">
             {/* Karta 3D */}
             <div
               ref={cardRef}
@@ -143,7 +70,7 @@ export default function ShoeViewer({ variants = DEFAULT_VARIANTS }) {
               style={{ perspective: "1000px" }}
             >
               <div
-                className="relative w-full aspect-square bg-white rounded-3xl overflow-hidden shadow-xl"
+                className="relative w-full aspect-square bg-white rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl"
                 style={{
                   transform: `rotateX(${tilt.y}deg) rotateY(${tilt.x}deg)`,
                   transition: isHovering
@@ -153,7 +80,6 @@ export default function ShoeViewer({ variants = DEFAULT_VARIANTS }) {
                   willChange: "transform",
                 }}
               >
-                {/* Zdjęcia aktywnego wariantu */}
                 {variant.images.map((src, i) => (
                   <div
                     key={`${activeVariant}-${i}`}
@@ -165,20 +91,18 @@ export default function ShoeViewer({ variants = DEFAULT_VARIANTS }) {
                       alt={`${variant.label} — ${VIEW_LABELS[i]}`}
                       fill
                       sizes="(max-width: 768px) 90vw, 480px"
-                      className="object-contain p-8"
+                      className="object-contain p-6 sm:p-8"
                       priority={i === 0 && activeVariant === 0}
                     />
                   </div>
                 ))}
 
-                {/* Hint */}
-                <div className="absolute bottom-4 right-4 text-xs text-gray-300 font-mono">
+                <div className="absolute bottom-3 right-3 text-xs text-gray-300 font-mono">
                   ⟲ przesuń
                 </div>
 
-                {/* Shine */}
                 <div
-                  className="absolute inset-0 rounded-3xl pointer-events-none transition-opacity duration-300"
+                  className="absolute inset-0 rounded-2xl sm:rounded-3xl pointer-events-none transition-opacity duration-300"
                   style={{
                     opacity: isHovering ? 0.06 : 0,
                     background: `radial-gradient(circle at ${50 + tilt.x * 3}% ${50 - tilt.y * 3}%, white, transparent 70%)`,
@@ -187,22 +111,96 @@ export default function ShoeViewer({ variants = DEFAULT_VARIANTS }) {
               </div>
             </div>
 
-            {/* Przełącznik widoków */}
-            <div className="flex items-center gap-3">
-              {VIEW_LABELS.map((label, i) => (
-                <button
-                  key={i}
-                  onClick={() => setActiveView(i)}
-                  className={`px-4 py-2 rounded-full text-xs font-medium transition-all duration-200 ${
-                    activeView === i
-                      ? "bg-gray-900 text-white"
-                      : "bg-white border border-gray-200 text-gray-500 hover:border-gray-400"
-                  }`}
+            {/* Wiersz: kolor + widok — razem pod zdjęciem na mobile */}
+            <div className="flex items-center justify-between w-full max-w-md px-1">
+              {/* Wybór koloru */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400 uppercase tracking-widest hidden sm:inline">
+                  Kolor
+                </span>
+                {variants.map((v, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleVariantChange(i)}
+                    title={v.label}
+                    className={`w-5 h-5 rounded-full transition-all duration-200 ${
+                      activeVariant === i
+                        ? "ring-2 ring-offset-2 ring-gray-900 scale-110"
+                        : "ring-1 ring-gray-200 hover:scale-105"
+                    }`}
+                    style={{ background: v.color }}
+                    aria-label={v.label}
+                  />
+                ))}
+                <span className="text-xs font-medium text-gray-700 ml-1">
+                  {variant.label}
+                </span>
+              </div>
+
+              {/* Przełącznik widoków */}
+              <div className="flex items-center gap-2">
+                {VIEW_LABELS.map((label, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveView(i)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                      activeView === i
+                        ? "bg-gray-900 text-white"
+                        : "bg-white border border-gray-200 text-gray-500 hover:border-gray-400"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* === LEWA — tekst (na mobile DRUGA) === */}
+          <div className="order-2 lg:order-1">
+            <span className="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-600 px-4 py-1.5 rounded-full text-xs font-medium tracking-wide uppercase mb-4 sm:mb-6">
+              Nowość
+            </span>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl xl:text-6xl font-serif font-medium leading-[1.05] text-gray-900 mb-4 sm:mb-5">
+              Klapki z naturalnego
+              <br />
+              <span className="text-red-700">zamszu.</span>
+            </h2>
+            <p className="text-sm sm:text-base text-gray-500 leading-relaxed mb-6 sm:mb-8 max-w-sm">
+              Ręcznie szyte w Męcinie. Podeszwa korkowa, wkładka ze skóry
+              naturalnej, klamra ze stali nierdzewnej.
+            </p>
+
+            {/* Właściwości */}
+            <div className="grid grid-cols-3 gap-3 sm:flex sm:flex-wrap sm:gap-6 mb-6 sm:mb-8 text-sm">
+              {[
+                { label: "Materiał", value: "Welur bydlęcy" },
+                { label: "Podeszwa", value: "Korek + guma" },
+                { label: "Wkładka", value: "Skóra naturalna" },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="bg-white sm:bg-transparent rounded-xl sm:rounded-none p-3 sm:p-0"
                 >
-                  {label}
-                </button>
+                  <p className="text-xs uppercase tracking-widest text-gray-400 mb-0.5">
+                    {item.label}
+                  </p>
+                  <p className="font-medium text-gray-900 text-xs sm:text-sm">
+                    {item.value}
+                  </p>
+                </div>
               ))}
             </div>
+
+            <Link
+              href={variant.href}
+              className="group inline-flex items-center gap-3 bg-gray-900 hover:bg-red-700 transition-all duration-300 text-white font-medium px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl w-full sm:w-auto justify-center sm:justify-start"
+            >
+              Zobacz produkt
+              <span className="group-hover:translate-x-1 transition-transform">
+                →
+              </span>
+            </Link>
           </div>
         </div>
       </div>
