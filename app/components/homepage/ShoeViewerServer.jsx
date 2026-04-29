@@ -3,7 +3,7 @@
 // lub:    <ShoeViewerServer featured />
 
 import prisma from "@/app/lib/prisma";
-import ShoeViewer from "./ShoeViewer";
+import ShoeViewer from "./Shoeviewer";
 
 const fixJsonField = (field) => {
   if (!field) return [];
