@@ -49,6 +49,7 @@ export async function GET(request) {
       orderBy: { id: "asc" },
     });
 
+    console.log(categories);
     return NextResponse.json({
       message: "Kategorie pobrane pomyślnie",
       categories,

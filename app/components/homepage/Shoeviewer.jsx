@@ -3,32 +3,9 @@ import { useRef, useState, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
-const DEFAULT_VARIANTS = [
-  {
-    label: "Ciemny brąz",
-    color: "#3b2314",
-    href: "/produkty/klapki-mule-ciemny-braz-damskie",
-    images: [
-      "https://pantofle-karpaty.s3.eu-central-1.amazonaws.com/products/dc1eb092-1bb9-4e4a-88b7-0ae720ec19f1-IMG_4913.PNG",
-      "https://pantofle-karpaty.s3.eu-central-1.amazonaws.com/products/804dd41f-a152-47bb-a935-b9df1a2735ba-Photoroom_20260420_230419.JPG",
-      "https://pantofle-karpaty.s3.eu-central-1.amazonaws.com/products/fd539bc8-d352-4828-90a0-301438e27868-Photoroom_20260420_230638.JPG",
-    ],
-  },
-  {
-    label: "Szare",
-    color: "#c8a97a",
-    href: "/produkty/szare-klapki-mule-damskie",
-    images: [
-      "https://pantofle-karpaty.s3.eu-central-1.amazonaws.com/products/715085b9-f32e-4d68-8006-9b3d59df191a-Photoroom_20260421_103332.JPG",
-      "https://pantofle-karpaty.s3.eu-central-1.amazonaws.com/products/22f96d91-8262-46ff-98e2-3a2129a4411a-Photoroom_20260421_103449.JPG",
-      "https://pantofle-karpaty.s3.eu-central-1.amazonaws.com/products/85cfc526-3158-44fa-82fa-f5bbef989add-Photoroom_20260421_103655.jpg",
-    ],
-  },
-];
-
 const VIEW_LABELS = ["Bok", "Profil", "Góra"];
 
-export default function ShoeViewer({ variants = DEFAULT_VARIANTS }) {
+export default function ShoeViewer({ variants }) {
   const [activeVariant, setActiveVariant] = useState(0);
   const [activeView, setActiveView] = useState(0);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
@@ -50,6 +27,8 @@ export default function ShoeViewer({ variants = DEFAULT_VARIANTS }) {
     setActiveVariant(i);
     setActiveView(0);
   };
+
+  if (!variants.length) return null;
 
   return (
     <section className="w-full bg-[#f7f5f2] py-10 lg:py-24 overflow-hidden">
@@ -114,25 +93,24 @@ export default function ShoeViewer({ variants = DEFAULT_VARIANTS }) {
             {/* Wiersz: kolor + widok — razem pod zdjęciem na mobile */}
             <div className="flex items-center justify-between w-full max-w-md px-1">
               {/* Wybór koloru */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 uppercase tracking-widest hidden sm:inline">
-                  Kolor
-                </span>
-                {variants.map((v, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleVariantChange(i)}
-                    title={v.label}
-                    className={`w-5 h-5 rounded-full transition-all duration-200 ${
-                      activeVariant === i
-                        ? "ring-2 ring-offset-2 ring-gray-900 scale-110"
-                        : "ring-1 ring-gray-200 hover:scale-105"
-                    }`}
-                    style={{ background: v.color }}
-                    aria-label={v.label}
-                  />
-                ))}
-                <span className="text-xs font-medium text-gray-700 ml-1">
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2">
+                  {variants.map((v, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleVariantChange(i)}
+                      title={v.label}
+                      className={`w-5 h-5 rounded-full transition-all duration-200 ${
+                        activeVariant === i
+                          ? "ring-2 ring-offset-2 ring-gray-900 scale-110"
+                          : "ring-1 ring-gray-200 hover:scale-105"
+                      }`}
+                      style={{ background: v.color }}
+                      aria-label={v.label}
+                    />
+                  ))}
+                </div>
+                <span className="text-xs font-medium mt-4 text-gray-700">
                   {variant.label}
                 </span>
               </div>

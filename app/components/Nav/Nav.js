@@ -1,14 +1,26 @@
+// app/components/ServerNav.tsx
+import prisma from "@/app/lib/prisma";
 import ClientNav from "./ClientNav";
 
 async function getCategories() {
-  const res = await fetch(
-    `${
-      process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
-    }/api/categories?parentId=null`,
-    { cache: "no-store" },
-  );
-  const data = await res.json();
-  return data.categories || [];
+  return prisma.category.findMany({
+    where: { parentId: null, deletedAt: null },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      subcategories: {
+        where: { deletedAt: null },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+        orderBy: { id: "asc" },
+      },
+    },
+    orderBy: { id: "asc" },
+  });
 }
 
 export default async function ServerNav() {

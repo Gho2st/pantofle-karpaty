@@ -46,8 +46,6 @@ export default function Baner() {
           </div>
 
           {/* PRAWA KOLUMNA (TYLKO 2 ZDJĘCIA OBOK SIEBIE) */}
-          {/* KLUCZOWA ZMIANA: Zagnieżdżony Grid, który dzieli całą kolumnę na 2 kolumny (50%/50%) */}
-          {/* Dodano h-full, aby kontener rozciągnął się na całą wysokość lewej kolumny. */}
           <div className="grid grid-cols-2 gap-4 h-full">
             {/* Lewe zdjęcie (zajmuje 1/2 szerokości i całą dostępną wysokość) */}
             <div className={imageContainerClasses}>
