@@ -49,7 +49,7 @@ export default function Footer() {
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           {/* Logo / nazwa */}
           <div>
-            <p className="text-xs uppercase tracking-widest text-white/40 mb-1">
+            <p className="text-xs uppercase tracking-widest text-white/50 mb-1">
               Polski producent
             </p>
             <span className="text-xl font-medium text-white">
@@ -78,11 +78,11 @@ export default function Footer() {
       {/* Dolna sekcja */}
       <div className="px-6 lg:px-20 py-5">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-xs text-white/30 tracking-wide">
+          <p className="text-xs text-white/50 tracking-wide">
             &copy; {new Date().getFullYear()} Karpaty. Wszelkie prawa
             zastrzeżone.
           </p>
-          <p className="text-xs text-white/20">
+          <p className="text-xs text-white/50">
             Pantofle Karpaty — Kapcie Skórzane i Wełniane | Producent
           </p>
         </div>
