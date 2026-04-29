@@ -37,9 +37,6 @@ async function getCategoryPageData(slug) {
         name: true,
         slug: true,
         image: true,
-        _count: {
-          select: { products: { where: { deletedAt: null } } },
-        },
       },
       orderBy: { name: "asc" },
     }),
@@ -83,7 +80,8 @@ function getGridClass(count) {
   if (count === 1) return "flex justify-center";
   if (count === 2) return "grid sm:grid-cols-2 max-w-xl mx-auto";
   if (count === 3) return "grid sm:grid-cols-3 max-w-6xl mx-auto";
-  if (count === 4) return "grid sm:grid-cols-2 md:grid-cols-4 max-w-7xl mx-auto";
+  if (count === 4)
+    return "grid sm:grid-cols-2 md:grid-cols-4 max-w-7xl mx-auto";
   return "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4";
 }
 
@@ -119,7 +117,7 @@ export default async function CategoryPage({ params }) {
               centerOnMobile="true"
               src={category.image || "/pantofle/pantofle.jpg"}
               alt={category.name}
-              label={`${category.name} (${category._count.products})`}
+              label={category.name}
               href={`/kategorie/${slug}/${category.slug || category.name.toLowerCase().replace(/\s+/g, "-")}`}
             />
           ))
