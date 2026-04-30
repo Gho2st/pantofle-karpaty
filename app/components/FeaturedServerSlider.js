@@ -53,7 +53,7 @@ async function getFeaturedProducts(total = 20) {
   return [...featured, ...random.sort(() => Math.random() - 0.5)];
 }
 
-export default async function FeaturedSliderServer() {
+export default async function FeaturedServerSlider() {
   const products = await getFeaturedProducts(20);
   return <FeaturedSlider products={products} />;
 }

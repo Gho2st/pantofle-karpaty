@@ -2,8 +2,8 @@ import Baner from "./components/homepage/Baner";
 import About from "./components/homepage/About";
 import Testimonials from "./components/homepage/Testimonials";
 import SeoSection from "./components/homepage/SeoSection";
-import FeaturedSliderServer from "./components/FeaturedServerSlider";
 import ShoeViewerServer from "./components/homepage/ShoeViewerServer";
+import FeaturedServerSlider from "./components/FeaturedServerSlider";
 
 export const metadata = {
   title: "Pantofle Karpaty - Kapcie Skórzane i Wełniane | Producent",
@@ -19,7 +19,7 @@ export default function Home() {
     <>
       <Baner />
       <ShoeViewerServer colorGroup="klapki-zamszowe" />
-      <FeaturedSliderServer />
+      <FeaturedServerSlider />
       <About />
       <Testimonials />
       <SeoSection />
