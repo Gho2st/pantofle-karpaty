@@ -57,7 +57,7 @@ export default function FeaturedSlider({ products }) {
             <button
               onClick={() => scroll(-1)}
               disabled={!canScrollLeft}
-              className="w-11 h-11 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:border-gray-900 hover:bg-gray-900 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:hover:border-gray-200 transition-all duration-300"
+              className="w-12 h-12 rounded-full bg-gray-900/90 text-white text-xl flex items-center justify-center shadow-md hover:bg-gray-700 hover:shadow-lg active:scale-95 disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300"
               aria-label="Poprzednie"
             >
               ←
@@ -65,7 +65,7 @@ export default function FeaturedSlider({ products }) {
             <button
               onClick={() => scroll(1)}
               disabled={!canScrollRight}
-              className="w-11 h-11 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:border-gray-900 hover:bg-gray-900 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:hover:border-gray-200 transition-all duration-300"
+              className="w-12 h-12 rounded-full bg-gray-900/90 text-white text-xl flex items-center justify-center shadow-md hover:bg-gray-700 hover:shadow-lg active:scale-95 disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300"
               aria-label="Następne"
             >
               →
