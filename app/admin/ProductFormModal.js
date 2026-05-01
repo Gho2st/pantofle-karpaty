@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { X } from "lucide-react";
 import { useAdmin } from "../context/adminContext";
 import { generateSlug } from "../utils/slugify";
+import ImageProcessor from "./ImageProcessor";
 
 export default function ProductFormModal() {
   const { editingProduct, setEditingProduct, handleEditProduct } = useAdmin();
@@ -11,20 +12,31 @@ export default function ProductFormModal() {
   const [newSize, setNewSize] = useState("");
   const [newStock, setNewStock] = useState("");
 
+  // Jedna wspólna lista mediów (mix existing + new)
+  const [mediaItems, setMediaItems] = useState([]);
+
   useEffect(() => {
     if (editingProduct) {
       setProductData({
         ...editingProduct,
-        imagesToAdd: [],
-        imagesToRemove: [],
         promoPrice: editingProduct.promoPrice || null,
         slug: editingProduct.slug || generateSlug(editingProduct.name),
         featured: editingProduct.featured || false,
         colorHex: editingProduct.colorHex || "",
         colorGroup: editingProduct.colorGroup || "",
       });
+
+      // Inicjalizuj listę mediów z istniejących zdjęć
+      const existingItems = (editingProduct.images || []).map((url) => ({
+        id: crypto.randomUUID(),
+        kind: "existing",
+        url,
+        removed: false,
+      }));
+      setMediaItems(existingItems);
     } else {
       setProductData(null);
+      setMediaItems([]);
     }
   }, [editingProduct]);
 
@@ -44,32 +56,6 @@ export default function ProductFormModal() {
             : value,
       ...(name === "name" && { slug: generateSlug(value) }),
     }));
-  };
-
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    setProductData((prev) => ({
-      ...prev,
-      imagesToAdd: [...(prev.imagesToAdd || []), ...files],
-    }));
-  };
-
-  const handleRemoveImage = (index, isExisting = false) => {
-    if (isExisting) {
-      setProductData((prev) => {
-        const imageToRemove = prev.images[index];
-        return {
-          ...prev,
-          images: prev.images.filter((_, i) => i !== index),
-          imagesToRemove: [...(prev.imagesToRemove || []), imageToRemove],
-        };
-      });
-    } else {
-      setProductData((prev) => ({
-        ...prev,
-        imagesToAdd: prev.imagesToAdd.filter((_, i) => i !== index),
-      }));
-    }
   };
 
   const handleAddSize = () => {
@@ -141,8 +127,39 @@ export default function ProductFormModal() {
       toast.error("Błąd: Nieprawidłowe ID kategorii");
       return;
     }
+
+    // Sprawdź czy żadne zdjęcie nie jest aktualnie przetwarzane
+    if (mediaItems.some((item) => item.kind === "new" && item.processing)) {
+      toast.error("Poczekaj aż wszystkie zdjęcia zostaną przetworzone");
+      return;
+    }
+
+    // Sprawdź czy zostanie przynajmniej jedno zdjęcie po wszystkich zmianach
+    const remainingExisting = mediaItems.filter(
+      (i) => i.kind === "existing" && !i.removed,
+    );
+    const newOnes = mediaItems.filter((i) => i.kind === "new");
+    if (remainingExisting.length === 0 && newOnes.length === 0) {
+      toast.error("Produkt musi mieć przynajmniej jedno zdjęcie");
+      return;
+    }
+
+    const imagesToRemove = mediaItems
+      .filter((i) => i.kind === "existing" && i.removed)
+      .map((i) => i.url);
+
+    const imagesToAdd = newOnes.map((i) => i.file);
+
+    // Kolejność tablicy images dla backendu (istniejące, które zostają)
+    const remainingImages = mediaItems
+      .filter((i) => i.kind === "existing" && !i.removed)
+      .map((i) => i.url);
+
     handleEditProduct({
       ...productData,
+      images: remainingImages,
+      imagesToAdd,
+      imagesToRemove,
       sortOrder: productData.sortOrder ? parseInt(productData.sortOrder) : null,
       colorHex: productData.colorHex || null,
       colorGroup: productData.colorGroup || null,
@@ -280,13 +297,12 @@ export default function ProductFormModal() {
             </>
           )}
 
-          {/* ── FEATURED + KOLOR ── */}
+          {/* FEATURED + KOLOR */}
           <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-4">
             <h4 className="text-sm font-semibold text-amber-800 uppercase tracking-wide">
               Wyróżnienie i warianty
             </h4>
 
-            {/* Featured */}
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
@@ -307,7 +323,6 @@ export default function ProductFormModal() {
               </label>
             </div>
 
-            {/* Kolor */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={labelClass}>
@@ -414,59 +429,8 @@ export default function ProductFormModal() {
             />
           </div>
 
-          {/* Zdjęcia */}
-          <div>
-            <label className={labelClass}>Zdjęcia produktu</label>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleImageChange}
-              className={inputClass}
-            />
-            {(productData.images?.length > 0 ||
-              productData.imagesToAdd?.length > 0) && (
-              <ul className="mt-2 space-y-1">
-                {productData.images?.map((url, index) => (
-                  <li
-                    key={`existing-${index}`}
-                    className="flex items-center justify-between text-sm text-gray-600"
-                  >
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:underline truncate max-w-[80%]"
-                    >
-                      Zdjęcie {index + 1}
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveImage(index, true)}
-                      className="text-red-500 hover:text-red-700 ml-2"
-                    >
-                      Usuń
-                    </button>
-                  </li>
-                ))}
-                {productData.imagesToAdd?.map((file, index) => (
-                  <li
-                    key={`new-${index}`}
-                    className="flex items-center justify-between text-sm text-gray-600"
-                  >
-                    <span className="truncate max-w-[80%]">{file.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveImage(index, false)}
-                      className="text-red-500 hover:text-red-700 ml-2"
-                    >
-                      Usuń
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          {/* === ZDJĘCIA — nowy ImageProcessor === */}
+          <ImageProcessor images={mediaItems} onChange={setMediaItems} />
 
           {/* Rozmiary */}
           <div>

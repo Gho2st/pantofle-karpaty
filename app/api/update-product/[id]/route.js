@@ -77,7 +77,6 @@ function generateSlug(name) {
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
 }
-// ... reszta importów bez zmian
 
 export async function PUT(request, { params }) {
   const session = await getServerSession(authOptions);
@@ -109,6 +108,7 @@ export async function PUT(request, { params }) {
     let sizes = formData.get("sizes");
     const categoryId = formData.get("categoryId");
     let imagesToRemove = formData.get("imagesToRemove");
+    let existingImagesOrder = formData.get("existingImagesOrder"); // NOWE
     const imagesToAdd = formData.getAll("imagesToAdd");
     const promoPrice = formData.get("promoPrice");
     const promoStartDate = formData.get("promoStartDate") || null;
@@ -118,12 +118,12 @@ export async function PUT(request, { params }) {
     const colorHex = formData.get("colorHex") || null;
     const colorGroup = formData.get("colorGroup") || null;
 
-    // === WALIDACJA SLUG (KLUCZOWA ZMIANA!) ===
+    // === WALIDACJA SLUG ===
     const existingActiveProduct = await prisma.product.findFirst({
       where: {
         slug: slug,
         deletedAt: null,
-        id: { not: productId }, // wyklucz bieżący produkt
+        id: { not: productId },
       },
     });
 
@@ -134,7 +134,6 @@ export async function PUT(request, { params }) {
       );
     }
 
-    // === RESZTA WALIDACJI ===
     if (!name || !price) {
       return NextResponse.json(
         { error: "Nazwa i cena produktu są wymagane" },
@@ -150,7 +149,6 @@ export async function PUT(request, { params }) {
       );
     }
 
-    // === WALIDACJA PROMO PRICE ===
     let parsedPromoPrice = null;
     if (promoPrice !== null && promoPrice !== "") {
       parsedPromoPrice = parseFloat(promoPrice);
@@ -199,6 +197,17 @@ export async function PUT(request, { params }) {
       );
     }
 
+    try {
+      existingImagesOrder = existingImagesOrder
+        ? JSON.parse(existingImagesOrder)
+        : null;
+    } catch (e) {
+      return NextResponse.json(
+        { error: "Nieprawidłowy format existingImagesOrder" },
+        { status: 400 },
+      );
+    }
+
     const product = await prisma.product.findUnique({
       where: { id: productId },
       select: { images: true, sizes: true, categoryId: true },
@@ -210,22 +219,41 @@ export async function PUT(request, { params }) {
       );
     }
 
-    // === USUWANIE ZDJĘĆ ===
-    let updatedImages = product.images || [];
+    const dbImages = product.images || [];
+
+    // === USUWANIE ZDJĘĆ Z S3 ===
     if (imagesToRemove.length > 0) {
-      for (const imageUrl of imagesToRemove) {
+      // Bezpieczeństwo: usuwaj z S3 tylko URL-e, które rzeczywiście należą do tego produktu
+      const safeToRemove = imagesToRemove.filter((url) =>
+        dbImages.includes(url),
+      );
+      for (const imageUrl of safeToRemove) {
         try {
           await deleteFileFromS3(imageUrl);
         } catch (err) {
           console.error(`Nie udało się usunąć obrazu ${imageUrl}:`, err);
         }
       }
-      updatedImages = updatedImages.filter(
-        (url) => !imagesToRemove.includes(url),
-      );
     }
 
-    // === DODAWANIE ZDJĘĆ ===
+    // === BUDOWANIE NOWEJ TABLICY ZDJĘĆ ===
+    let updatedImages;
+
+    if (Array.isArray(existingImagesOrder)) {
+      // NOWY WARIANT: klient przesłał tablicę URL-i istniejących zdjęć
+      // w nowej kolejności (po usunięciach).
+      // Filtrujemy bezpiecznie — tylko URL-e które rzeczywiście były w bazie
+      // (admin nie może wstrzyknąć obcego URL-a).
+      updatedImages = existingImagesOrder.filter((url) =>
+        dbImages.includes(url),
+      );
+    } else {
+      // FALLBACK (stara wersja klienta): zachowaj kolejność z bazy,
+      // odfiltrowując usunięte.
+      updatedImages = dbImages.filter((url) => !imagesToRemove.includes(url));
+    }
+
+    // === DODAWANIE NOWYCH ZDJĘĆ ===
     if (imagesToAdd && imagesToAdd.length > 0) {
       const newImageUrls = [];
       for (const file of imagesToAdd) {
@@ -240,6 +268,9 @@ export async function PUT(request, { params }) {
         const imageUrl = await uploadFileToS3(buffer, file.name, file.type);
         newImageUrls.push(imageUrl);
       }
+      // Nowe zdjęcia idą na koniec — kolejność w obrębie nowych odpowiada
+      // kolejności w którym przyszły z formData (a tę ustawia klient
+      // w `mediaItems` po przefiltrowaniu kind === "new")
       updatedImages = [...updatedImages, ...newImageUrls];
     }
 

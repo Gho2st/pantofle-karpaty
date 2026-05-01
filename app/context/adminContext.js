@@ -27,7 +27,6 @@ export function AdminProvider({ children }) {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryDescription, setNewCategoryDescription] = useState("");
 
-  // === Pomocnicza funkcja do wyszukiwania kategorii ===
   const findCategoryById = useCallback((categoriesList, id) => {
     for (const cat of categoriesList) {
       if (cat.id === id) return cat;
@@ -39,7 +38,6 @@ export function AdminProvider({ children }) {
     return null;
   }, []);
 
-  // === Pobieranie kategorii ===
   const fetchCategories = useCallback(async (parentId = null) => {
     setIsLoading(true);
     setError(null);
@@ -61,7 +59,6 @@ export function AdminProvider({ children }) {
     }
   }, []);
 
-  // === Aktualizacja lokalnych kategorii po zmianie ===
   const updateCategoriesLocally = useCallback((updater) => {
     setCategories((prev) => {
       const newCats = typeof updater === "function" ? updater(prev) : updater;
@@ -71,12 +68,10 @@ export function AdminProvider({ children }) {
     });
   }, []);
 
-  // === Obsługa kliknięcia kategorii ===
   const handleCategoryClick = useCallback((category) => {
     setSelectedCategory(category);
   }, []);
 
-  // === Uniwersalna funkcja do aktualizacji selectedCategory po zmianach ===
   const refreshSelectedCategory = useCallback(
     (newCategories) => {
       if (!selectedCategory) return;
@@ -86,7 +81,6 @@ export function AdminProvider({ children }) {
     [selectedCategory, findCategoryById],
   );
 
-  // === Edycja kategorii ===
   const handleEditCategory = useCallback(
     async (category) => {
       try {
@@ -152,10 +146,7 @@ export function AdminProvider({ children }) {
           formData.append("sortOrder", productData.sortOrder.toString());
         }
 
-        // Polecany produkt
         formData.append("featured", productData.featured ? "true" : "false");
-
-        // Warianty kolorystyczne
         formData.append("colorHex", productData.colorHex || "");
         formData.append("colorGroup", productData.colorGroup || "");
 
@@ -174,6 +165,14 @@ export function AdminProvider({ children }) {
         if (Array.isArray(productData.imagesToAdd))
           productData.imagesToAdd.forEach((file) =>
             formData.append("imagesToAdd", file),
+          );
+
+        // === NOWE: wyślij kolejność istniejących zdjęć ===
+        // Tablica URL-i z ProductFormModal (po usunięciach + w nowej kolejności)
+        if (Array.isArray(productData.images))
+          formData.append(
+            "existingImagesOrder",
+            JSON.stringify(productData.images),
           );
 
         const res = await fetch(`/api/update-product/${productData.id}`, {
@@ -195,7 +194,6 @@ export function AdminProvider({ children }) {
     [fetchCategories, refreshSelectedCategory, fetchCart],
   );
 
-  // === Dodawanie produktu ===
   const handleAddProduct = useCallback(
     async (categoryId, formData) => {
       try {
@@ -217,7 +215,6 @@ export function AdminProvider({ children }) {
     [fetchCategories, findCategoryById, fetchCart],
   );
 
-  // === Dodawanie kategorii ===
   const handleAddCategory = useCallback(
     async (formData) => {
       try {
@@ -243,7 +240,6 @@ export function AdminProvider({ children }) {
     [fetchCategories, selectedCategory, findCategoryById],
   );
 
-  // === Usuwanie ===
   const handleDelete = useCallback(
     async (type, id) => {
       try {
@@ -267,7 +263,6 @@ export function AdminProvider({ children }) {
         }
         setShowDeleteModal(null);
         if (type === "product") await fetchCart();
-        //  TOAST PO USUNIĘCIU
         toast.success(
           type === "category" ? "Kategoria usunięta!" : "Produkt usunięty!",
         );
@@ -279,7 +274,6 @@ export function AdminProvider({ children }) {
     [fetchCategories, selectedCategory, refreshSelectedCategory, fetchCart],
   );
 
-  // === Przywrócenie produktu ===
   const handleRestoreProduct = useCallback(
     async (productId) => {
       try {
@@ -307,7 +301,6 @@ export function AdminProvider({ children }) {
     }
   }, [status, session, fetchCategories, categories.length]);
 
-  // === Wartość kontekstu (memoizowana) ===
   const value = useMemo(
     () => ({
       categories,
@@ -325,8 +318,6 @@ export function AdminProvider({ children }) {
       setNewCategoryName,
       newCategoryDescription,
       setNewCategoryDescription,
-
-      // Akcje
       fetchCategories,
       handleCategoryClick,
       handleEditCategory,
@@ -347,7 +338,6 @@ export function AdminProvider({ children }) {
       showDeleteModal,
       newCategoryName,
       newCategoryDescription,
-
       fetchCategories,
       handleCategoryClick,
       handleEditCategory,

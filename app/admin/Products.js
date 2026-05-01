@@ -5,11 +5,11 @@ import { toast } from "react-toastify";
 import { useAdmin } from "../context/adminContext";
 import { generateSlug } from "../utils/slugify";
 import ProductFormModal from "./ProductFormModal";
+import ImageProcessor from "./ImageProcessor";
 
 export default function Products() {
   const {
     selectedCategory,
-    setSelectedCategory,
     setEditingProduct,
     handleAddProduct,
     setShowDeleteModal,
@@ -29,14 +29,14 @@ export default function Products() {
     colorHex: "",
     colorGroup: "",
   });
+  // Lista zawiera tylko obiekty kind: "new" (przy dodawaniu nowego produktu nie ma istniejących)
   const [newProductImages, setNewProductImages] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
   const [newSize, setNewSize] = useState("");
   const [newStock, setNewStock] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
-  const [showDeleted, setShowDeleted] = useState(false); // FILTR
+  const [showDeleted, setShowDeleted] = useState(false);
 
-  // Auto-slug
   useEffect(() => {
     if (newProduct.name) {
       setNewProduct((prev) => ({ ...prev, slug: generateSlug(prev.name) }));
@@ -54,15 +54,6 @@ export default function Products() {
             ? parseFloat(value) || ""
             : value,
     }));
-  };
-
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    setNewProductImages((prev) => [...prev, ...files]);
-  };
-
-  const handleRemoveImage = (index) => {
-    setNewProductImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleAddSize = () => {
@@ -85,11 +76,41 @@ export default function Products() {
     }));
   };
 
+  const resetForm = () => {
+    setNewProduct({
+      name: "",
+      slug: "",
+      price: "",
+      description: "",
+      description2: "",
+      additionalInfo: "",
+      sizes: [],
+      featured: false,
+      colorHex: "",
+      colorGroup: "",
+    });
+    setNewProductImages([]);
+    setShowAddForm(false);
+  };
+
   const handleAddProductSubmit = async (e) => {
     e.preventDefault();
     if (!selectedCategory) return toast.error("Wybierz kategorię");
     if (!newProduct.name || !newProduct.price)
       return toast.error("Nazwa i cena wymagane");
+
+    // Wszystkie obrazy w formularzu dodawania to "new"
+    const newOnes = newProductImages.filter((i) => i.kind === "new");
+
+    if (newOnes.length === 0) {
+      toast.error("Dodaj przynajmniej jedno zdjęcie produktu");
+      return;
+    }
+
+    if (newOnes.some((img) => img.processing)) {
+      toast.error("Poczekaj aż wszystkie zdjęcia zostaną przetworzone");
+      return;
+    }
 
     setIsAdding(true);
     try {
@@ -105,31 +126,12 @@ export default function Products() {
       formData.append("featured", newProduct.featured ? "true" : "false");
       formData.append("colorHex", newProduct.colorHex || "");
       formData.append("colorGroup", newProduct.colorGroup || "");
-      newProductImages.forEach((file) => formData.append("files", file));
 
-      if (newProductImages.length === 0) {
-        toast.error("Dodaj przynajmniej jedno zdjęcie produktu");
-        setIsAdding(false);
-        return;
-      }
+      newOnes.forEach((item) => formData.append("files", item.file));
 
       await handleAddProduct(selectedCategory.id, formData);
 
-      // Reset formularza
-      setNewProduct({
-        name: "",
-        slug: "",
-        price: "",
-        description: "",
-        description2: "",
-        additionalInfo: "",
-        sizes: [],
-        featured: false,
-        colorHex: "",
-        colorGroup: "",
-      });
-      setNewProductImages([]);
-      setShowAddForm(false);
+      resetForm();
       toast.success("Produkt dodany!");
     } catch (err) {
       toast.error(err.message || "Błąd podczas dodawania");
@@ -138,33 +140,27 @@ export default function Products() {
     }
   };
 
-  // W handleRestoreProduct
   const handleRestoreProduct = async (productId) => {
     if (!confirm("Przywrócić produkt?")) return;
-
     try {
       const res = await fetch(`/api/restore-product/${productId}`, {
         method: "PATCH",
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-
       const updatedCategories = await fetchCategories();
-      refreshSelectedCategory(updatedCategories); // ← ZAMIENIONE
-
+      refreshSelectedCategory(updatedCategories);
       toast.success("Produkt przywrócony!");
     } catch (err) {
       toast.error(err.message || "Błąd przywracania");
     }
   };
 
-  // === FILTROWANIE PRODUKTÓW ===
   const filteredProducts =
     selectedCategory?.products?.filter((p) =>
       showDeleted ? p.deletedAt : !p.deletedAt,
     ) || [];
 
-  // === KOMPONENT CENY Z PROMOCJĄ ===
   const renderPrice = (product) => {
     const hasPromo =
       product.promoPrice != null && product.promoPrice < product.price;
@@ -175,14 +171,11 @@ export default function Products() {
     return (
       <div className="space-y-1">
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Przekreślona cena */}
           {hasPromo && (
             <span className="text-sm line-through text-gray-500">
               {product.price.toFixed(2)} PLN
             </span>
           )}
-
-          {/* Aktualna cena */}
           <span
             className={`font-semibold ${
               hasPromo ? "text-red-600" : "text-gray-800"
@@ -190,16 +183,12 @@ export default function Products() {
           >
             {displayPrice.toFixed(2)} PLN
           </span>
-
-          {/* Badge PROMOCJA */}
           {hasPromo && (
             <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded">
               PROMOCJA
             </span>
           )}
         </div>
-
-        {/* Najniższa cena z 30 dni */}
         {hasLowestPrice && (
           <div className="text-xs text-gray-500">
             Najniższa z 30 dni:{" "}
@@ -214,7 +203,6 @@ export default function Products() {
 
   return (
     <div className="mt-6">
-      {/* NAGŁÓWEK + FILTR */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
         <h2 className="text-2xl font-bold text-gray-800">
           Produkty w {selectedCategory?.name || "Kategorii"}
@@ -237,7 +225,6 @@ export default function Products() {
         </button>
       </div>
 
-      {/* PRZYCISK DODAJ */}
       {!showAddForm && (
         <button
           onClick={() => setShowAddForm(true)}
@@ -247,7 +234,6 @@ export default function Products() {
         </button>
       )}
 
-      {/* FORMULARZ DODAWANIA */}
       {showAddForm && (
         <form
           onSubmit={handleAddProductSubmit}
@@ -339,37 +325,14 @@ export default function Products() {
                 rows="4"
               />
             </div>
+
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Zdjęcia (wiele)
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageChange}
-                className="w-full p-3 border border-gray-300 rounded-md"
+              <ImageProcessor
+                images={newProductImages}
+                onChange={setNewProductImages}
               />
-              {newProductImages.length > 0 && (
-                <ul className="mt-2 list-disc pl-5">
-                  {newProductImages.map((file, i) => (
-                    <li
-                      key={i}
-                      className="text-gray-600 flex justify-between items-center"
-                    >
-                      <span>{file.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(i)}
-                        className="ml-2 text-red-500 hover:text-red-700"
-                      >
-                        Usuń
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </div>
+
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Rozmiary i stany
@@ -423,8 +386,8 @@ export default function Products() {
               )}
             </div>
           </div>
-          {/* Wyróżnienie i kolory */}
-          <div className="sm:col-span-2 p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-4">
+
+          <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-4">
             <h4 className="text-sm font-semibold text-amber-800 uppercase tracking-wide">
               Wyróżnienie i warianty
             </h4>
@@ -503,6 +466,7 @@ export default function Products() {
               </div>
             )}
           </div>
+
           <div className="flex gap-3 mt-6">
             <button
               type="submit"
@@ -535,22 +499,7 @@ export default function Products() {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setNewProduct({
-                  name: "",
-                  slug: "",
-                  price: "",
-                  description: "",
-                  description2: "",
-                  additionalInfo: "",
-                  sizes: [],
-                  featured: false,
-                  colorHex: "",
-                  colorGroup: "",
-                });
-                setNewProductImages([]);
-                setShowAddForm(false);
-              }}
+              onClick={resetForm}
               className="px-6 py-3 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
             >
               Anuluj
@@ -559,7 +508,6 @@ export default function Products() {
         </form>
       )}
 
-      {/* LISTA PRODUKTÓW */}
       <h3 className="text-lg font-semibold text-gray-800 mb-4">
         Produkty ({filteredProducts.length})
       </h3>
@@ -581,7 +529,6 @@ export default function Products() {
                   : "hover:shadow-xl"
               }`}
             >
-              {/* Etykieta USUNIĘTY */}
               {product.deletedAt && (
                 <div className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded font-medium">
                   USUNIĘTY
@@ -604,10 +551,8 @@ export default function Products() {
                 {product.name}
               </h4>
 
-              {/* CENA Z PROMOCJĄ */}
               <div className="text-gray-600 mt-1">{renderPrice(product)}</div>
 
-              {/* AKCJE */}
               <div className="flex gap-2 mt-4">
                 <button
                   onClick={() =>
@@ -645,7 +590,6 @@ export default function Products() {
         </div>
       )}
 
-      {/* MODAL EDYCJI */}
       <ProductFormModal />
     </div>
   );
