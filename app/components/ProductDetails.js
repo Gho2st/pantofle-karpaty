@@ -66,14 +66,14 @@ function MobileSlider({ images, productName, onImageClick }) {
 
   if (!images.length) {
     return (
-      <div className="relative aspect-[4/5] bg-gray-100 rounded-xl flex items-center justify-center">
+      <div className="relative aspect-square bg-gray-100 rounded-xl flex items-center justify-center">
         <span className="text-gray-400 text-sm">Brak zdjęć</span>
       </div>
     );
   }
 
   return (
-    <div className="relative aspect-[4/5] bg-gray-100 rounded-xl overflow-hidden select-none">
+    <div className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden select-none">
       {/* Zdjęcia */}
       {images.map((src, i) => (
         <div
@@ -286,7 +286,7 @@ export default function ProductDetails({ product }) {
                 )}
               </div>
 
-              <div className="relative aspect-4/5 bg-gray-100 rounded-md overflow-hidden col-span-10">
+              <div className="relative aspect-square bg-gray-100 rounded-md overflow-hidden col-span-10">
                 <div
                   className="group relative w-full h-full cursor-zoom-in"
                   onMouseEnter={() => setIsHoverZoom(true)}
@@ -614,7 +614,7 @@ export default function ProductDetails({ product }) {
 
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div className="flex justify-center">
-                <div className="relative aspect-4/5 w-full max-w-md bg-gray-100 rounded-md overflow-hidden">
+                <div className="relative aspect-square w-full max-w-md bg-gray-100 rounded-md overflow-hidden">
                   <SafeImage
                     src={product.partnerImage}
                     fill

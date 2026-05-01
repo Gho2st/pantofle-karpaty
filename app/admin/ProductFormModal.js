@@ -11,8 +11,6 @@ export default function ProductFormModal() {
   const [productData, setProductData] = useState(null);
   const [newSize, setNewSize] = useState("");
   const [newStock, setNewStock] = useState("");
-
-  // Jedna wspólna lista mediów (mix existing + new)
   const [mediaItems, setMediaItems] = useState([]);
 
   useEffect(() => {
@@ -26,7 +24,6 @@ export default function ProductFormModal() {
         colorGroup: editingProduct.colorGroup || "",
       });
 
-      // Inicjalizuj listę mediów z istniejących zdjęć
       const existingItems = (editingProduct.images || []).map((url) => ({
         id: crypto.randomUUID(),
         kind: "existing",
@@ -128,42 +125,61 @@ export default function ProductFormModal() {
       return;
     }
 
-    // Sprawdź czy żadne zdjęcie nie jest aktualnie przetwarzane
-    if (mediaItems.some((item) => item.kind === "new" && item.processing)) {
+    if (
+      mediaItems.some(
+        (item) =>
+          (item.kind === "new" && item.processing) ||
+          (item.kind === "existing" && item.converting),
+      )
+    ) {
       toast.error("Poczekaj aż wszystkie zdjęcia zostaną przetworzone");
       return;
     }
 
-    // Sprawdź czy zostanie przynajmniej jedno zdjęcie po wszystkich zmianach
     const remainingExisting = mediaItems.filter(
       (i) => i.kind === "existing" && !i.removed,
     );
     const newOnes = mediaItems.filter((i) => i.kind === "new");
+
     if (remainingExisting.length === 0 && newOnes.length === 0) {
       toast.error("Produkt musi mieć przynajmniej jedno zdjęcie");
       return;
     }
 
-    const imagesToRemove = mediaItems
-      .filter((i) => i.kind === "existing" && i.removed)
-      .map((i) => i.url);
+    // === NOWA LOGIKA KOLEJNOŚCI ===
+    const imagesToRemove = [
+      ...mediaItems
+        .filter((i) => i.kind === "existing" && i.removed)
+        .map((i) => i.url),
+      ...mediaItems
+        .filter((i) => i.kind === "new" && i.replacesUrl)
+        .map((i) => i.replacesUrl),
+    ];
 
     const imagesToAdd = newOnes.map((i) => i.file);
 
-    // Kolejność tablicy images dla backendu (istniejące, które zostają)
-    const remainingImages = mediaItems
-      .filter((i) => i.kind === "existing" && !i.removed)
-      .map((i) => i.url);
+    const newIndexMap = new Map(newOnes.map((item, index) => [item.id, index]));
+
+    const imageOrder = mediaItems
+      .filter((i) => !(i.kind === "existing" && i.removed))
+      .map((item) => {
+        if (item.kind === "existing") {
+          return { type: "existing", url: item.url };
+        } else {
+          return { type: "new", index: newIndexMap.get(item.id) };
+        }
+      });
 
     handleEditProduct({
       ...productData,
-      images: remainingImages,
       imagesToAdd,
       imagesToRemove,
+      imageOrder, // ← KLUCZOWE
       sortOrder: productData.sortOrder ? parseInt(productData.sortOrder) : null,
       colorHex: productData.colorHex || null,
       colorGroup: productData.colorGroup || null,
     });
+
     setEditingProduct(null);
   };
 
@@ -187,7 +203,6 @@ export default function ProductFormModal() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Nazwa + slug */}
           <div>
             <label className={labelClass}>Nazwa produktu</label>
             <input
@@ -210,7 +225,6 @@ export default function ProductFormModal() {
             />
           </div>
 
-          {/* Cena + promocja */}
           <div>
             <label className={labelClass}>Cena regularna (PLN)</label>
             <input
@@ -297,7 +311,6 @@ export default function ProductFormModal() {
             </>
           )}
 
-          {/* FEATURED + KOLOR */}
           <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-4">
             <h4 className="text-sm font-semibold text-amber-800 uppercase tracking-wide">
               Wyróżnienie i warianty
@@ -377,7 +390,6 @@ export default function ProductFormModal() {
             )}
           </div>
 
-          {/* Kolejność */}
           <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
             <label className={labelClass}>
               Kolejność w kategorii
@@ -397,7 +409,6 @@ export default function ProductFormModal() {
             />
           </div>
 
-          {/* Opisy */}
           <div>
             <label className={labelClass}>Opis produktu</label>
             <textarea
@@ -429,7 +440,7 @@ export default function ProductFormModal() {
             />
           </div>
 
-          {/* === ZDJĘCIA — nowy ImageProcessor === */}
+          {/* === ZDJĘCIA === */}
           <ImageProcessor images={mediaItems} onChange={setMediaItems} />
 
           {/* Rozmiary */}
@@ -499,7 +510,6 @@ export default function ProductFormModal() {
             )}
           </div>
 
-          {/* Przyciski */}
           <div className="flex gap-3 pt-4 border-t">
             <button
               type="submit"

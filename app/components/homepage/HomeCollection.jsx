@@ -70,7 +70,7 @@ export default function HomeCollection() {
           <div className="grid md:grid-cols-3 gap-6">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="flex flex-col gap-4">
-                <div className="aspect-[4/5] bg-gray-100 rounded-2xl animate-pulse" />
+                <div className="aspect-square bg-stone-50 rounded-2xl animate-pulse" />
                 <div className="h-4 bg-gray-100 rounded animate-pulse w-2/3" />
                 <div className="h-3 bg-gray-100 rounded animate-pulse w-full" />
               </div>
@@ -93,21 +93,19 @@ export default function HomeCollection() {
                   transition={{ delay: index * 0.1 }}
                 >
                   <Link href={href} className="group block">
-                    {/* Zdjęcie */}
-                    <div className="aspect-[4/5] bg-gray-100 rounded-2xl overflow-hidden mb-5 relative">
+                    {/* Zdjęcie — kwadrat, białe tło zdjęcia łączy się z subtelnym tłem ramki */}
+                    <div className="aspect-square bg-stone-50 rounded-2xl overflow-hidden mb-5 relative">
                       <Image
                         src={src}
                         alt={category.name}
                         fill
                         sizes="(max-width: 768px) 100vw, 33vw"
-                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                        className="object-contain p-4 group-hover:scale-105 transition-transform duration-500"
                       />
-                      {/* Gradient overlay na dole */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
 
-                      {/* Label na zdjęciu */}
-                      <div className="absolute bottom-4 left-4">
-                        <span className="inline-block bg-white/90 backdrop-blur-sm text-gray-900 text-xs font-semibold uppercase tracking-widest px-3 py-1.5 rounded-full">
+                      {/* Label w rogu — bez overlay, białe tło zdjęcia jest neutralne */}
+                      <div className="absolute top-4 left-4">
+                        <span className="inline-block bg-white text-gray-900 text-xs font-semibold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-sm border border-gray-100">
                           {category.name}
                         </span>
                       </div>

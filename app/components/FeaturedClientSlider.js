@@ -135,22 +135,25 @@ function ProductCard({ product }) {
       }}
     >
       <Link href={`/produkty/${product.slug}`} className="block">
-        <div className="relative aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden mb-3">
+        {/* Kafelek — kwadrat, ciepłe białe tło, contain z paddingiem */}
+        <div className="relative aspect-square bg-stone-50 rounded-2xl overflow-hidden mb-3">
           <Image
             src={primary}
             alt={product.name}
             fill
             sizes="(max-width: 768px) 48vw, 280px"
-            className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+            className="object-contain p-3 transition-transform duration-500 ease-out group-hover:scale-[1.05]"
           />
 
+          {/* Badge promocji */}
           {isPromo && discount > 0 && (
-            <div className="absolute top-3 left-3 bg-red-600 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+            <div className="absolute top-3 left-3 bg-red-600 text-white text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm z-10">
               −{discount}%
             </div>
           )}
 
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/[0.06] transition-colors duration-500 ease-out" />
+          {/* Hover — subtelne pociemnienie tła kafelka, nie zdjęcia */}
+          <div className="absolute inset-0 bg-stone-100/0 group-hover:bg-stone-100/60 transition-colors duration-500 ease-out pointer-events-none" />
         </div>
 
         <h3 className="text-sm font-medium text-gray-900 group-hover:text-red-700 transition-colors leading-snug mb-1 line-clamp-1">

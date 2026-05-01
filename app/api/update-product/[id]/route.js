@@ -28,15 +28,12 @@ async function uploadFileToS3(fileBuffer, fileName, contentType) {
     ContentType: contentType || "application/octet-stream",
   };
 
-  console.log(`Przesyłanie pliku do S3: ${uniqueFileName}`);
   const command = new PutObjectCommand(params);
   await s3Client.send(command);
-  console.log(`Pomyślnie przesłano plik: ${uniqueFileName}`);
   return `https://${BUCKET_NAME}.s3.eu-central-1.amazonaws.com/products/${uniqueFileName}`;
 }
 
 async function deleteFileFromS3(imageUrl) {
-  console.log(`Próba usunięcia obrazu z S3: ${imageUrl}`);
   const key = imageUrl.split(
     `https://${BUCKET_NAME}.s3.eu-central-1.amazonaws.com/`,
   )[1];
@@ -49,10 +46,8 @@ async function deleteFileFromS3(imageUrl) {
     Key: key,
   };
 
-  console.log(`Parametry usuwania S3:`, params);
   const command = new DeleteObjectCommand(params);
   await s3Client.send(command);
-  console.log(`Pomyślnie usunięto obraz: ${imageUrl}`);
 }
 
 function validateSizes(sizes) {
@@ -239,28 +234,28 @@ export async function PUT(request, { params }) {
     // === BUDOWANIE NOWEJ TABLICY ZDJĘĆ ===
     let updatedImages;
 
-    if (Array.isArray(existingImagesOrder)) {
-      // NOWY WARIANT: klient przesłał tablicę URL-i istniejących zdjęć
-      // w nowej kolejności (po usunięciach).
-      // Filtrujemy bezpiecznie — tylko URL-e które rzeczywiście były w bazie
-      // (admin nie może wstrzyknąć obcego URL-a).
-      updatedImages = existingImagesOrder.filter((url) =>
-        dbImages.includes(url),
-      );
-    } else {
-      // FALLBACK (stara wersja klienta): zachowaj kolejność z bazy,
-      // odfiltrowując usunięte.
-      updatedImages = dbImages.filter((url) => !imagesToRemove.includes(url));
+    // === NOWA LOGIKA KOLEJNOŚCI (z imageOrder) ===
+    let finalImages = [];
+
+    const imageOrderRaw = formData.get("imageOrder");
+    let imageOrder = null;
+    if (imageOrderRaw) {
+      try {
+        imageOrder = JSON.parse(imageOrderRaw);
+      } catch (e) {
+        return NextResponse.json(
+          { error: "Nieprawidłowy format imageOrder" },
+          { status: 400 },
+        );
+      }
     }
 
-    // === DODAWANIE NOWYCH ZDJĘĆ ===
-    if (imagesToAdd && imagesToAdd.length > 0) {
+    if (Array.isArray(imageOrder) && imageOrder.length > 0) {
+      // Najpierw uploadujemy wszystkie nowe zdjęcia
       const newImageUrls = [];
       for (const file of imagesToAdd) {
-        if (!(file instanceof File) || !file.type.startsWith("image/")) {
-          console.warn(`Pomijanie pliku niebędącego obrazem: ${file.name}`);
+        if (!(file instanceof File) || !file.type.startsWith("image/"))
           continue;
-        }
         if (file.size > 5 * 1024 * 1024) {
           throw new Error(`Plik ${file.name} przekracza limit 5MB`);
         }
@@ -268,10 +263,27 @@ export async function PUT(request, { params }) {
         const imageUrl = await uploadFileToS3(buffer, file.name, file.type);
         newImageUrls.push(imageUrl);
       }
-      // Nowe zdjęcia idą na koniec — kolejność w obrębie nowych odpowiada
-      // kolejności w którym przyszły z formData (a tę ustawia klient
-      // w `mediaItems` po przefiltrowaniu kind === "new")
-      updatedImages = [...updatedImages, ...newImageUrls];
+
+      // Budujemy finalną kolejność dokładnie tak jak w ImageProcessor
+      finalImages = imageOrder
+        .map((item) => {
+          if (item.type === "existing") return item.url;
+          if (item.type === "new" && typeof item.index === "number") {
+            return newImageUrls[item.index];
+          }
+          return null;
+        })
+        .filter(Boolean);
+    } else {
+      // fallback dla starej wersji (bez imageOrder)
+      finalImages = dbImages.filter((url) => !imagesToRemove.includes(url));
+      for (const file of imagesToAdd) {
+        if (!(file instanceof File) || !file.type.startsWith("image/"))
+          continue;
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const imageUrl = await uploadFileToS3(buffer, file.name, file.type);
+        finalImages.push(imageUrl);
+      }
     }
 
     // === AKTUALIZACJA PRODUKTU ===
@@ -288,7 +300,7 @@ export async function PUT(request, { params }) {
         description2,
         additionalInfo,
         sizes,
-        images: updatedImages,
+        images: finalImages,
         categoryId: categoryId ? parseInt(categoryId) : product.categoryId,
         sortOrder: sortOrder ? parseInt(sortOrder) : null,
         featured,
