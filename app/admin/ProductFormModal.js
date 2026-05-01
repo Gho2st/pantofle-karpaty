@@ -41,16 +41,12 @@ export default function ProductFormModal() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+
     setProductData((prev) => ({
       ...prev,
-      [name]:
-        type === "checkbox"
-          ? checked
-          : name === "price" || name === "promoPrice" || name === "sortOrder"
-            ? value === ""
-              ? null
-              : parseInt(value) || ""
-            : value,
+      // Po prostu zapisujemy wartość. Nie parsujemy jej podczas wpisywania.
+      [name]: type === "checkbox" ? checked : value,
+      // Automatyczne generowanie sluga przy zmianie nazwy
       ...(name === "name" && { slug: generateSlug(value) }),
     }));
   };
@@ -174,7 +170,7 @@ export default function ProductFormModal() {
       ...productData,
       imagesToAdd,
       imagesToRemove,
-      imageOrder, // ← KLUCZOWE
+      imageOrder,
       sortOrder: productData.sortOrder ? parseInt(productData.sortOrder) : null,
       colorHex: productData.colorHex || null,
       colorGroup: productData.colorGroup || null,

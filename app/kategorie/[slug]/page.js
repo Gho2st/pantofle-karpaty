@@ -50,6 +50,7 @@ async function getCategoryPageData(slug) {
         promoPrice: true,
         lowestPrice: true,
         images: true,
+        promoEndDate: true,
       },
       orderBy: { name: "asc" },
     }),
