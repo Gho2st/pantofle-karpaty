@@ -15,7 +15,7 @@ export async function sendOrderEmails(order, isPaid = false) {
     if (needsInvoice) {
       fiscalDocumentInfo = `
         <div style="background:#e8f5e8;padding:18px;border-radius:8px;border-left:5px solid #4CAF50;margin:25px 0;font-size:15px;">
-          <strong>Faktura VAT</strong> zostanie wystawiona i wysłana na adres e-mail:<br>
+          <strong>Faktura VAT</strong> zostanie wystawiona i wysłana do KSEF:<br>
           <strong>${order.email}</strong><br>
           <small>(w ciągu 1-2 dni roboczych od realizacji zamówienia)</small>
         </div>`;
@@ -234,7 +234,7 @@ export async function sendOrderEmails(order, isPaid = false) {
       ${
         isCompany
           ? needsInvoice
-            ? "Faktura VAT (wysłana mailem)"
+            ? "Faktura VAT (KSEF)"
             : "Paragon z NIP-em (w paczce)"
           : "Paragon zwykły (w paczce)"
       }

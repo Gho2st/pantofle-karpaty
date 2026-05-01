@@ -1,4 +1,4 @@
-// app/api/update-lowest-price/route.js
+// app/api/cron/update-lowest-price/route.js
 import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
 
