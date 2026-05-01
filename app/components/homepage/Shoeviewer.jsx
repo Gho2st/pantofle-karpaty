@@ -76,10 +76,6 @@ export default function ShoeViewer({ variants }) {
                   </div>
                 ))}
 
-                <div className="absolute bottom-3 right-3 text-xs text-gray-300 font-mono">
-                  ⟲ przesuń
-                </div>
-
                 <div
                   className="absolute inset-0 rounded-2xl sm:rounded-3xl pointer-events-none transition-opacity duration-300"
                   style={{
