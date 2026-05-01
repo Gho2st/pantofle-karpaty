@@ -152,8 +152,6 @@ function ProductCard({ product }) {
             </div>
           )}
 
-          {/* Hover — subtelne pociemnienie tła kafelka, nie zdjęcia */}
-          <div className="absolute inset-0 bg-stone-100/0 group-hover:bg-stone-100/60 transition-colors duration-500 ease-out pointer-events-none" />
         </div>
 
         <h3 className="text-sm font-medium text-gray-900 group-hover:text-red-700 transition-colors leading-snug mb-1 line-clamp-1">
