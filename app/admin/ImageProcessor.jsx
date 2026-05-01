@@ -699,6 +699,60 @@ async function drawOnSquare(
   });
 }
 
+function findAlphaBoundingBox(img) {
+  const canvas = document.createElement("canvas");
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0);
+
+  let imageData;
+  try {
+    imageData = ctx.getImageData(0, 0, img.width, img.height);
+  } catch {
+    return null;
+  }
+
+  const data = imageData.data;
+  const w = img.width;
+  const h = img.height;
+
+  let minX = w,
+    minY = h,
+    maxX = -1,
+    maxY = -1;
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const alpha = data[(y * w + x) * 4 + 3];
+      if (alpha > ALPHA_THRESHOLD) {
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+      }
+    }
+  }
+
+  if (maxX < 0) return null;
+
+  // Dodajemy margines (np. 2% wymiaru zdjęcia, ale nie mniej niż 10px),
+  // aby zachować miękkie krawędzie podeszwy i cienie
+  const padding = Math.max(10, Math.floor(Math.max(w, h) * 0.02));
+
+  const finalMinX = Math.max(0, minX - padding);
+  const finalMinY = Math.max(0, minY - padding);
+  const finalMaxX = Math.min(w - 1, maxX + padding);
+  const finalMaxY = Math.min(h - 1, maxY + padding);
+
+  return {
+    x: finalMinX,
+    y: finalMinY,
+    width: finalMaxX - finalMinX + 1,
+    height: finalMaxY - finalMinY + 1,
+  };
+}
+
 function findObjectBoundingBox(img) {
   const canvas = document.createElement("canvas");
   const ratio = Math.min(
@@ -760,56 +814,27 @@ function findObjectBoundingBox(img) {
 
   if (maxX < 0) return null;
 
+  // Tutaj również aplikujemy padding uwzględniając skalowanie
   const scale = img.width / w;
-  return {
-    x: Math.floor(minX * scale),
-    y: Math.floor(minY * scale),
-    width: Math.ceil((maxX - minX + 1) * scale),
-    height: Math.ceil((maxY - minY + 1) * scale),
-  };
-}
+  const originalMinX = Math.floor(minX * scale);
+  const originalMinY = Math.floor(minY * scale);
+  const originalMaxX = Math.ceil(maxX * scale);
+  const originalMaxY = Math.ceil(maxY * scale);
 
-function findAlphaBoundingBox(img) {
-  const canvas = document.createElement("canvas");
-  canvas.width = img.width;
-  canvas.height = img.height;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(img, 0, 0);
+  const padding = Math.max(
+    10,
+    Math.floor(Math.max(img.width, img.height) * 0.02),
+  );
 
-  let imageData;
-  try {
-    imageData = ctx.getImageData(0, 0, img.width, img.height);
-  } catch {
-    return null;
-  }
-
-  const data = imageData.data;
-  const w = img.width;
-  const h = img.height;
-
-  let minX = w,
-    minY = h,
-    maxX = -1,
-    maxY = -1;
-
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const alpha = data[(y * w + x) * 4 + 3];
-      if (alpha > ALPHA_THRESHOLD) {
-        minX = Math.min(minX, x);
-        maxX = Math.max(maxX, x);
-        minY = Math.min(minY, y);
-        maxY = Math.max(maxY, y);
-      }
-    }
-  }
-
-  if (maxX < 0) return null;
+  const finalMinX = Math.max(0, originalMinX - padding);
+  const finalMinY = Math.max(0, originalMinY - padding);
+  const finalMaxX = Math.min(img.width - 1, originalMaxX + padding);
+  const finalMaxY = Math.min(img.height - 1, originalMaxY + padding);
 
   return {
-    x: minX,
-    y: minY,
-    width: maxX - minX + 1,
-    height: maxY - minY + 1,
+    x: finalMinX,
+    y: finalMinY,
+    width: finalMaxX - finalMinX + 1,
+    height: finalMaxY - finalMinY + 1,
   };
 }

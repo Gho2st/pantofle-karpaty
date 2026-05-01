@@ -59,15 +59,6 @@ export function AdminProvider({ children }) {
     }
   }, []);
 
-  const updateCategoriesLocally = useCallback((updater) => {
-    setCategories((prev) => {
-      const newCats = typeof updater === "function" ? updater(prev) : updater;
-      toast.success("Operacja zakończona pomyślnie!");
-      window.dispatchEvent(new Event("categoriesUpdated"));
-      return newCats;
-    });
-  }, []);
-
   const handleCategoryClick = useCallback((category) => {
     setSelectedCategory(category);
   }, []);

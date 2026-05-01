@@ -5,12 +5,9 @@ import Script from "next/script";
 export default function FacebookPixel() {
   const pixelId = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID;
 
-  // Debug – możesz zostawić na chwilę
-  // console.log("Pixel ID z env:", pixelId);
-
   if (!pixelId) {
     console.warn(
-      "Brak NEXT_PUBLIC_FACEBOOK_PIXEL_ID – pixel nie zostanie załadowany"
+      "Brak NEXT_PUBLIC_FACEBOOK_PIXEL_ID – pixel nie zostanie załadowany",
     );
     return null;
   }
