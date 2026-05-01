@@ -1,0 +1,13 @@
+# *
+User-agent: *
+Allow: /
+Disallow: /koszyk
+Disallow: /zamowienie
+Disallow: /admin
+Disallow: /moje-konto
+
+# Host
+Host: https://sklep-pantofle-karpaty.pl
+
+# Sitemaps
+Sitemap: https://sklep-pantofle-karpaty.pl/sitemap.xml
