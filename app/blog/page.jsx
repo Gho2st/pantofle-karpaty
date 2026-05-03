@@ -1,10 +1,8 @@
 // app/(app)/blog/page.jsx
 import Link from "next/link";
 import Image from "next/image";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../lib/prisma";
 import BlogProducts from "./blogProducts";
-
-const prisma = new PrismaClient();
 
 export const metadata = {
   title: "Blog o obuwiu skórzanym | Pantofle Karpaty",

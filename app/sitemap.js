@@ -1,3 +1,4 @@
+export const revalidate = 0;
 import prisma from "@/app/lib/prisma";
 
 export default async function sitemap() {
