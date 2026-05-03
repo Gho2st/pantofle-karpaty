@@ -57,7 +57,7 @@ export async function POST(request) {
     if (!product) {
       return NextResponse.json(
         { error: "Produkt nie istnieje lub został usunięty" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -92,7 +92,7 @@ export async function POST(request) {
 
     return NextResponse.json(
       { message: "Dodano do koszyka", cartItem },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Błąd POST koszyka:", error);
@@ -115,7 +115,7 @@ export async function PUT(request) {
           message: "Zaktualizowano (gość)",
           cartItem: { id: cartItemId, quantity },
         },
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -127,7 +127,7 @@ export async function PUT(request) {
     if (!cartItem || cartItem.userId !== session.user.id) {
       return NextResponse.json(
         { error: "Pozycja nie znaleziona" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -136,7 +136,7 @@ export async function PUT(request) {
       await prisma.cart.delete({ where: { id: cartItem.id } });
       return NextResponse.json(
         { error: "Produkt został usunięty – usunięto z koszyka" },
-        { status: 410 }
+        { status: 410 },
       );
     }
 
@@ -147,7 +147,7 @@ export async function PUT(request) {
 
     return NextResponse.json(
       { message: "Zaktualizowano", cartItem: updated },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Błąd PUT koszyka:", error);
@@ -163,7 +163,7 @@ export async function DELETE(request) {
     if (!session) {
       return NextResponse.json(
         { message: "Koszyk gościa wyczyszczony" },
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -177,7 +177,7 @@ export async function DELETE(request) {
       });
       return NextResponse.json(
         { message: "Usunięto martwe produkty z koszyka" },
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -188,7 +188,7 @@ export async function DELETE(request) {
       });
       return NextResponse.json(
         { message: "Koszyk wyczyszczony" },
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -209,7 +209,7 @@ export async function DELETE(request) {
 
     return NextResponse.json(
       { message: "Usunięto z koszyka" },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Błąd DELETE koszyka:", error);
