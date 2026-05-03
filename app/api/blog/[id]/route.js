@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/app/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 // GET — pojedynczy wpis
 export async function GET(req, { params }) {
