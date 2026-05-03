@@ -62,10 +62,23 @@ export async function DELETE(req, { params }) {
     return NextResponse.json({ error: "Brak dostępu" }, { status: 401 });
   }
 
+  const post = await prisma.post.findUnique({
+    where: { id: parseInt(params.id) },
+    select: { slug: true },
+  });
+
+  if (!post) {
+    return NextResponse.json({ error: "Nie znaleziono" }, { status: 404 });
+  }
+
+  const { slug } = post; // ← zapisz slug przed usunięciem
+
   await prisma.post.delete({
     where: { id: parseInt(params.id) },
   });
-  revalidatePath("/blog"); // ← lista
-  revalidatePath(`/blog/${post.slug}`); // ← strona posta
+
+  revalidatePath("/blog");
+  revalidatePath(`/blog/${slug}`); // ← używaj slug, nie post.slug
+
   return NextResponse.json({ success: true });
 }
