@@ -49,7 +49,8 @@ export async function PUT(req, { params }) {
       updatedAt: new Date(),
     },
   });
-
+  revalidatePath("/blog"); // ← lista
+  revalidatePath(`/blog/${post.slug}`); // ← strona posta
   return NextResponse.json(post);
 }
 
@@ -63,6 +64,7 @@ export async function DELETE(req, { params }) {
   await prisma.post.delete({
     where: { id: parseInt(params.id) },
   });
-
+  revalidatePath("/blog"); // ← lista
+  revalidatePath(`/blog/${post.slug}`); // ← strona posta
   return NextResponse.json({ success: true });
 }
