@@ -8,6 +8,8 @@ import { CartProvider } from "./context/cartContext";
 import { CategoriesProvider } from "./context/categoriesContext";
 import CookieConsent from "./components/CookieConsent";
 import FacebookPixel from "./components/FacebookPixel";
+import { GoogleTagManager } from "@next/third-parties/google";
+import Script from "next/script";
 
 // Konfiguracja czcionki Josefin Sans
 const josefinSans = Josefin_Sans({
@@ -18,6 +20,21 @@ const josefinSans = Josefin_Sans({
 export default function RootLayout({ children }) {
   return (
     <html lang="pl">
+      <head>
+        <Script id="consent-default" strategy="beforeInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('consent', 'default', {
+              'ad_storage': 'denied',
+              'ad_user_data': 'denied',
+              'ad_personalization': 'denied',
+              'analytics_storage': 'denied',
+              'wait_for_update': 500
+            });
+          `}
+        </Script>
+      </head>
       <body
         className={`${josefinSans.className} antialiased min-h-screen flex flex-col`}
       >
@@ -29,6 +46,7 @@ export default function RootLayout({ children }) {
               <FacebookPixel />
               <main className="grow">{children}</main>
               <CookieConsent />
+              <GoogleTagManager gtmId="GTM-M7C454G3" />
               <Footer />
             </CategoriesProvider>
           </CartProvider>

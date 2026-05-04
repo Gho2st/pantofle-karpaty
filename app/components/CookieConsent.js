@@ -1,5 +1,4 @@
 "use client";
-
 import Link from "next/link";
 import { useState, useEffect } from "react";
 
@@ -7,132 +6,129 @@ const CookieConsent = () => {
   const [showBanner, setShowBanner] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [consent, setConsent] = useState({
+    ad_storage: "denied",
     analytics_storage: "denied",
   });
 
   useEffect(() => {
-    const stored = localStorage.getItem("cookie-consent");
-    if (stored) {
-      const parsed = JSON.parse(stored);
+    const storedConsent = localStorage.getItem("consent");
+    if (storedConsent) {
+      const parsed = JSON.parse(storedConsent);
       setConsent(parsed);
-      applyConsent(parsed);
+      updateGtagConsent(parsed);
+      setShowBanner(false);
     } else {
       setShowBanner(true);
     }
   }, []);
 
-  const applyConsent = (consentState) => {
+  // Aktualizuje zgodę w Google Consent Mode
+  const updateGtagConsent = (consentState) => {
     if (typeof window === "undefined") return;
-    if (consentState.analytics_storage === "granted") {
-      loadGTM();
-    } else {
-      removeGTM();
-    }
-  };
 
-  const loadGTM = () => {
-    if (document.getElementById("gtm-script")) return;
-    const script = document.createElement("script");
-    script.id = "gtm-script";
-    script.async = true;
-    script.src = "https://www.googletagmanager.com/gtm.js?id=GTM-M7C454G3";
-    document.head.appendChild(script);
     window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push({
-      "gtm.start": new Date().getTime(),
-      event: "gtm.js",
-    });
-  };
+    function gtag() {
+      window.dataLayer.push(arguments);
+    }
 
-  const removeGTM = () => {
-    const script = document.getElementById("gtm-script");
-    if (script) script.remove();
-    if (window.dataLayer) window.dataLayer = [];
+    gtag("consent", "update", {
+      ad_storage: consentState.ad_storage,
+      ad_user_data: consentState.ad_storage,
+      ad_personalization: consentState.ad_storage,
+      analytics_storage: consentState.analytics_storage,
+    });
   };
 
   const saveConsent = (newConsent) => {
     setConsent(newConsent);
-    localStorage.setItem("cookie-consent", JSON.stringify(newConsent));
-    applyConsent(newConsent);
+    localStorage.setItem("consent", JSON.stringify(newConsent));
+    updateGtagConsent(newConsent);
     setShowBanner(false);
     setShowSettings(false);
   };
 
-  const handleAcceptAll = () => saveConsent({ analytics_storage: "granted" });
-  const handleRejectAll = () => saveConsent({ analytics_storage: "denied" });
-  const toggleConsent = () =>
+  const handleAcceptAll = () => {
+    saveConsent({
+      ad_storage: "granted",
+      analytics_storage: "granted",
+    });
+  };
+
+  const handleRejectAll = () => {
+    saveConsent({
+      ad_storage: "denied",
+      analytics_storage: "denied",
+    });
+  };
+
+  const handleSaveSettings = () => {
+    saveConsent(consent);
+  };
+
+  const toggleConsent = (key) => {
     setConsent((prev) => ({
-      analytics_storage:
-        prev.analytics_storage === "granted" ? "denied" : "granted",
+      ...prev,
+      [key]: prev[key] === "granted" ? "denied" : "granted",
     }));
+  };
 
   if (!showBanner) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 md:p-6">
-      <div className="max-w-2xl mx-auto bg-white border border-gray-200 rounded-2xl shadow-lg p-6 md:p-8">
-        {/* Nagłówek */}
-        <div className="mb-4">
-          <p className="text-xs uppercase tracking-widest text-gray-400 mb-1">
-            Pantofle Karpaty
-          </p>
-          <h2 className="text-lg font-medium text-gray-900">
-            Ta strona używa ciasteczek
-          </h2>
-        </div>
-
-        {/* Opis */}
-        <p className="text-sm text-gray-500 leading-relaxed mb-4">
-          Używamy{" "}
-          <span className="text-gray-700 font-medium">Google Analytics 4</span>,
-          by lepiej rozumieć, jak korzystasz ze sklepu i poprawiać jego
-          działanie.{" "}
-          <Link
-            href="/polityka-prywatnosci"
-            className="text-red-700 hover:text-red-800 underline underline-offset-2 transition-colors"
-          >
-            Polityka prywatności
-          </Link>
+    <div className="fixed bottom-0 left-0 right-0 md:bottom-4 md:mx-4 bg-gray-900 text-white p-4 md:p-6 rounded-t-lg md:rounded-lg shadow-xl z-50 transition-all duration-300 ease-in-out">
+      <div className="max-w-7xl mx-auto text-center">
+        <h2 className="text-xl md:text-2xl font-bold mb-2 md:mb-4 tracking-tight">
+          Zgoda na ciasteczka
+        </h2>
+        <p className="mb-3 md:mb-4 text-xs md:text-sm leading-relaxed text-gray-300">
+          Cześć! Używamy cookies (np. Google Analytics, Google Ads), aby Twoja
+          wizyta była jeszcze lepsza – od personalizacji po analizę ruchu. Masz
+          pełną kontrolę nad ustawieniami!
         </p>
+        <Link
+          href="/polityka-cookies"
+          className="text-blue-400 hover:underline text-xs md:text-sm inline-block mb-3 md:mb-4"
+        >
+          Dowiedz się więcej
+        </Link>
 
-        {/* Panel ustawień */}
         {showSettings && (
-          <div className="mb-5 p-4 bg-gray-50 border border-gray-100 rounded-xl">
-            <p className="text-xs uppercase tracking-widest text-gray-400 mb-3">
-              Ustawienia
+          <div className="mt-3 md:mt-4 flex flex-col gap-2 md:gap-3 bg-gray-800 p-3 md:p-4 rounded-md transition-all duration-300">
+            <h3 className="text-base md:text-lg font-semibold tracking-tight">
+              Ustawienia cookies
+            </h3>
+            <p className="text-xs md:text-sm text-gray-300 mb-2 md:mb-3">
+              Możesz wybrać, które cookies chcesz zaakceptować. Niezbędne
+              cookies są zawsze włączone, aby strona działała prawidłowo.
             </p>
-            <label className="flex items-center justify-between cursor-pointer gap-4">
-              <span className="text-sm text-gray-700">
-                Analityka (Google Analytics 4)
-              </span>
-              {/* Toggle switch */}
-              <div
-                onClick={toggleConsent}
-                className={`relative w-10 h-5 rounded-full transition-colors duration-200 cursor-pointer shrink-0 ${
-                  consent.analytics_storage === "granted"
-                    ? "bg-red-600"
-                    : "bg-gray-300"
-                }`}
-              >
-                <div
-                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${
-                    consent.analytics_storage === "granted"
-                      ? "translate-x-5"
-                      : "translate-x-0"
-                  }`}
-                />
-              </div>
+            <label className="flex items-center gap-2 md:gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={consent.analytics_storage === "granted"}
+                onChange={() => toggleConsent("analytics_storage")}
+                className="h-4 w-4 md:h-5 md:w-5 accent-blue-500 rounded focus:ring-2 focus:ring-blue-400"
+              />
+              <span className="text-xs md:text-sm">Analityczne cookies</span>
             </label>
-            <div className="flex gap-2 mt-4">
+            <label className="flex items-center gap-2 md:gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={consent.ad_storage === "granted"}
+                onChange={() => toggleConsent("ad_storage")}
+                className="h-4 w-4 md:h-5 md:w-5 accent-blue-500 rounded focus:ring-2 focus:ring-blue-400"
+              />
+              <span className="text-xs md:text-sm">Reklamowe cookies</span>
+            </label>
+            <div className="flex justify-center gap-2 md:gap-4 mt-2 md:mt-3">
               <button
-                onClick={() => saveConsent(consent)}
-                className="px-4 py-2 bg-gray-900 hover:bg-gray-700 text-white text-xs font-medium uppercase tracking-wide rounded-lg transition-colors"
+                onClick={handleSaveSettings}
+                className="bg-blue-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-full hover:bg-blue-500 transition-all duration-200 text-xs md:text-sm font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
               >
-                Zapisz
+                Zapisz ustawienia
               </button>
               <button
                 onClick={() => setShowSettings(false)}
-                className="px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-medium uppercase tracking-wide rounded-lg transition-colors"
+                className="bg-gray-700 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-full hover:bg-gray-600 transition-all duration-200 text-xs md:text-sm font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
               >
                 Anuluj
               </button>
@@ -140,25 +136,24 @@ const CookieConsent = () => {
           </div>
         )}
 
-        {/* Przyciski główne */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-row justify-center gap-2 md:gap-4 mt-3 md:mt-4">
           <button
             onClick={handleAcceptAll}
-            className="flex-1 min-w-[100px] py-2.5 px-5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+            className="bg-green-600 text-white px-4 md:px-6 py-1.5 md:py-2 rounded-full hover:bg-green-500 transition-all duration-200 text-xs md:text-sm font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
           >
-            Akceptuj
+            Akceptuj wszystko
           </button>
           <button
             onClick={handleRejectAll}
-            className="flex-1 min-w-[100px] py-2.5 px-5 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors"
+            className="bg-red-600 text-white px-4 md:px-6 py-1.5 md:py-2 rounded-full hover:bg-red-500 transition-all duration-200 text-xs md:text-sm font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
           >
             Odrzuć
           </button>
           <button
-            onClick={() => setShowSettings((v) => !v)}
-            className="py-2.5 px-5 border border-gray-200 hover:bg-gray-50 text-gray-500 text-sm font-medium rounded-lg transition-colors"
+            onClick={() => setShowSettings(!showSettings)}
+            className="bg-gray-700 text-white px-4 md:px-6 py-1.5 md:py-2 rounded-full hover:bg-gray-600 transition-all duration-200 text-xs md:text-sm font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
           >
-            {showSettings ? "Ukryj" : "Ustawienia"}
+            Dostosuj
           </button>
         </div>
       </div>
