@@ -7,20 +7,21 @@ import AuthProvider from "./providers";
 import { CartProvider } from "./context/cartContext";
 import { CategoriesProvider } from "./context/categoriesContext";
 import CookieConsent from "./components/CookieConsent";
-import FacebookPixel from "./components/FacebookPixel";
 import { GoogleTagManager } from "@next/third-parties/google";
 import Script from "next/script";
 
-// Konfiguracja czcionki Josefin Sans
 const josefinSans = Josefin_Sans({
   subsets: ["latin"],
   weight: ["200", "300", "400", "500", "600", "700"],
 });
 
 export default function RootLayout({ children }) {
+  const fbPixelId = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID;
+
   return (
     <html lang="pl">
       <head>
+        {/* Google Consent Mode - domyślna odmowa */}
         <Script id="consent-default" strategy="beforeInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
@@ -43,7 +44,6 @@ export default function RootLayout({ children }) {
             <CategoriesProvider>
               <FreeDelivery />
               <Nav />
-              <FacebookPixel />
               <main className="grow">{children}</main>
               <CookieConsent />
               <GoogleTagManager gtmId="GTM-M7C454G3" />
@@ -51,6 +51,19 @@ export default function RootLayout({ children }) {
             </CategoriesProvider>
           </CartProvider>
         </AuthProvider>
+
+        {/* Facebook Pixel noscript - dla użytkowników bez JS */}
+        {fbPixelId && (
+          <noscript>
+            <img
+              height="1"
+              width="1"
+              style={{ display: "none" }}
+              src={`https://www.facebook.com/tr.php?id=${fbPixelId}&ev=PageView&noscript=1`}
+              alt=""
+            />
+          </noscript>
+        )}
       </body>
     </html>
   );

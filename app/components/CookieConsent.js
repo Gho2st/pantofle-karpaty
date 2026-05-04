@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const CookieConsent = () => {
   const [showBanner, setShowBanner] = useState(false);
@@ -9,20 +9,49 @@ const CookieConsent = () => {
     ad_storage: "denied",
     analytics_storage: "denied",
   });
+  const fbPixelLoaded = useRef(false);
 
-  useEffect(() => {
-    const storedConsent = localStorage.getItem("consent");
-    if (storedConsent) {
-      const parsed = JSON.parse(storedConsent);
-      setConsent(parsed);
-      updateGtagConsent(parsed);
-      setShowBanner(false);
-    } else {
-      setShowBanner(true);
+  // === Facebook Pixel ===
+  const loadFacebookPixel = () => {
+    if (fbPixelLoaded.current) return;
+
+    const pixelId = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID;
+    if (!pixelId) {
+      console.warn("Brak NEXT_PUBLIC_FACEBOOK_PIXEL_ID");
+      return;
     }
-  }, []);
 
-  // Aktualizuje zgodę w Google Consent Mode
+    // Inicjalizacja Pixel
+    !(function (f, b, e, v, n, t, s) {
+      if (f.fbq) return;
+      n = f.fbq = function () {
+        n.callMethod
+          ? n.callMethod.apply(n, arguments)
+          : n.queue.push(arguments);
+      };
+      if (!f._fbq) f._fbq = n;
+      n.push = n;
+      n.loaded = !0;
+      n.version = "2.0";
+      n.queue = [];
+      t = b.createElement(e);
+      t.async = !0;
+      t.src = v;
+      s = b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t, s);
+    })(
+      window,
+      document,
+      "script",
+      "https://connect.facebook.net/en_US/fbevents.js",
+    );
+
+    window.fbq("init", pixelId);
+    window.fbq("track", "PageView");
+    fbPixelLoaded.current = true;
+  };
+
+  // === Aktualizacja zgody w Google Consent Mode ===
   const updateGtagConsent = (consentState) => {
     if (typeof window === "undefined") return;
 
@@ -39,10 +68,38 @@ const CookieConsent = () => {
     });
   };
 
+  // === Sprawdzenie zgody przy starcie ===
+  useEffect(() => {
+    const storedConsent = localStorage.getItem("consent");
+    if (storedConsent) {
+      const parsed = JSON.parse(storedConsent);
+      setConsent(parsed);
+      updateGtagConsent(parsed);
+
+      // Facebook Pixel - tylko jeśli zgoda na reklamy
+      if (parsed.ad_storage === "granted") {
+        loadFacebookPixel();
+      }
+
+      setShowBanner(false);
+    } else {
+      setShowBanner(true);
+    }
+  }, []);
+
+  // === Zapis zgody ===
   const saveConsent = (newConsent) => {
     setConsent(newConsent);
     localStorage.setItem("consent", JSON.stringify(newConsent));
+
+    // 1. Google Consent Mode (GTM/Ads/Analytics)
     updateGtagConsent(newConsent);
+
+    // 2. Facebook Pixel - ładuj jeśli zgoda na reklamy
+    if (newConsent.ad_storage === "granted") {
+      loadFacebookPixel();
+    }
+
     setShowBanner(false);
     setShowSettings(false);
   };
@@ -81,9 +138,9 @@ const CookieConsent = () => {
           Zgoda na ciasteczka
         </h2>
         <p className="mb-3 md:mb-4 text-xs md:text-sm leading-relaxed text-gray-300">
-          Cześć! Używamy cookies (np. Google Analytics, Google Ads), aby Twoja
-          wizyta była jeszcze lepsza – od personalizacji po analizę ruchu. Masz
-          pełną kontrolę nad ustawieniami!
+          Cześć! Używamy cookies (np. Google Analytics, Google Ads, Meta Pixel),
+          aby Twoja wizyta była jeszcze lepsza – od personalizacji po analizę
+          ruchu. Masz pełną kontrolę nad ustawieniami!
         </p>
         <Link
           href="/polityka-cookies"
@@ -117,7 +174,9 @@ const CookieConsent = () => {
                 onChange={() => toggleConsent("ad_storage")}
                 className="h-4 w-4 md:h-5 md:w-5 accent-blue-500 rounded focus:ring-2 focus:ring-blue-400"
               />
-              <span className="text-xs md:text-sm">Reklamowe cookies</span>
+              <span className="text-xs md:text-sm">
+                Reklamowe cookies (Google Ads, Meta Pixel)
+              </span>
             </label>
             <div className="flex justify-center gap-2 md:gap-4 mt-2 md:mt-3">
               <button
