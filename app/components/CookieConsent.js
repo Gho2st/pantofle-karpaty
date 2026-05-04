@@ -143,7 +143,7 @@ const CookieConsent = () => {
           ruchu. Masz pełną kontrolę nad ustawieniami!
         </p>
         <Link
-          href="/polityka-cookies"
+          href="/polityka-prywatnosci"
           className="text-blue-400 hover:underline text-xs md:text-sm inline-block mb-3 md:mb-4"
         >
           Dowiedz się więcej
