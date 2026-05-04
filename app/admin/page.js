@@ -26,17 +26,6 @@ export default function Admin({ session }) {
         return <BlogAdmin />;
       case "dashboard":
         return <Dashboard />;
-      default:
-        return (
-          <div className="flex flex-col items-center justify-center h-full text-center p-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-4">
-              Witaj w Panelu Admina
-            </h1>
-            <p className="text-gray-600 max-w-md">
-              Wybierz opcję z menu, aby rozpocząć.
-            </p>
-          </div>
-        );
     }
   };
 
@@ -83,12 +72,11 @@ export default function Admin({ session }) {
             </button>
           </div>
           <nav className="flex-1 space-y-1">
-            {menuItem("start", "Start")}
+            {menuItem("dashboard", "Dashboard")}
             {menuItem("orders", "Zamówienia")}
             {menuItem("categories", "Kategorie")}
             {menuItem("discounts", "Kody rabatowe")}
             {menuItem("blog", "Blog")}
-            {menuItem("dashboard", "Dashboard")}
           </nav>
         </div>
       </aside>
