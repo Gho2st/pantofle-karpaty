@@ -21,7 +21,6 @@ const CookieConsent = () => {
       return;
     }
 
-    // Inicjalizacja Pixel
     !(function (f, b, e, v, n, t, s) {
       if (f.fbq) return;
       n = f.fbq = function () {
@@ -47,8 +46,16 @@ const CookieConsent = () => {
     );
 
     window.fbq("init", pixelId);
+    window.fbq("consent", "grant");
     window.fbq("track", "PageView");
     fbPixelLoaded.current = true;
+  };
+
+  // === Cofnięcie zgody dla Facebook Pixel ===
+  const revokeFacebookPixel = () => {
+    if (typeof window !== "undefined" && window.fbq) {
+      window.fbq("consent", "revoke");
+    }
   };
 
   // === Aktualizacja zgody w Google Consent Mode ===
@@ -70,13 +77,12 @@ const CookieConsent = () => {
 
   // === Sprawdzenie zgody przy starcie ===
   useEffect(() => {
-    const storedConsent = localStorage.getItem("consent");
+    const storedConsent = localStorage.getItem("consent_v2");
     if (storedConsent) {
       const parsed = JSON.parse(storedConsent);
       setConsent(parsed);
       updateGtagConsent(parsed);
 
-      // Facebook Pixel - tylko jeśli zgoda na reklamy
       if (parsed.ad_storage === "granted") {
         loadFacebookPixel();
       }
@@ -90,14 +96,16 @@ const CookieConsent = () => {
   // === Zapis zgody ===
   const saveConsent = (newConsent) => {
     setConsent(newConsent);
-    localStorage.setItem("consent", JSON.stringify(newConsent));
+    localStorage.setItem("consent_v2", JSON.stringify(newConsent));
 
     // 1. Google Consent Mode (GTM/Ads/Analytics)
     updateGtagConsent(newConsent);
 
-    // 2. Facebook Pixel - ładuj jeśli zgoda na reklamy
+    // 2. Facebook Pixel
     if (newConsent.ad_storage === "granted") {
       loadFacebookPixel();
+    } else {
+      revokeFacebookPixel();
     }
 
     setShowBanner(false);

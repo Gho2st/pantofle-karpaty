@@ -16,8 +16,6 @@ const josefinSans = Josefin_Sans({
 });
 
 export default function RootLayout({ children }) {
-  const fbPixelId = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID;
-
   return (
     <html lang="pl">
       <head>
@@ -51,19 +49,6 @@ export default function RootLayout({ children }) {
             </CategoriesProvider>
           </CartProvider>
         </AuthProvider>
-
-        {/* Facebook Pixel noscript - dla użytkowników bez JS */}
-        {fbPixelId && (
-          <noscript>
-            <img
-              height="1"
-              width="1"
-              style={{ display: "none" }}
-              src={`https://www.facebook.com/tr.php?id=${fbPixelId}&ev=PageView&noscript=1`}
-              alt=""
-            />
-          </noscript>
-        )}
       </body>
     </html>
   );
