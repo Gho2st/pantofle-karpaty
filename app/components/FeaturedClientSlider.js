@@ -151,7 +151,6 @@ function ProductCard({ product }) {
               −{discount}%
             </div>
           )}
-
         </div>
 
         <h3 className="text-sm font-medium text-gray-900 group-hover:text-red-700 transition-colors leading-snug mb-1 line-clamp-1">
