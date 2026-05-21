@@ -41,7 +41,7 @@ export default function Modal() {
         </button>
 
         <div className="text-center">
-          <div className="text-5xl mb-4">🍽️</div>
+          <div className="text-5xl mb-4">!</div>
           <h2
             id="restaurant-modal-title"
             className="text-2xl font-semibold text-gray-900 mb-3"
