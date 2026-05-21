@@ -19,7 +19,7 @@ export async function POST(request, { params }) {
     if (!id || isNaN(parseInt(id))) {
       return NextResponse.json(
         { error: "Nieprawidłowe ID zamówienia" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -42,7 +42,7 @@ export async function POST(request, { params }) {
     if (!order) {
       return NextResponse.json(
         { error: "Zamówienie nie istnieje" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -57,7 +57,7 @@ export async function POST(request, { params }) {
       ) {
         return NextResponse.json(
           { error: "Brak autoryzacji" },
-          { status: 403 }
+          { status: 403 },
         );
       }
     }
@@ -66,7 +66,7 @@ export async function POST(request, { params }) {
     if (order.status !== "PENDING") {
       return NextResponse.json(
         { error: "Nie można ponowić płatności dla zamówienia w tym statusie" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -77,21 +77,25 @@ export async function POST(request, { params }) {
           error:
             "Brak konfiguracji Stripe lub NEXT_PUBLIC_BASE_URL w zmiennych środowiskowych",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
+    // Zabezpieczenie przed podwójnym slashem — usuwa trailing slash z BASE_URL
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL.replace(/\/$/, "");
+
     // Generate new Stripe Checkout session
     const stripeSession = await stripe.checkout.sessions.create({
-      payment_method_types: ["card", "blik", "p24"],
+      // Brak payment_method_types — Stripe użyje metod aktywnych
+      // w Payment Method Configuration (Dashboard → Settings → Payment methods)
       mode: "payment",
       currency: "pln",
       customer_email: order.email,
       metadata: {
         orderId: order.id.toString(),
       },
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/zamowienie/${order.id}?status=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/zamowienie/${order.id}?status=error`,
+      success_url: `${baseUrl}/zamowienie/${order.id}?status=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/zamowienie/${order.id}?status=error`,
       line_items: order.items.map((item) => ({
         price_data: {
           currency: "pln",
@@ -126,7 +130,7 @@ export async function POST(request, { params }) {
 
     return NextResponse.json(
       { redirectUrl: stripeSession.url },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Błąd podczas generowania nowej sesji płatności:", error);
@@ -136,7 +140,7 @@ export async function POST(request, { params }) {
           error.message ||
           "Błąd serwera podczas generowania nowej sesji płatności",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
