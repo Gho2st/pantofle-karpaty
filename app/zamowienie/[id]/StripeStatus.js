@@ -20,7 +20,7 @@ export default function StripeStatus({ order }) {
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(
-          errorData.error || "Nie udało się wygenerować nowej sesji płatności"
+          errorData.error || "Nie udało się wygenerować nowej sesji płatności",
         );
       }
       const { redirectUrl } = await response.json();
