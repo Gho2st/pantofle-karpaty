@@ -9,7 +9,7 @@ import { CategoriesProvider } from "./context/categoriesContext";
 import CookieConsent from "./components/CookieConsent";
 import { GoogleTagManager } from "@next/third-parties/google";
 import Script from "next/script";
-// import Modal from "./components/Modal";
+import Modal from "./components/Modal";
 
 const josefinSans = Josefin_Sans({
   subsets: ["latin"],
@@ -47,7 +47,7 @@ export default function RootLayout({ children }) {
               <CookieConsent />
               <GoogleTagManager gtmId="GTM-M7C454G3" />
               <Footer />
-              {/* <Modal /> */}
+              <Modal />
             </CategoriesProvider>
           </CartProvider>
         </AuthProvider>
