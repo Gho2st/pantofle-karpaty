@@ -7,7 +7,7 @@ import { useCategories } from "@/app/context/categoriesContext";
 const categoryMeta = {
   "dla-dzieci": {
     heading: "Obuwie dziecięce — wygoda i zdrowy rozwój stopy",
-    body: "Pantofle i kapcie dla dzieci w rozmiarach 26–35. Szyjemy zarówno ze skóry naturalnej z wkładką skórzaną, jak i z wysokiej jakości materiałów syntetycznych — miękkich, przewiewnych i łatwych w pielęgnacji. Każda para tworzona z dbałością o komfort i bezpieczeństwo dziecka.",
+    body: "Pantofle i kapcie dla dzieci w rozmiarach 26-35. Szyjemy zarówno ze skóry naturalnej z wkładką skórzaną, jak i z wysokiej jakości materiałów syntetycznych — miękkich, przewiewnych i łatwych w pielęgnacji. Każda para tworzona z dbałością o komfort i bezpieczeństwo dziecka.",
     cta: "Kolekcja dziecięca",
   },
   "dla-kobiet": {
