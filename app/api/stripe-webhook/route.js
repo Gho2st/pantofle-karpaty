@@ -16,7 +16,7 @@ export async function POST(req) {
     event = stripe.webhooks.constructEvent(
       rawBody,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET
+      process.env.STRIPE_WEBHOOK_SECRET,
     );
   } catch (err) {
     console.error("Webhook signature verification failed:", err.message);
@@ -79,7 +79,7 @@ export async function POST(req) {
         data: { status: "EXPIRED" },
       });
       console.log(
-        `Sesja wygasła – zamówienie #${orderId} oznaczone jako EXPIRED`
+        `Sesja wygasła – zamówienie #${orderId} oznaczone jako EXPIRED`,
       );
     }
   }

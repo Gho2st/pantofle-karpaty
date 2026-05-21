@@ -2,7 +2,7 @@ export const revalidate = 0;
 import prisma from "@/app/lib/prisma";
 
 export default async function sitemap() {
-  const baseUrl = "https://sklep-pantofle-karpaty.pl";
+  const baseUrl = "https://www.pantofle-karpaty.pl";
 
   // 1. Pobieramy wszystkie aktywne produkty
   const products = await prisma.product.findMany({

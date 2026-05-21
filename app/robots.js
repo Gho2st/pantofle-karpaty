@@ -12,6 +12,6 @@ export default function robots() {
         "/api/",
       ],
     },
-    sitemap: "https://sklep-pantofle-karpaty.pl/sitemap.xml",
+    sitemap: "https://www.pantofle-karpaty.pl/sitemap.xml",
   };
 }
