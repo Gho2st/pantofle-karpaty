@@ -15,7 +15,6 @@ export async function POST(request, { params }) {
     const awaitedParams = await params;
     const id = awaitedParams?.id;
 
-    // Validate order ID
     if (!id || isNaN(parseInt(id))) {
       return NextResponse.json(
         { error: "Nieprawidłowe ID zamówienia" },
@@ -23,19 +22,13 @@ export async function POST(request, { params }) {
       );
     }
 
-    // Fetch order with items
     const order = await prisma.order.findUnique({
       where: { id: parseInt(id) },
-      include: {
-        items: {
-          select: {
-            productId: true,
-            name: true,
-            size: true,
-            quantity: true,
-            price: true,
-          },
-        },
+      select: {
+        id: true,
+        status: true,
+        email: true,
+        totalAmount: true,
       },
     });
 
@@ -46,7 +39,7 @@ export async function POST(request, { params }) {
       );
     }
 
-    // Restrict access to order owner or admin
+    // Authorization check
     if (session && session.user && session.user.email) {
       const user = await prisma.user.findUnique({
         where: { email: session.user.email },
@@ -62,7 +55,6 @@ export async function POST(request, { params }) {
       }
     }
 
-    // Validate order status
     if (order.status !== "PENDING") {
       return NextResponse.json(
         { error: "Nie można ponowić płatności dla zamówienia w tym statusie" },
@@ -70,7 +62,6 @@ export async function POST(request, { params }) {
       );
     }
 
-    // Validate environment variables
     if (!process.env.STRIPE_SECRET_KEY || !process.env.NEXT_PUBLIC_BASE_URL) {
       return NextResponse.json(
         {
@@ -81,13 +72,9 @@ export async function POST(request, { params }) {
       );
     }
 
-    // Zabezpieczenie przed podwójnym slashem — usuwa trailing slash z BASE_URL
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL.replace(/\/$/, "");
 
-    // Generate new Stripe Checkout session
     const stripeSession = await stripe.checkout.sessions.create({
-      // Brak payment_method_types — Stripe użyje metod aktywnych
-      // w Payment Method Configuration (Dashboard → Settings → Payment methods)
       mode: "payment",
       currency: "pln",
       customer_email: order.email,
@@ -96,33 +83,20 @@ export async function POST(request, { params }) {
       },
       success_url: `${baseUrl}/zamowienie/${order.id}?status=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/zamowienie/${order.id}?status=error`,
-      line_items: order.items.map((item) => ({
-        price_data: {
-          currency: "pln",
-          product_data: {
-            name: item.name,
-            description: `Rozmiar: ${item.size}`,
-          },
-          unit_amount: Math.round(item.price * 100), // Price in cents
-        },
-        quantity: item.quantity,
-      })),
-      shipping_options: [
+      line_items: [
         {
-          shipping_rate_data: {
-            type: "fixed_amount",
-            fixed_amount: {
-              amount: Math.round(order.deliveryCost * 100),
-              currency: "pln",
+          price_data: {
+            currency: "pln",
+            product_data: {
+              name: `Zamówienie #${order.id}`,
             },
-            display_name:
-              order.deliveryMethod === "paczkomat" ? "Paczkomat" : "Kurier",
+            unit_amount: Math.round(order.totalAmount * 100),
           },
+          quantity: 1,
         },
       ],
     });
 
-    // Update order with new session ID
     await prisma.order.update({
       where: { id: order.id },
       data: { paymentId: stripeSession.id, status: "PENDING" },
