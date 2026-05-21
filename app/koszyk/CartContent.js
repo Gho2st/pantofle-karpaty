@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import Collection from "../components/Collection";
 import LoadingOverlay from "./LoadingOverlay";
-import CartSkeleton from "./CartSkeleton";
 import QuantityInput from "./QuantityInput";
 
 export default function CartContent() {
@@ -26,7 +25,7 @@ export default function CartContent() {
     availabilityErrors,
     setAvailabilityErrors,
     availableQuantities,
-    getCurrentPrice, // ← DODANE
+    getCurrentPrice,
   } = useCart();
 
   const [deliveryMethod, setDeliveryMethod] = useState("paczkomat");
@@ -81,7 +80,7 @@ export default function CartContent() {
     return cartItems
       .reduce(
         (sum, item) => sum + getCurrentPrice(item.product) * item.quantity,
-        0
+        0,
       )
       .toFixed(2);
   };
@@ -222,7 +221,7 @@ export default function CartContent() {
                     availabilityErrors.some(
                       (e) =>
                         String(e.productId) === String(item.productId) &&
-                        e.size === item.size
+                        e.size === item.size,
                     )
                       ? "border-2 border-red-500 ring-2 ring-red-200"
                       : "border border-transparent"
@@ -267,7 +266,7 @@ export default function CartContent() {
                         error={availabilityErrors.some(
                           (e) =>
                             String(e.productId) === String(item.productId) &&
-                            e.size === item.size
+                            e.size === item.size,
                         )}
                       />
                     </div>
@@ -277,7 +276,7 @@ export default function CartContent() {
                     {/* POPRAWIONE: Używa getCurrentPrice */}
                     <p className="text-lg font-medium text-gray-800">
                       {(getCurrentPrice(item.product) * item.quantity).toFixed(
-                        2
+                        2,
                       )}{" "}
                       PLN
                     </p>
@@ -476,8 +475,8 @@ export default function CartContent() {
                 {isRedirecting
                   ? "Przechodzenie..."
                   : isCheckingAvailability
-                  ? "Sprawdzanie..."
-                  : "Przejdź do finalizacji"}
+                    ? "Sprawdzanie..."
+                    : "Przejdź do finalizacji"}
               </button>
             </div>
           </div>

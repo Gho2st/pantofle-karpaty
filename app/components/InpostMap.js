@@ -43,7 +43,7 @@ const InPostGeowidget = ({
         return;
       }
 
-      console.log("✅ Punkt InPost odebrany pomyślnie:", point);
+      // console.log("✅ Punkt InPost odebrany pomyślnie:", point);
       setSelectedPoint(point);
 
       // UKRYJ MAPĘ po wybraniu punktu
