@@ -73,6 +73,7 @@ model Product {
   featured       Boolean     @default(false)
   colorHex       String?
   colorGroup     String?
+
   @@unique([slug, deletedAt]) // KLUCZ: unikalny TYLKO wśród aktywnych!
 }
 
@@ -162,4 +163,12 @@ model Post {
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  // CTA na końcu wpisu
+  ctaTitle          String?
+  ctaDescription    String?
+  ctaPrimaryLabel   String?
+  ctaPrimaryUrl     String?
+  ctaSecondaryLabel String?
+  ctaSecondaryUrl   String?
 }

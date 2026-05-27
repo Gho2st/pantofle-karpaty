@@ -9,6 +9,24 @@ const prisma = new PrismaClient();
 async function getPost(slug) {
   return prisma.post.findFirst({
     where: { slug, status: "published" },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      excerpt: true,
+      content: true,
+      coverImage: true,
+      publishedAt: true,
+      createdAt: true,
+      updatedAt: true,
+      // CTA fields
+      ctaTitle: true,
+      ctaDescription: true,
+      ctaPrimaryLabel: true,
+      ctaSecondaryLabel: true,
+      ctaPrimaryUrl: true,
+      ctaSecondaryUrl: true,
+    },
   });
 }
 
@@ -140,6 +158,50 @@ export default async function BlogPostPage({ params }) {
             prose-img:rounded-xl"
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
+
+        {/* ==================== CTA ==================== */}
+        {post.ctaTitle && (
+          <div className="my-16 bg-gradient-to-br from-red-900 to-red-800 rounded-2xl p-8 lg:p-10 text-white">
+            <p className="text-xs uppercase tracking-widest text-red-200 mb-3">
+              Pantofle Karpaty
+            </p>
+            <h3 className="text-2xl lg:text-3xl font-light mb-3 leading-tight">
+              {post.ctaTitle}
+            </h3>
+            {post.ctaDescription && (
+              <p className="text-red-100 mb-6 leading-relaxed max-w-xl">
+                {post.ctaDescription}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-3">
+              {post.ctaPrimaryUrl && post.ctaPrimaryLabel && (
+                <Link
+                  href={
+                    post.ctaPrimaryUrl.startsWith("http")
+                      ? post.ctaPrimaryUrl
+                      : post.ctaPrimaryUrl
+                  }
+                  className="inline-flex items-center gap-2 bg-white text-red-900 px-6 py-3 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
+                >
+                  {post.ctaPrimaryLabel} <span>→</span>
+                </Link>
+              )}
+              {post.ctaSecondaryUrl && post.ctaSecondaryLabel && (
+                <Link
+                  href={
+                    post.ctaSecondaryUrl.startsWith("http")
+                      ? post.ctaSecondaryUrl
+                      : post.ctaSecondaryUrl
+                  }
+                  className="inline-flex items-center gap-2 border border-red-700 text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-red-700/30 transition-colors"
+                >
+                  {post.ctaSecondaryLabel}
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
+        {/* ============================================ */}
 
         {/* Powrót */}
         <div className="mt-16 pt-8 border-t border-gray-100">

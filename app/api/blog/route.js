@@ -18,8 +18,6 @@ export async function GET(req) {
 
   return NextResponse.json(posts);
 }
-
-// POST — utwórz nowy wpis
 export async function POST(req) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "ADMIN") {
@@ -27,8 +25,21 @@ export async function POST(req) {
   }
 
   const body = await req.json();
-  const { title, slug, excerpt, content, coverImage, status, publishedAt } =
-    body;
+  const {
+    title,
+    slug,
+    excerpt,
+    content,
+    coverImage,
+    status,
+    publishedAt,
+    ctaTitle,
+    ctaDescription,
+    ctaPrimaryLabel,
+    ctaPrimaryUrl,
+    ctaSecondaryLabel,
+    ctaSecondaryUrl,
+  } = body;
 
   if (!title || !slug || !content) {
     return NextResponse.json(
@@ -51,6 +62,12 @@ export async function POST(req) {
             ? new Date(publishedAt)
             : new Date()
           : null,
+      ctaTitle: ctaTitle || null,
+      ctaDescription: ctaDescription || null,
+      ctaPrimaryLabel: ctaPrimaryLabel || null,
+      ctaPrimaryUrl: ctaPrimaryUrl || null,
+      ctaSecondaryLabel: ctaSecondaryLabel || null,
+      ctaSecondaryUrl: ctaSecondaryUrl || null,
     },
   });
   revalidatePath("/blog");

@@ -29,6 +29,12 @@ const emptyForm = {
   coverImage: "",
   status: "draft",
   publishedAt: "",
+  ctaTitle: "",
+  ctaDescription: "",
+  ctaPrimaryLabel: "",
+  ctaPrimaryUrl: "",
+  ctaSecondaryLabel: "",
+  ctaSecondaryUrl: "",
 };
 
 // ====================== LISTA WPISÓW ======================
@@ -182,6 +188,12 @@ function BlogForm({ post, onBack }) {
           publishedAt: post.publishedAt
             ? new Date(post.publishedAt).toISOString().split("T")[0]
             : "",
+          ctaTitle: post.ctaTitle || "",
+          ctaDescription: post.ctaDescription || "",
+          ctaPrimaryLabel: post.ctaPrimaryLabel || "",
+          ctaPrimaryUrl: post.ctaPrimaryUrl || "",
+          ctaSecondaryLabel: post.ctaSecondaryLabel || "",
+          ctaSecondaryUrl: post.ctaSecondaryUrl || "",
         }
       : emptyForm,
   );
@@ -220,6 +232,9 @@ function BlogForm({ post, onBack }) {
     setSaving(false);
   };
 
+  const fieldClass =
+    "w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors";
+
   return (
     <div>
       {/* Nagłówek */}
@@ -251,7 +266,7 @@ function BlogForm({ post, onBack }) {
             value={form.title}
             onChange={handleTitleChange}
             placeholder="np. Jak dobrać rozmiar kapci ze skóry"
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors"
+            className={fieldClass}
             required
           />
         </div>
@@ -290,7 +305,7 @@ function BlogForm({ post, onBack }) {
             }
             placeholder="Wyświetlany na liście wpisów i w Google..."
             rows={2}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors resize-none"
+            className={`${fieldClass} resize-none`}
           />
         </div>
 
@@ -306,7 +321,7 @@ function BlogForm({ post, onBack }) {
               setForm((f) => ({ ...f, coverImage: e.target.value }))
             }
             placeholder="https://..."
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors"
+            className={fieldClass}
           />
           {form.coverImage && (
             <img
@@ -328,6 +343,102 @@ function BlogForm({ post, onBack }) {
           />
         </div>
 
+        {/* CTA */}
+        <div className="p-4 bg-gray-50 rounded-xl flex flex-col gap-4">
+          <p className="text-xs uppercase tracking-widest text-gray-400 font-medium">
+            Sekcja CTA (na końcu wpisu)
+          </p>
+
+          <div>
+            <label className="block text-xs uppercase tracking-widest text-gray-400 mb-2">
+              Tytuł CTA
+            </label>
+            <input
+              type="text"
+              value={form.ctaTitle}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, ctaTitle: e.target.value }))
+              }
+              placeholder="np. Po zwiedzaniu czas na coś dobrego"
+              className={fieldClass}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs uppercase tracking-widest text-gray-400 mb-2">
+              Opis CTA
+            </label>
+            <textarea
+              value={form.ctaDescription}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, ctaDescription: e.target.value }))
+              }
+              placeholder="Krótki tekst zachęcający..."
+              rows={2}
+              className={`${fieldClass} resize-none`}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs uppercase tracking-widest text-gray-400 mb-2">
+                Tekst przycisku 1
+              </label>
+              <input
+                type="text"
+                value={form.ctaPrimaryLabel}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, ctaPrimaryLabel: e.target.value }))
+                }
+                placeholder="np. Zobacz park"
+                className={fieldClass}
+              />
+            </div>
+            <div>
+              <label className="block text-xs uppercase tracking-widest text-gray-400 mb-2">
+                URL przycisku 1
+              </label>
+              <input
+                type="text"
+                value={form.ctaPrimaryUrl}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, ctaPrimaryUrl: e.target.value }))
+                }
+                placeholder="/park lub https://..."
+                className={fieldClass}
+              />
+            </div>
+            <div>
+              <label className="block text-xs uppercase tracking-widest text-gray-400 mb-2">
+                Tekst przycisku 2
+              </label>
+              <input
+                type="text"
+                value={form.ctaSecondaryLabel}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, ctaSecondaryLabel: e.target.value }))
+                }
+                placeholder="np. Zarezerwuj stolik"
+                className={fieldClass}
+              />
+            </div>
+            <div>
+              <label className="block text-xs uppercase tracking-widest text-gray-400 mb-2">
+                URL przycisku 2
+              </label>
+              <input
+                type="text"
+                value={form.ctaSecondaryUrl}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, ctaSecondaryUrl: e.target.value }))
+                }
+                placeholder="/restauracja lub https://..."
+                className={fieldClass}
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Status + data */}
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -339,7 +450,7 @@ function BlogForm({ post, onBack }) {
               onChange={(e) =>
                 setForm((f) => ({ ...f, status: e.target.value }))
               }
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-gray-400 transition-colors"
+              className={fieldClass}
             >
               <option value="draft">Szkic</option>
               <option value="published">Opublikowany</option>
@@ -355,7 +466,7 @@ function BlogForm({ post, onBack }) {
               onChange={(e) =>
                 setForm((f) => ({ ...f, publishedAt: e.target.value }))
               }
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-gray-400 transition-colors"
+              className={fieldClass}
             />
           </div>
         </div>

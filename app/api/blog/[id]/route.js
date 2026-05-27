@@ -20,7 +20,6 @@ export async function GET(req, { params }) {
     return NextResponse.json({ error: "Nie znaleziono" }, { status: 404 });
   return NextResponse.json(post);
 }
-
 // PUT — edytuj wpis
 export async function PUT(req, { params }) {
   const session = await getServerSession(authOptions);
@@ -29,8 +28,21 @@ export async function PUT(req, { params }) {
   }
 
   const body = await req.json();
-  const { title, slug, excerpt, content, coverImage, status, publishedAt } =
-    body;
+  const {
+    title,
+    slug,
+    excerpt,
+    content,
+    coverImage,
+    status,
+    publishedAt,
+    ctaTitle,
+    ctaDescription,
+    ctaPrimaryLabel,
+    ctaPrimaryUrl,
+    ctaSecondaryLabel,
+    ctaSecondaryUrl,
+  } = body;
 
   const post = await prisma.post.update({
     where: { id: parseInt(params.id) },
@@ -47,11 +59,17 @@ export async function PUT(req, { params }) {
             ? new Date(publishedAt)
             : new Date()
           : null,
+      ctaTitle: ctaTitle || null,
+      ctaDescription: ctaDescription || null,
+      ctaPrimaryLabel: ctaPrimaryLabel || null,
+      ctaPrimaryUrl: ctaPrimaryUrl || null,
+      ctaSecondaryLabel: ctaSecondaryLabel || null,
+      ctaSecondaryUrl: ctaSecondaryUrl || null,
       updatedAt: new Date(),
     },
   });
-  revalidatePath("/blog"); // ← lista
-  revalidatePath(`/blog/${post.slug}`); // ← strona posta
+  revalidatePath("/blog");
+  revalidatePath(`/blog/${post.slug}`);
   return NextResponse.json(post);
 }
 
