@@ -2,9 +2,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/app/lib/prisma";
 
-const prisma = new PrismaClient();
+export const revalidate = 86400; // 24h
 
 async function getPost(slug) {
   return prisma.post.findFirst({

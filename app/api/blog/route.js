@@ -71,6 +71,7 @@ export async function POST(req) {
     },
   });
   revalidatePath("/blog");
+  revalidatePath(`/blog/${post.slug}`);
 
   return NextResponse.json(post, { status: 201 });
 }

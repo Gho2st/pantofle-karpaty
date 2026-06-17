@@ -4,6 +4,8 @@ import Image from "next/image";
 import prisma from "../lib/prisma";
 import BlogProducts from "./blogProducts";
 
+export const revalidate = 86400; // 24h
+
 export const metadata = {
   title: "Blog o obuwiu skórzanym | Pantofle Karpaty",
   description:
