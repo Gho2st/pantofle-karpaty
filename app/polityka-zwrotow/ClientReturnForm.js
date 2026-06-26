@@ -125,7 +125,7 @@ export default function ClientReturnForm() {
           Kupiłaś/eś, przymierzyłaś/eś i nie pasuje?
         </h2>
         <p className="text-gray-700 leading-relaxed">
-          Nie martw się! Masz <strong>14 dni</strong> na zwrot zakupionego
+          Nie martw się! Masz <strong>30 dni</strong> na zwrot zakupionego
           towaru. Zwrot środków nastąpi{" "}
           <strong>niezwłocznie – nie później niż 14 dni</strong> od otrzymania
           zwrotu.

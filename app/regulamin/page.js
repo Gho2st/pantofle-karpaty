@@ -317,7 +317,7 @@ export default function RegulaminSklepu() {
         </h2>
         <ol className="list-decimal pl-6 space-y-3 text-gray-700">
           <li>
-            Konsument może odstąpić od Umowy w terminie <strong>14 dni</strong>{" "}
+            Konsument może odstąpić od Umowy w terminie <strong>30 dni</strong>{" "}
             bez podawania przyczyny.
           </li>
           <li>Termin biegnie od otrzymania Produktu.</li>
@@ -338,12 +338,12 @@ export default function RegulaminSklepu() {
         </h3>
         <ol className="list-decimal pl-6 space-y-3 text-gray-700">
           <li>Umowa uważana jest za niezawartą.</li>
-          <li>Zwrot płatności w ciągu 14 dni (tę samą metodą).</li>
+          <li>Zwrot płatności w ciągu 30 dni (tę samą metodą).</li>
           <li>
             Sprzedawca może wstrzymać zwrot do otrzymania Produktu lub dowodu
             odesłania.
           </li>
-          <li>Konsument odsyła Produkt w ciągu 14 dni z dokumentem zakupu.</li>
+          <li>Konsument odsyła Produkt w ciągu 30 dni z dokumentem zakupu.</li>
           <li>Konsument ponosi koszt zwrotu.</li>
           <li>
             Odpowiedzialność tylko za zmniejszenie wartości Produktu ponad

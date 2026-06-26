@@ -4,8 +4,9 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 
 const SizeChart = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [type, setType] = useState("standard"); // "standard" | "mule"
 
-  const sizes = [
+  const standardSizes = [
     { eu: 26, insole: 16.5 },
     { eu: 27, insole: 17.0 },
     { eu: 28, insole: 18 },
@@ -29,6 +30,25 @@ const SizeChart = () => {
     { eu: 46, insole: 30 },
   ];
 
+  const muleSizes = [
+    { eu: 36, insole: 22.5 },
+    { eu: 37, insole: 23.2 },
+    { eu: 38, insole: 23.8 },
+    { eu: 39, insole: 24.5 },
+    { eu: 40, insole: 25.2 },
+    { eu: 41, insole: 25.7 },
+    { eu: 42, insole: 26.5 },
+    { eu: 43, insole: 27.3 },
+    { eu: 44, insole: 27.9 },
+    { eu: 45, insole: 28.7 },
+    { eu: 46, insole: 29.2 },
+  ];
+
+  const sizes = type === "mule" ? muleSizes : standardSizes;
+
+  // format z polskim przecinkiem, np. 22,5
+  const formatCm = (v) => v.toFixed(1).replace(".", ",");
+
   return (
     <div className="border-t border-gray-100">
       <button
@@ -47,6 +67,30 @@ const SizeChart = () => {
 
       {isOpen && (
         <div className="pb-6">
+          {/* Przełącznik typu obuwia */}
+          <div className="flex gap-1 mb-4 p-1 bg-gray-50 rounded-lg">
+            <button
+              onClick={() => setType("standard")}
+              className={`flex-1 py-2 text-xs uppercase tracking-wider rounded-md transition-all ${
+                type === "standard"
+                  ? "bg-white text-gray-800 shadow-sm font-semibold"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              Standardowe
+            </button>
+            <button
+              onClick={() => setType("mule")}
+              className={`flex-1 py-2 text-xs uppercase tracking-wider rounded-md transition-all ${
+                type === "mule"
+                  ? "bg-white text-gray-800 shadow-sm font-semibold"
+                  : "text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              Klapki mule
+            </button>
+          </div>
+
           <dl className="grid grid-cols-1 divide-y divide-gray-100">
             <div className="flex justify-between items-baseline py-2 gap-4">
               <dt className="text-xs text-gray-400">Rozmiar EU</dt>
@@ -59,7 +103,7 @@ const SizeChart = () => {
               >
                 <dt className="text-xs text-gray-400">{size.eu}</dt>
                 <dd className="text-sm text-gray-700">
-                  {size.insole.toFixed(1)}
+                  {formatCm(size.insole)}
                 </dd>
               </div>
             ))}
