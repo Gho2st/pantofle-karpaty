@@ -4,7 +4,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import prisma from "@/app/lib/prisma";
 
-export const revalidate = 86400; // 24h
+export const revalidate = 86400;
+export const dynamicParams = false;
+
+export async function generateStaticParams() {
+  const posts = await prisma.post.findMany({
+    where: { status: "published" },
+    select: { slug: true },
+  });
+  return posts.map(({ slug }) => ({ slug }));
+}
 
 async function getPost(slug) {
   return prisma.post.findFirst({
@@ -47,7 +56,8 @@ async function getRelatedPosts(currentSlug) {
 }
 
 export async function generateMetadata({ params }) {
-  const post = await getPost(params.slug);
+  const { slug } = await params; // ← await
+  const post = await getPost(slug);
   if (!post) return {};
   return {
     title: `${post.title} | Blog Pantofle Karpaty`,
@@ -63,10 +73,11 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function BlogPostPage({ params }) {
-  const post = await getPost(params.slug);
+  const { slug } = await params; // ← await
+  const post = await getPost(slug);
   if (!post) notFound();
 
-  const related = await getRelatedPosts(params.slug);
+  const related = await getRelatedPosts(slug);
 
   const schema = {
     "@context": "https://schema.org",
