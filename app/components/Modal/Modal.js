@@ -5,11 +5,13 @@ export default function Modal() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    const hasSeenModal = sessionStorage.getItem("promoModalShown");
+    const hasSeenModal = sessionStorage.getItem(
+      "shippingBreakModalShown_2026_09",
+    );
     if (!hasSeenModal) {
       const timer = setTimeout(() => {
         setIsModalOpen(true);
-        sessionStorage.setItem("promoModalShown", "true");
+        sessionStorage.setItem("shippingBreakModalShown_2026_09", "true");
       }, 1500);
       return () => clearTimeout(timer);
     }
@@ -71,9 +73,9 @@ export default function Modal() {
               <div className="h-px bg-[#e0d7c7] w-1/2 mx-auto mb-6"></div>
 
               <p className="text-[#4a3728] mb-6 leading-relaxed font-medium">
-                W dniach 23-26 lutego trwa przerwa w wysyłkach. Wszystkie
-                zamówienia złożone w tym czasie zostaną wysłane po 26 lutego.
-                Dziękujemy za wyrozumiałość!
+                Zamówienia złożone w dniach 31.08 - 09.09 zostaną wysłane po 10
+                września z powodu przerwy wakacyjnej. Dziękujemy za
+                wyrozumiałość! 💛
               </p>
             </div>
           </div>
