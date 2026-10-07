@@ -142,14 +142,14 @@ export default function ShoeViewer({ variants }) {
             </h2>
             <p className="text-sm sm:text-base text-gray-500 leading-relaxed mb-6 sm:mb-8 max-w-sm">
               Ręcznie szyte w Męcinie. Podeszwa korkowa, wkładka ze skóry
-              naturalnej, klamra ze stali nierdzewnej.
+              naturalnej, metalowa klamra.
             </p>
 
             {/* Właściwości */}
             <div className="grid grid-cols-3 gap-3 sm:flex sm:flex-wrap sm:gap-6 mb-6 sm:mb-8 text-sm">
               {[
                 { label: "Materiał", value: "Welur bydlęcy" },
-                { label: "Podeszwa", value: "Korek + guma" },
+                { label: "Podeszwa", value: "Korek + styrogum" },
                 { label: "Wkładka", value: "Skóra naturalna" },
               ].map((item) => (
                 <div
