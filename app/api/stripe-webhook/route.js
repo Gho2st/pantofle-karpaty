@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import prisma from "@/app/lib/prisma";
 import { sendOrderEmails } from "@/app/lib/sendOrderEmails";
-import { expireOrder } from "@/app/lib/expireOrder";
+import { expireOrder } from "@/app/lib/releaseOrder";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",

@@ -1,18 +1,39 @@
-// app/lib/expireOrder.js
+// app/lib/releaseOrder.js
 import prisma from "@/app/lib/prisma";
 
-// Oznacza nieopłacone zamówienie jako EXPIRED i oddaje towar na stan.
-// Zmiana statusu PENDING → EXPIRED jest warunkowa, więc nawet przy
-// równoczesnym wywołaniu z webhooka i strony zamówienia stan wraca tylko raz.
+// Zamówienia w tych statusach trzymają towar zdjęty ze stanu.
+const ACTIVE_STATUSES = ["PENDING", "PAID", "SHIPPED"];
+
+// Nieopłacone zamówienie → EXPIRED, towar wraca na stan.
 // paymentId: wygasa tylko aktualna sesja Stripe — po ponowieniu płatności
 // (retry-payment) wygaśnięcie starej sesji nie może anulować zamówienia.
-export async function expireOrder(orderId, paymentId) {
+export function expireOrder(orderId, paymentId) {
+  return releaseOrder(
+    { id: orderId, status: "PENDING", paymentId },
+    "EXPIRED",
+  );
+}
+
+// Anulowanie przez admina → CANCELLED, towar wraca na stan.
+export function cancelOrder(orderId) {
+  return releaseOrder(
+    { id: orderId, status: { in: ACTIVE_STATUSES } },
+    "CANCELLED",
+  );
+}
+
+// Zmiana statusu jest warunkowa, więc przy równoczesnych wywołaniach
+// (webhook + strona zamówienia, podwójne kliknięcie) towar wraca tylko raz.
+// Zwraca false, jeśli zamówienie nie spełniało warunku.
+async function releaseOrder(where, newStatus) {
   return prisma.$transaction(async (tx) => {
     const { count } = await tx.order.updateMany({
-      where: { id: orderId, status: "PENDING", paymentId },
-      data: { status: "EXPIRED" },
+      where,
+      data: { status: newStatus },
     });
     if (count === 0) return false;
+
+    const orderId = where.id;
 
     const order = await tx.order.findUnique({
       where: { id: orderId },

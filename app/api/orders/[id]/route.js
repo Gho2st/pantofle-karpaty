@@ -3,23 +3,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
-
-// === BEZPIECZNE PARSOWANIE I ZAPIS JSON ===
-function parseSizes(sizes) {
-  if (typeof sizes === "string") {
-    try {
-      return JSON.parse(sizes);
-    } catch (e) {
-      console.error("Błąd parsowania sizes:", e);
-      return [];
-    }
-  }
-  return Array.isArray(sizes) ? sizes : [];
-}
-
-function serializeSizes(sizes) {
-  return JSON.stringify(sizes);
-}
+import { cancelOrder } from "@/app/lib/releaseOrder";
 
 export async function PATCH(request, { params }) {
   const session = await getServerSession(authOptions);
@@ -52,22 +36,9 @@ export async function PATCH(request, { params }) {
 
     const orderId = parseInt(id);
 
-    // Pobierz zamówienie z itemami i produktami
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: {
-        items: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                sizes: true,
-              },
-            },
-          },
-        },
-      },
+      select: { status: true },
     });
 
     if (!order) {
@@ -77,35 +48,25 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    // === RESTOCK: tylko jeśli status ZMIENIA się NA CANCELLED ===
-    const wasCancelled = order.status === "CANCELLED";
+    // Anulowane/wygasłe zamówienie ma już towar z powrotem na stanie —
+    // przywrócenie go do obiegu rozjechałoby stany magazynowe.
+    if (["CANCELLED", "EXPIRED"].includes(order.status)) {
+      return NextResponse.json(
+        { error: "Nie można zmienić statusu anulowanego lub wygasłego zamówienia" },
+        { status: 400 }
+      );
+    }
+
     const isNowCancelled = status === "CANCELLED";
 
-    if (isNowCancelled && !wasCancelled) {
-      for (const item of order.items) {
-        const product = item.product;
-        if (!product || !product.sizes) continue;
-
-        let sizes = parseSizes(product.sizes);
-        const sizeEntry = sizes.find((s) => s.size === item.size);
-
-        if (sizeEntry) {
-          sizeEntry.stock += item.quantity;
-          console.log(
-            `[RESTOCK] ${product.name} | ${item.size} +${item.quantity} → ${sizeEntry.stock}`
-          );
-
-          await prisma.product.update({
-            where: { id: product.id },
-            data: {
-              sizes: serializeSizes(sizes),
-            },
-          });
-        } else {
-          console.warn(
-            `[RESTOCK] Nie znaleziono rozmiaru ${item.size} w produkcie ${product.id}`
-          );
-        }
+    // === RESTOCK przy anulowaniu (atomowo, tylko raz) ===
+    if (isNowCancelled) {
+      const cancelled = await cancelOrder(orderId);
+      if (!cancelled) {
+        return NextResponse.json(
+          { error: "Zamówienie zostało już anulowane" },
+          { status: 409 }
+        );
       }
     }
 
@@ -150,7 +111,7 @@ export async function PATCH(request, { params }) {
       {
         order: updatedOrder,
         message:
-          isNowCancelled && !wasCancelled
+          isNowCancelled
             ? "Zamówienie anulowane + stan magazynowy przywrócony"
             : "Status zaktualizowany",
       },
