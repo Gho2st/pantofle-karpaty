@@ -84,7 +84,8 @@ export default function DiscountCodes() {
   const handleDelete = async (id) => {
     if (!confirm("Na pewno usunąć kod?")) return;
     try {
-      await fetch(`/api/discounts/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/discounts/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
       toast.success("Kod usunięty");
       fetchCodes();
     } catch (err) {

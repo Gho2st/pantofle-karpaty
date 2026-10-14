@@ -1,6 +1,6 @@
 // app/admin/page.js
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Category from "./Category";
 import Orders from "./Orders";
 import DiscountCodes from "./DiscountCodes";
@@ -10,9 +10,24 @@ import { Menu, X } from "lucide-react";
 import BlogAdmin from "./blogAdmin";
 import Dashboard from "./Dashboard";
 
+const VIEWS = ["dashboard", "orders", "categories", "discounts", "blog"];
+
 export default function Admin({ session }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState("dashboard");
+
+  // Aktywna zakładka w adresie (?tab=orders) — odświeżenie strony jej nie gubi
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    if (VIEWS.includes(tab)) setActiveView(tab);
+  }, []);
+
+  const changeView = (view) => {
+    setActiveView(view);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", view);
+    window.history.replaceState(null, "", url);
+  };
 
   const renderView = () => {
     switch (activeView) {
@@ -32,7 +47,7 @@ export default function Admin({ session }) {
   const menuItem = (view, label) => (
     <button
       onClick={() => {
-        setActiveView(view);
+        changeView(view);
         setSidebarOpen(false);
       }}
       className={`block w-full text-left px-4 py-2 rounded transition-colors ${

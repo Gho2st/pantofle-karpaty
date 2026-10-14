@@ -1,8 +1,32 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
+import {
+  TRANSFER_EXPIRY_BUSINESS_DAYS,
+  businessDaysSince,
+} from "@/app/lib/transferDeadline";
+
+const PAGE_SIZE = 20;
+
+const DELIVERY_LABELS = { paczkomat: "Paczkomat InPost", kurier: "Kurier" };
+
+// Cena zapłacona: promoPrice jest zapisywane tylko, gdy promocja obowiązywała przy zakupie
+const paidPrice = (item) => item.promoPrice || item.price;
+
+function matchesSearch(order, query) {
+  const q = query.trim().toLowerCase().replace(/^#/, "");
+  if (!q) return true;
+  if (String(order.id) === q) return true;
+  return [
+    `${order.firstName} ${order.lastName}`,
+    order.email,
+    order.phone,
+    order.city,
+    order.companyName,
+  ].some((field) => field?.toLowerCase().includes(q));
+}
 
 // Dostępne akcje dla danego statusu (zamówienia anulowane/wygasłe są zamknięte)
 const ACTIONS = {
@@ -40,11 +64,19 @@ export default function Orders() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [orders, setOrders] = useState([]);
-  const [filteredOrders, setFilteredOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  // Domyślnie tylko zamówienia wymagające działania
+  const [statusFilter, setStatusFilter] = useState("todo");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const listTopRef = useRef(null);
+
+  const goToPage = (next) => {
+    setPage(next);
+    listTopRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   // Modal potwierdzenia akcji: { orderId, status, notify }
   const [pendingAction, setPendingAction] = useState(null);
@@ -62,7 +94,6 @@ export default function Orders() {
           }
           const data = await response.json();
           setOrders(data.orders);
-          setFilteredOrders(data.orders);
         } catch (err) {
           setError(err.message);
           toast.error(err.message, {
@@ -77,22 +108,32 @@ export default function Orders() {
     }
   }, [status, session]);
 
-  // Połączone filtrowanie po metodzie płatności i statusie
+  // Filtrowanie: metoda płatności, status, wyszukiwarka
+  const filteredOrders = useMemo(
+    () =>
+      orders.filter(
+        (order) =>
+          (paymentMethodFilter === "all" ||
+            order.paymentMethod === paymentMethodFilter) &&
+          (statusFilter === "all" ||
+            (statusFilter === "todo"
+              ? ["PENDING", "PAID"].includes(order.status)
+              : order.status === statusFilter)) &&
+          matchesSearch(order, search)
+      ),
+    [orders, paymentMethodFilter, statusFilter, search]
+  );
+
+  // Zmiana filtrów wraca na pierwszą stronę
   useEffect(() => {
-    let result = orders;
+    setPage(1);
+  }, [paymentMethodFilter, statusFilter, search]);
 
-    if (paymentMethodFilter !== "all") {
-      result = result.filter(
-        (order) => order.paymentMethod === paymentMethodFilter
-      );
-    }
-
-    if (statusFilter !== "all") {
-      result = result.filter((order) => order.status === statusFilter);
-    }
-
-    setFilteredOrders(result);
-  }, [orders, paymentMethodFilter, statusFilter]);
+  const pageCount = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
+  const visibleOrders = filteredOrders.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE
+  );
 
   // Handle status change
   const handleStatusChange = async (orderId, newStatus, notify = false) => {
@@ -111,14 +152,12 @@ export default function Orders() {
         );
       }
       const updatedOrder = await response.json();
+      // Podmieniamy tylko status — odpowiedź PATCH nie zawiera rabatu ani cen promocyjnych
       setOrders((prevOrders) =>
         prevOrders.map((order) =>
-          order.id === orderId ? updatedOrder.order : order
-        )
-      );
-      setFilteredOrders((prevOrders) =>
-        prevOrders.map((order) =>
-          order.id === orderId ? updatedOrder.order : order
+          order.id === orderId
+            ? { ...order, status: updatedOrder.order.status }
+            : order
         )
       );
 
@@ -267,7 +306,24 @@ export default function Orders() {
         </h1>
 
         {/* Filtry */}
-        <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <label
+              htmlFor="order-search"
+              className="block text-gray-700 font-medium mb-2"
+            >
+              Szukaj:
+            </label>
+            <input
+              id="order-search"
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Nr zamówienia, nazwisko, e-mail, telefon…"
+              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors bg-white"
+            />
+          </div>
+
           <div>
             <label
               htmlFor="payment-method-filter"
@@ -300,6 +356,7 @@ export default function Orders() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors bg-white"
             >
+              <option value="todo">Do zrobienia (oczekujące + opłacone)</option>
               <option value="all">Wszystkie statusy</option>
               <option value="PENDING">Oczekujące</option>
               <option value="PAID">Opłacone</option>
@@ -310,6 +367,10 @@ export default function Orders() {
           </div>
         </div>
 
+        <p ref={listTopRef} className="text-sm text-gray-500 mb-4">
+          Znaleziono: {filteredOrders.length}
+        </p>
+
         {/* Lista zamówień */}
         {filteredOrders.length === 0 ? (
           <p className="text-gray-600 text-center text-lg py-12">
@@ -317,10 +378,16 @@ export default function Orders() {
           </p>
         ) : (
           <div className="grid gap-6">
-            {filteredOrders.map((order) => {
+            {visibleOrders.map((order) => {
               const { text: statusText, styles: statusStyles } = getStatusInfo(
                 order.status
               );
+              const transferDaysLeft =
+                order.status === "PENDING" &&
+                order.paymentMethod === "traditional"
+                  ? TRANSFER_EXPIRY_BUSINESS_DAYS -
+                    businessDaysSince(new Date(order.createdAt))
+                  : null;
               return (
                 <div
                   key={order.id}
@@ -336,6 +403,23 @@ export default function Orders() {
                       {statusText}
                     </span>
                   </div>
+
+                  {transferDaysLeft !== null && (
+                    <p
+                      className={`mb-4 text-sm px-3 py-2 rounded-lg border ${
+                        transferDaysLeft <= 2
+                          ? "bg-red-50 text-red-700 border-red-200"
+                          : "bg-yellow-50 text-yellow-800 border-yellow-200"
+                      }`}
+                    >
+                      Przelew czeka{" "}
+                      {TRANSFER_EXPIRY_BUSINESS_DAYS - transferDaysLeft} dni
+                      roboczych —{" "}
+                      {transferDaysLeft > 0
+                        ? `wygaśnie za ${transferDaysLeft} dni roboczych, jeśli nie zostanie oznaczony jako opłacony`
+                        : "wygaśnie najbliższej nocy, jeśli nie zostanie oznaczony jako opłacony"}
+                    </p>
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
                     <div>
@@ -370,7 +454,8 @@ export default function Orders() {
                     <div>
                       <p>
                         <span className="font-medium">Metoda dostawy:</span>{" "}
-                        {order.deliveryMethod}
+                        {DELIVERY_LABELS[order.deliveryMethod] ||
+                          order.deliveryMethod}
                       </p>
                       <p>
                         <span className="font-medium">Metoda płatności:</span>{" "}
@@ -380,6 +465,13 @@ export default function Orders() {
                         <span className="font-medium">Koszt dostawy:</span>{" "}
                         {order.deliveryCost.toFixed(2)} zł
                       </p>
+                      {order.discountAmount > 0 && (
+                        <p>
+                          <span className="font-medium">Rabat:</span> −
+                          {order.discountAmount.toFixed(2)} zł
+                          {order.discountCode && ` (${order.discountCode})`}
+                        </p>
+                      )}
                       <p>
                         <span className="font-medium">Całkowita kwota:</span>{" "}
                         {order.totalAmount.toFixed(2)} zł
@@ -428,7 +520,13 @@ export default function Orders() {
                               {item.name} ({item.size})
                             </span>
                             <span>
-                              {item.quantity} szt. x {item.price.toFixed(2)} zł
+                              {item.quantity} szt. x{" "}
+                              {item.promoPrice && (
+                                <span className="line-through text-gray-400 mr-1">
+                                  {item.price.toFixed(2)} zł
+                                </span>
+                              )}
+                              {paidPrice(item).toFixed(2)} zł
                             </span>
                           </li>
                         ))}
@@ -442,6 +540,28 @@ export default function Orders() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {pageCount > 1 && (
+          <div className="mt-8 flex items-center justify-center gap-4">
+            <button
+              onClick={() => goToPage(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="px-4 py-2 rounded-lg bg-white border text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+            >
+              ← Poprzednia
+            </button>
+            <span className="text-gray-600">
+              Strona {page} z {pageCount}
+            </span>
+            <button
+              onClick={() => goToPage(Math.min(pageCount, page + 1))}
+              disabled={page === pageCount}
+              className="px-4 py-2 rounded-lg bg-white border text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+            >
+              Następna →
+            </button>
           </div>
         )}
 
