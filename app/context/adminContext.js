@@ -143,6 +143,10 @@ export function AdminProvider({ children }) {
 
         if (Array.isArray(productData.sizes))
           formData.append("sizes", JSON.stringify(productData.sizes));
+        // Stan z chwili otwarcia formularza — serwer zastosuje tylko zmianę admina
+        // do aktualnego stanu (zamówienia złożone w międzyczasie nie przepadną)
+        if (Array.isArray(editingProduct?.sizes))
+          formData.append("originalSizes", JSON.stringify(editingProduct.sizes));
 
         if (
           Array.isArray(productData.imagesToRemove) &&
@@ -182,7 +186,7 @@ export function AdminProvider({ children }) {
         toast.error(err.message);
       }
     },
-    [fetchCategories, refreshSelectedCategory, fetchCart],
+    [editingProduct, fetchCategories, refreshSelectedCategory, fetchCart],
   );
 
   const handleAddProduct = useCallback(

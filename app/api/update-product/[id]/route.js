@@ -50,6 +50,39 @@ async function deleteFileFromS3(imageUrl) {
   await s3Client.send(command);
 }
 
+const parseSizes = (value) =>
+  typeof value === "string" ? JSON.parse(value) : value || [];
+
+// Formularz edycji pokazuje stan z chwili otwarcia. Zamiast nadpisywać stan,
+// stosujemy tylko zmianę wprowadzoną przez admina do aktualnego stanu w bazie —
+// zamówienia złożone w międzyczasie nie są tracone.
+function mergeSizes(current, original, edited) {
+  const originalBySize = new Map(original.map((s) => [s.size, s.stock]));
+  const currentBySize = new Map(current.map((s) => [s.size, s.stock]));
+
+  const merged = edited.map((item) => {
+    if (originalBySize.has(item.size) && currentBySize.has(item.size)) {
+      const delta = item.stock - originalBySize.get(item.size);
+      return {
+        ...item,
+        stock: Math.max(0, currentBySize.get(item.size) + delta),
+      };
+    }
+    return item;
+  });
+
+  // Rozmiar dodany w bazie po otwarciu formularza — nie usuwamy go po cichu
+  for (const item of current) {
+    if (
+      !originalBySize.has(item.size) &&
+      !merged.some((m) => m.size === item.size)
+    ) {
+      merged.push(item);
+    }
+  }
+  return merged;
+}
+
 function validateSizes(sizes) {
   if (!sizes) return true;
   if (!Array.isArray(sizes)) {
@@ -183,6 +216,18 @@ export async function PUT(request, { params }) {
     }
     validateSizes(sizes);
 
+    // Stan rozmiarów z chwili otwarcia formularza (do scalenia ze stanem w bazie)
+    let originalSizes = null;
+    try {
+      const raw = formData.get("originalSizes");
+      originalSizes = raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return NextResponse.json(
+        { error: "Nieprawidłowy format originalSizes" },
+        { status: 400 },
+      );
+    }
+
     try {
       imagesToRemove = imagesToRemove ? JSON.parse(imagesToRemove) : [];
     } catch (e) {
@@ -287,26 +332,38 @@ export async function PUT(request, { params }) {
     }
 
     // === AKTUALIZACJA PRODUKTU ===
-    const updatedProduct = await prisma.product.update({
-      where: { id: productId },
-      data: {
-        name,
-        slug,
-        price: parsedPrice,
-        promoPrice: parsedPromoPrice,
-        promoStartDate: promoStartDate ? new Date(promoStartDate) : null,
-        promoEndDate: promoEndDate ? new Date(promoEndDate) : null,
-        description,
-        description2,
-        additionalInfo,
-        sizes,
-        images: finalImages,
-        categoryId: categoryId ? parseInt(categoryId) : product.categoryId,
-        sortOrder: sortOrder ? parseInt(sortOrder) : null,
-        featured,
-        colorHex,
-        colorGroup,
-      },
+    // Stan czytamy w transakcji tuż przed zapisem (upload zdjęć mógł trwać kilka sekund)
+    const updatedProduct = await prisma.$transaction(async (tx) => {
+      let finalSizes = sizes;
+      if (sizes && Array.isArray(originalSizes)) {
+        const fresh = await tx.product.findUnique({
+          where: { id: productId },
+          select: { sizes: true },
+        });
+        finalSizes = mergeSizes(parseSizes(fresh.sizes), originalSizes, sizes);
+      }
+
+      return tx.product.update({
+        where: { id: productId },
+        data: {
+          name,
+          slug,
+          price: parsedPrice,
+          promoPrice: parsedPromoPrice,
+          promoStartDate: promoStartDate ? new Date(promoStartDate) : null,
+          promoEndDate: promoEndDate ? new Date(promoEndDate) : null,
+          description,
+          description2,
+          additionalInfo,
+          sizes: finalSizes,
+          images: finalImages,
+          categoryId: categoryId ? parseInt(categoryId) : product.categoryId,
+          sortOrder: sortOrder ? parseInt(sortOrder) : null,
+          featured,
+          colorHex,
+          colorGroup,
+        },
+      });
     });
 
     return NextResponse.json({
