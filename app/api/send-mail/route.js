@@ -7,6 +7,15 @@ function isValidEmail(email) {
   return emailRegex.test(email);
 }
 
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // === WALIDACJA PÓL ===
 function validateFields(fields) {
   return Object.entries(fields).every(
@@ -16,6 +25,9 @@ function validateFields(fields) {
 
 // === SZABLON E-MAILA ===
 function createEmailTemplate({ name, text, email }) {
+  name = escapeHtml(name);
+  text = escapeHtml(text);
+  email = escapeHtml(email);
   return `
     <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4;">
       <div style="max-width: 600px; margin: auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1);">
@@ -84,7 +96,7 @@ export async function POST(request) {
       from: `"Pantofle Karpaty" <${process.env.SMTP_USER}>`, // Poprawny nadawca
       replyTo: email, // Odpowiedź trafi do klienta
       to: "mwidel@pantofle-karpaty.pl", // Twój e-mail
-      subject: `Kontakt: ${name} – Pantofle Karpaty`,
+      subject: `Kontakt: ${String(name).replace(/[\r\n]/g, " ")} – Pantofle Karpaty`,
       html: createEmailTemplate({ name, text, email }),
     };
 
@@ -100,7 +112,6 @@ export async function POST(request) {
     return NextResponse.json(
       {
         message: "Nie udało się wysłać wiadomości.",
-        error: error.message || "Nieznany błąd",
       },
       { status: 500 }
     );

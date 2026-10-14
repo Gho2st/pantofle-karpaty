@@ -7,6 +7,7 @@ import Stripe from "stripe";
 import StripeStatus from "./StripeStatus";
 import TraditionalPaymentInstructions from "../TraditionalPaymentInstructions";
 import OrderSummary from "./OrderSummary";
+import { expireOrder } from "@/app/lib/expireOrder";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
@@ -108,10 +109,7 @@ export default async function OrderConfirmationPage({ params, searchParams }) {
           data: { status: "PAID" },
         });
       } else if (stripeSession.status === "expired") {
-        await prisma.order.update({
-          where: { id: order.id },
-          data: { status: "EXPIRED" },
-        });
+        await expireOrder(order.id, sessionId);
       }
     } catch (error) {
       console.error("Błąd weryfikacji Stripe:", error);

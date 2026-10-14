@@ -1,5 +1,17 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import prisma from "@/app/lib/prisma";
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 // === WALIDACJA E-MAILA ===
 function isValidEmail(email) {
@@ -24,7 +36,7 @@ function createStatusEmailTemplate({
           Zamówienie #${orderId} – ${statusText.toUpperCase()}
         </h2>
         <p style="font-size: 16px; color: #333; line-height: 1.6;">
-          Cześć <strong>${customerName}</strong>!
+          Cześć <strong>${escapeHtml(customerName)}</strong>!
         </p>
         <p style="font-size: 16px; color: #333; line-height: 1.6;">
           Informujemy, że status Twojego zamówienia został zaktualizowany:
@@ -72,12 +84,16 @@ const createTransporter = () => {
 
 // === GŁÓWNA FUNKCJA POST ===
 export async function POST(request) {
+  const session = await getServerSession(authOptions);
+  if (session?.user?.role !== "ADMIN") {
+    return NextResponse.json({ message: "Brak dostępu" }, { status: 401 });
+  }
+
   try {
-    const { orderId, status, customerName, customerEmail } =
-      await request.json();
+    const { orderId, status } = await request.json();
 
     // === Walidacja danych ===
-    if (!orderId || !status || !customerName || !customerEmail) {
+    if (!orderId || !status) {
       return NextResponse.json(
         { message: "Brak wymaganych danych." },
         { status: 400 }
@@ -90,6 +106,20 @@ export async function POST(request) {
         { status: 400 }
       );
     }
+
+    // Dane klienta bierzemy z bazy, nie z żądania
+    const order = await prisma.order.findUnique({
+      where: { id: parseInt(orderId) },
+      select: { id: true, email: true, firstName: true, lastName: true },
+    });
+    if (!order) {
+      return NextResponse.json(
+        { message: "Nie znaleziono zamówienia." },
+        { status: 404 }
+      );
+    }
+    const customerName = `${order.firstName} ${order.lastName}`;
+    const customerEmail = order.email;
 
     if (!isValidEmail(customerEmail)) {
       return NextResponse.json(
@@ -116,11 +146,11 @@ export async function POST(request) {
       from: `"Pantofle Karpaty" <${process.env.SMTP_USER}>`,
       to: customerEmail,
       replyTo: process.env.SMTP_USER,
-      subject: `Zamówienie #${orderId} – ${
+      subject: `Zamówienie #${order.id} – ${
         status === "wysłane" ? "Wysłane" : "Anulowane"
       }`,
       html: createStatusEmailTemplate({
-        orderId,
+        orderId: order.id,
         status,
         customerName,
         customerEmail,
@@ -139,7 +169,7 @@ export async function POST(request) {
   } catch (error) {
     console.error("Błąd API /admin/order-status-email:", error);
     return NextResponse.json(
-      { message: "Błąd wysyłki e-maila.", error: error.message },
+      { message: "Błąd wysyłki e-maila." },
       { status: 500 }
     );
   }

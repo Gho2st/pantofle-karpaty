@@ -1,38 +1,24 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "@/app/lib/prisma";
+import { validateDiscount } from "@/app/lib/pricing";
 
 export async function POST(request) {
   try {
     const { code, subtotal } = await request.json();
 
-    const discount = await prisma.discountCode.findUnique({
-      where: { code: code.toUpperCase() },
-    });
-
-    if (!discount || !discount.isActive) {
+    if (typeof code !== "string" || !code.trim()) {
       return NextResponse.json({ error: "Nieprawidłowy kod" }, { status: 400 });
     }
 
-    const now = new Date();
-    if (discount.validFrom && now < discount.validFrom) {
-      return NextResponse.json(
-        { error: "Kod jeszcze nieaktywny" },
-        { status: 400 }
-      );
-    }
-    if (discount.validTo && now > discount.validTo) {
-      return NextResponse.json({ error: "Kod wygasł" }, { status: 400 });
-    }
-    if (discount.minOrderValue && subtotal < discount.minOrderValue) {
-      return NextResponse.json(
-        { error: `Minimalna kwota: ${discount.minOrderValue} PLN` },
-        { status: 400 }
-      );
-    }
-    if (discount.maxUses && discount.usedCount >= discount.maxUses) {
-      return NextResponse.json({ error: "Kod wyczerpany" }, { status: 400 });
+    const { discount, error } = validateDiscount(
+      await prisma.discountCode.findUnique({
+        where: { code: code.toUpperCase().trim() },
+      }),
+      Number(subtotal) || 0,
+    );
+
+    if (error) {
+      return NextResponse.json({ error }, { status: 400 });
     }
 
     return NextResponse.json({
@@ -41,8 +27,8 @@ export async function POST(request) {
       value: discount.value,
       message: `Rabat ${
         discount.type === "percentage"
-          ? `$$ {discount.value}%`
-          : ` $${discount.value} PLN`
+          ? `${discount.value}%`
+          : `${discount.value} PLN`
       }`,
     });
   } catch (error) {

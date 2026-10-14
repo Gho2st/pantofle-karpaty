@@ -5,6 +5,16 @@ import { authOptions } from "../auth/[...nextauth]/route";
 import Stripe from "stripe";
 import crypto from "crypto";
 import { sendOrderEmails } from "@/app/lib/sendOrderEmails";
+import {
+  DELIVERY_COSTS,
+  getCurrentPrice,
+  getDeliveryCost,
+  getDiscountAmount,
+  round2,
+  validateDiscount,
+} from "@/app/lib/pricing";
+
+class CheckoutError extends Error {}
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
@@ -20,22 +30,47 @@ export async function POST(req) {
     const session = await getServerSession(authOptions);
     const body = await req.json();
 
-    const {
-      cartItems,
-      formData,
-      total,
-      deliveryCost,
-      paymentMethod,
-      deliveryMethod,
-      discountCode,
-      discountValue,
-    } = body;
+    // Ceny, koszt dostawy i rabat liczymy wyłącznie na serwerze —
+    // wartości z przeglądarki (total, deliveryCost, discountValue) są ignorowane.
+    const { formData, paymentMethod, deliveryMethod, discountCode } = body;
+    const cartItems = Array.isArray(body.cartItems)
+      ? body.cartItems.map((item) => ({
+          productId: Number(item.productId),
+          size: item.size,
+          quantity: Number(item.quantity),
+        }))
+      : [];
 
     // Walidacje
-    if (!Array.isArray(cartItems) || cartItems.length === 0) {
+    if (cartItems.length === 0) {
       return NextResponse.json({ error: "Koszyk jest pusty" }, { status: 400 });
     }
-    if (!isValidEmail(formData.email)) {
+    if (
+      !cartItems.every(
+        (item) =>
+          Number.isInteger(item.productId) &&
+          Number.isInteger(item.quantity) &&
+          item.quantity > 0,
+      )
+    ) {
+      return NextResponse.json(
+        { error: "Nieprawidłowa zawartość koszyka" },
+        { status: 400 },
+      );
+    }
+    if (!(deliveryMethod in DELIVERY_COSTS)) {
+      return NextResponse.json(
+        { error: "Nieprawidłowa metoda dostawy" },
+        { status: 400 },
+      );
+    }
+    if (!["stripe", "traditional"].includes(paymentMethod)) {
+      return NextResponse.json(
+        { error: "Nieprawidłowa metoda płatności" },
+        { status: 400 },
+      );
+    }
+    if (!isValidEmail(formData?.email)) {
       return NextResponse.json(
         { error: "Nieprawidłowy adres e-mail" },
         { status: 400 },
@@ -57,30 +92,51 @@ export async function POST(req) {
     // === GŁÓWNA TRANSAKCJA ===
     const { createdOrder, guestToken } = await prisma.$transaction(
       async (tx) => {
-        // walidacja stocku
+        // walidacja stocku + ceny z bazy
+        const products = new Map();
+        let subtotal = 0;
         for (const item of cartItems) {
           const product = await tx.product.findUnique({
             where: { id: item.productId },
           });
-          if (!product || !product.sizes)
-            throw new Error(`Brak produktu ${item.productId}`);
+          if (!product || product.deletedAt || !product.sizes)
+            throw new CheckoutError(`Brak produktu ${item.productId}`);
           let sizes =
             typeof product.sizes === "string"
               ? JSON.parse(product.sizes)
               : product.sizes;
           const sizeData = sizes.find((s) => s.size === item.size);
           if (!sizeData || sizeData.stock < item.quantity) {
-            throw new Error(
+            throw new CheckoutError(
               `Brak wystarczającej ilości: ${product.name} (${item.size})`,
             );
           }
+          products.set(item.productId, product);
+          subtotal += getCurrentPrice(product) * item.quantity;
         }
+        subtotal = round2(subtotal);
+
+        let discountAmount = 0;
+        let appliedCode = null;
+        if (discountCode) {
+          const code = String(discountCode).toUpperCase().trim();
+          const { discount, error } = validateDiscount(
+            await tx.discountCode.findUnique({ where: { code } }),
+            subtotal,
+          );
+          if (error) throw new CheckoutError(`Kod rabatowy: ${error}`);
+          discountAmount = getDiscountAmount(discount, subtotal);
+          appliedCode = discount.code;
+        }
+
+        const deliveryCost = getDeliveryCost(deliveryMethod, subtotal);
+        const totalAmount = round2(subtotal + deliveryCost - discountAmount);
 
         const order = await tx.order.create({
           data: {
             user: userId ? { connect: { id: userId } } : undefined,
             isGuest,
-            totalAmount: parseFloat(total),
+            totalAmount,
             email: formData.email,
             firstName: formData.firstName,
             lastName: formData.lastName,
@@ -91,21 +147,24 @@ export async function POST(req) {
             paczkomat: formData.parcelLocker || null,
             paymentMethod,
             deliveryMethod,
-            deliveryCost: parseFloat(deliveryCost),
+            deliveryCost,
             companyName: formData.companyName || null,
             nip: formData.nip || null,
-            discountCode: discountCode || null,
-            discountAmount: discountValue || 0,
+            discountCode: appliedCode,
+            discountAmount,
             status: "PENDING",
             items: {
-              create: cartItems.map((item) => ({
-                productId: item.productId,
-                name: item.product.name,
-                size: item.size,
-                quantity: item.quantity,
-                price: item.product.price,
-                promoPrice: item.product.promoPrice || null,
-              })),
+              create: cartItems.map((item) => {
+                const product = products.get(item.productId);
+                return {
+                  productId: item.productId,
+                  name: product.name,
+                  size: item.size,
+                  quantity: item.quantity,
+                  price: product.price,
+                  promoPrice: product.promoPrice || null,
+                };
+              }),
             },
           },
           include: { items: true },
@@ -140,9 +199,9 @@ export async function POST(req) {
           }
         }
 
-        if (discountCode) {
+        if (appliedCode) {
           await tx.discountCode.update({
-            where: { code: discountCode },
+            where: { code: appliedCode },
             data: { usedCount: { increment: 1 } },
           });
         }
@@ -152,8 +211,9 @@ export async function POST(req) {
     );
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    let redirectUrl = `${baseUrl}/zamowienie/${createdOrder.id}`;
-    if (isGuest && guestToken) redirectUrl += `?guestToken=${guestToken}`;
+    const orderUrl = new URL(`/zamowienie/${createdOrder.id}`, baseUrl);
+    if (isGuest && guestToken) orderUrl.searchParams.set("guestToken", guestToken);
+    const redirectUrl = orderUrl.toString();
 
     // TYLKO PRZY PRZELEWIE TRADYCYJNYM → WYSYŁAMY MAILE OD RAZU
     if (paymentMethod !== "stripe") {
@@ -169,7 +229,9 @@ export async function POST(req) {
       currency: "pln",
       customer_email: formData.email,
       metadata: { orderId: createdOrder.id.toString() },
-      success_url: redirectUrl + "?payment=success",
+      // {CHECKOUT_SESSION_ID} podstawia Stripe — strona zamówienia weryfikuje nim płatność.
+      // Doklejamy ręcznie, bo URL zakodowałby nawiasy klamrowe.
+      success_url: `${redirectUrl}${redirectUrl.includes("?") ? "&" : "?"}payment=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/profil`,
       line_items: [
         {
@@ -190,9 +252,12 @@ export async function POST(req) {
 
     return NextResponse.json({ redirectUrl: stripeSession.url });
   } catch (error) {
+    if (error instanceof CheckoutError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     console.error("Checkout error:", error);
     return NextResponse.json(
-      { error: error.message || "Błąd podczas składania zamówienia" },
+      { error: "Błąd podczas składania zamówienia" },
       { status: 500 },
     );
   }

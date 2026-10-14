@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import prisma from "@/app/lib/prisma";
 import { sendOrderEmails } from "@/app/lib/sendOrderEmails";
+import { expireOrder } from "@/app/lib/expireOrder";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
@@ -74,13 +75,12 @@ export async function POST(req) {
     const orderId = session.metadata?.orderId;
 
     if (orderId) {
-      await prisma.order.update({
-        where: { id: parseInt(orderId) },
-        data: { status: "EXPIRED" },
-      });
-      console.log(
-        `Sesja wygasła – zamówienie #${orderId} oznaczone jako EXPIRED`,
-      );
+      const expired = await expireOrder(parseInt(orderId), session.id);
+      if (expired) {
+        console.log(
+          `Sesja wygasła – zamówienie #${orderId} oznaczone jako EXPIRED, towar wrócił na stan`,
+        );
+      }
     }
   }
 

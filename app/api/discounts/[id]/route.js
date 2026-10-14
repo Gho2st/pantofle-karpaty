@@ -1,7 +1,20 @@
-import { PrismaClient } from "@prisma/client";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import prisma from "@/app/lib/prisma";
 
-const prisma = new PrismaClient();
+async function isAdmin() {
+  const session = await getServerSession(authOptions);
+  return session?.user?.role === "ADMIN";
+}
+
+const unauthorized = () =>
+  new Response(JSON.stringify({ error: "Brak dostępu" }), {
+    status: 401,
+    headers: { "Content-Type": "application/json" },
+  });
 export async function PUT(request, { params }) {
+  if (!(await isAdmin())) return unauthorized();
+
   let body;
   try {
     body = await request.json();
@@ -45,6 +58,8 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
+  if (!(await isAdmin())) return unauthorized();
+
   await prisma.discountCode.delete({
     where: { id: parseInt(params.id) },
   });

@@ -4,7 +4,15 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request) {
+  // Vercel Cron wysyła nagłówek Authorization: Bearer <CRON_SECRET>
+  if (
+    !process.env.CRON_SECRET ||
+    request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`
+  ) {
+    return NextResponse.json({ error: "Brak dostępu" }, { status: 401 });
+  }
+
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 

@@ -25,7 +25,6 @@
     "@tiptap/pm": "^3.22.4",
     "@tiptap/react": "^3.22.4",
     "@tiptap/starter-kit": "^3.22.4",
-    "crypto": "^1.0.1",
     "framer-motion": "^12.23.24",
     "lodash": "^4.17.21",
     "lucide-react": "^0.545.0",

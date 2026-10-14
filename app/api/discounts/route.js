@@ -1,6 +1,17 @@
-import { PrismaClient } from "@prisma/client";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import prisma from "@/app/lib/prisma";
 
-const prisma = new PrismaClient();
+async function isAdmin() {
+  const session = await getServerSession(authOptions);
+  return session?.user?.role === "ADMIN";
+}
+
+const unauthorized = () =>
+  new Response(JSON.stringify({ error: "Brak dostępu" }), {
+    status: 401,
+    headers: { "Content-Type": "application/json" },
+  });
 
 // Pomocnicza funkcja do konwersji daty
 function parseDate(dateString) {
@@ -12,6 +23,8 @@ function parseDate(dateString) {
 
 // GET – pobieranie wszystkich kodów
 export async function GET() {
+  if (!(await isAdmin())) return unauthorized();
+
   try {
     const codes = await prisma.discountCode.findMany({
       orderBy: { createdAt: "desc" },
@@ -41,6 +54,8 @@ export async function GET() {
 
 // POST – dodawanie kodu
 export async function POST(request) {
+  if (!(await isAdmin())) return unauthorized();
+
   let body;
   try {
     body = await request.json();
