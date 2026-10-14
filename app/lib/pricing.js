@@ -24,15 +24,22 @@ export function getDeliveryCost(deliveryMethod, subtotal) {
   return DELIVERY_COSTS[deliveryMethod];
 }
 
+// Data jako "RRRR-MM-DD" — do porównywania samych dni kalendarzowych
+function polishDate(date, timeZone = "Europe/Warsaw") {
+  return new Date(date).toLocaleDateString("sv-SE", { timeZone });
+}
+
 // Zwraca { discount } albo { error } — wspólne dla /api/discounts/validate i checkoutu
 export function validateDiscount(discount, subtotal) {
   if (!discount || !discount.isActive) return { error: "Nieprawidłowy kod" };
 
-  const now = new Date();
-  if (discount.validFrom && now < discount.validFrom) {
+  // Daty "od"/"do" to pełne dni w czasie polskim, włącznie z ostatnim dniem.
+  // (W bazie są zapisane jako północ UTC — porównanie z godziną ucinało cały ostatni dzień.)
+  const today = polishDate(new Date());
+  if (discount.validFrom && today < polishDate(discount.validFrom, "UTC")) {
     return { error: "Kod jeszcze nieaktywny" };
   }
-  if (discount.validTo && now > discount.validTo) {
+  if (discount.validTo && today > polishDate(discount.validTo, "UTC")) {
     return { error: "Kod wygasł" };
   }
   if (discount.minOrderValue && subtotal < discount.minOrderValue) {
