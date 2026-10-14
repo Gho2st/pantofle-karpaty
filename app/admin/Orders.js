@@ -2,8 +2,39 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
+
+// Dostępne akcje dla danego statusu (zamówienia anulowane/wygasłe są zamknięte)
+const ACTIONS = {
+  PENDING: ["PAID", "SHIPPED", "CANCELLED"],
+  PAID: ["SHIPPED", "CANCELLED"],
+  SHIPPED: ["CANCELLED"],
+};
+
+const ACTION_CONFIG = {
+  PAID: {
+    label: "Oznacz jako opłacone",
+    title: "Oznaczyć zamówienie jako opłacone?",
+    button: "bg-green-600 hover:bg-green-700",
+  },
+  SHIPPED: {
+    label: "Oznacz jako wysłane",
+    title: "Oznaczyć zamówienie jako wysłane?",
+    button: "bg-blue-600 hover:bg-blue-700",
+    // Domyślnie bez maila — etykiety z InPostu same powiadamiają klienta
+    email: {
+      default: false,
+      hint: "Zostaw odznaczone, jeśli etykieta została wygenerowana w InPost — klient dostanie powiadomienie od InPostu.",
+    },
+  },
+  CANCELLED: {
+    label: "Anuluj zamówienie",
+    title: "Czy na pewno anulować zamówienie?",
+    button: "bg-red-600 hover:bg-red-700",
+    email: { default: true },
+    warning: "Towar wróci na stan. Tej operacji nie można cofnąć.",
+  },
+};
 
 export default function Orders() {
   const { data: session, status } = useSession();
@@ -15,9 +46,9 @@ export default function Orders() {
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  // Stany dla modala anulowania
-  const [cancelModalOpen, setCancelModalOpen] = useState(false);
-  const [orderToCancel, setOrderToCancel] = useState(null);
+  // Modal potwierdzenia akcji: { orderId, status, notify }
+  const [pendingAction, setPendingAction] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch orders for admin
   useEffect(() => {
@@ -64,7 +95,7 @@ export default function Orders() {
   }, [orders, paymentMethodFilter, statusFilter]);
 
   // Handle status change
-  const handleStatusChange = async (orderId, newStatus) => {
+  const handleStatusChange = async (orderId, newStatus, notify = false) => {
     try {
       const response = await fetch(`/api/orders/${orderId}`, {
         method: "PATCH",
@@ -91,19 +122,22 @@ export default function Orders() {
         )
       );
 
-      // Wysyłka emaila przy zmianie na SHIPPED lub CANCELLED
-      if (newStatus === "SHIPPED" || newStatus === "CANCELLED") {
-        const order = updatedOrder.order;
-        await fetch("/api/orders/status-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderId: order.id,
-            status: newStatus === "SHIPPED" ? "wysłane" : "anulowane",
-            customerName: `${order.firstName} ${order.lastName}`,
-            customerEmail: order.email,
-          }),
-        });
+      // Mail do klienta tylko, jeśli admin zaznaczył to w oknie potwierdzenia
+      let emailFailed = false;
+      if (notify && (newStatus === "SHIPPED" || newStatus === "CANCELLED")) {
+        try {
+          const emailRes = await fetch("/api/orders/status-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              orderId,
+              status: newStatus === "SHIPPED" ? "wysłane" : "anulowane",
+            }),
+          });
+          emailFailed = !emailRes.ok;
+        } catch {
+          emailFailed = true;
+        }
       }
 
       const statusText = {
@@ -116,12 +150,18 @@ export default function Orders() {
       toast.success(
         `Status zamówienia #${orderId} zmieniony na ${
           statusText[newStatus] || newStatus
-        }`,
+        }${notify && !emailFailed ? " – mail wysłany do klienta" : ""}`,
         {
           position: "top-right",
           autoClose: 3000,
         }
       );
+      if (emailFailed) {
+        toast.warning(
+          `Status zmieniony, ale nie udało się wysłać maila do klienta (#${orderId})`,
+          { position: "top-right", autoClose: false }
+        );
+      }
     } catch (err) {
       toast.error(err.message || "Błąd podczas zmiany statusu", {
         position: "top-right",
@@ -130,25 +170,24 @@ export default function Orders() {
     }
   };
 
-  // Otwarcie modala anulowania
-  const handleCancelOrder = (orderId) => {
-    setOrderToCancel(orderId);
-    setCancelModalOpen(true);
+  const openAction = (orderId, status) => {
+    setPendingAction({
+      orderId,
+      status,
+      notify: ACTION_CONFIG[status].email?.default ?? false,
+    });
   };
 
-  // Potwierdzenie anulowania
-  const confirmCancelOrder = async () => {
-    if (orderToCancel) {
-      await handleStatusChange(orderToCancel, "CANCELLED");
-      setCancelModalOpen(false);
-      setOrderToCancel(null);
-    }
-  };
-
-  // Zamknięcie modala
-  const closeCancelModal = () => {
-    setCancelModalOpen(false);
-    setOrderToCancel(null);
+  const confirmAction = async () => {
+    if (!pendingAction || isSubmitting) return;
+    setIsSubmitting(true);
+    await handleStatusChange(
+      pendingAction.orderId,
+      pendingAction.status,
+      pendingAction.notify
+    );
+    setIsSubmitting(false);
+    setPendingAction(null);
   };
 
   // Map status to colors and Polish translations
@@ -223,7 +262,6 @@ export default function Orders() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <ToastContainer position="bottom-right" autoClose={3000} />
         <h1 className="text-3xl font-bold text-gray-900 mb-6">
           Zarządzanie zamówieniami
         </h1>
@@ -359,44 +397,19 @@ export default function Orders() {
                     </div>
                   </div>
 
-                  <div className="mt-6">
-                    <label
-                      htmlFor={`status-${order.id}`}
-                      className="block text-gray-700 font-medium mb-2"
-                    >
-                      Zmień status:
-                    </label>
-                    <select
-                      id={`status-${order.id}`}
-                      value={order.status}
-                      onChange={(e) =>
-                        handleStatusChange(order.id, e.target.value)
-                      }
-                      className={`w-full md:w-1/2 border rounded-lg p-2 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors ${
-                        order.status === "CANCELLED" ||
-                        order.status === "EXPIRED"
-                          ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                          : "bg-white"
-                      }`}
-                      disabled={
-                        order.status === "CANCELLED" ||
-                        order.status === "EXPIRED"
-                      }
-                    >
-                      <option value="PAID">Opłacone</option>
-                      <option value="SHIPPED">Wysłane</option>
-                    </select>
-                  </div>
-
-                  {order.status !== "CANCELLED" &&
-                    order.status !== "EXPIRED" && (
-                      <button
-                        onClick={() => handleCancelOrder(order.id)}
-                        className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200"
-                      >
-                        Anuluj zamówienie
-                      </button>
-                    )}
+                  {ACTIONS[order.status] && (
+                    <div className="mt-6 flex flex-wrap gap-3">
+                      {ACTIONS[order.status].map((action) => (
+                        <button
+                          key={action}
+                          onClick={() => openAction(order.id, action)}
+                          className={`${ACTION_CONFIG[action].button} text-white px-4 py-2 rounded-lg transition-colors duration-200`}
+                        >
+                          {ACTION_CONFIG[action].label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="mt-6">
                     <h3 className="text-lg font-medium text-gray-900">
@@ -432,33 +445,64 @@ export default function Orders() {
           </div>
         )}
 
-        {/* Modal potwierdzenia anulowania */}
-        {cancelModalOpen && (
+        {/* Modal potwierdzenia akcji */}
+        {pendingAction && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
             <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-8">
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                Czy na pewno anulować zamówienie?
+                {ACTION_CONFIG[pendingAction.status].title}
               </h3>
-              <p className="text-gray-600 mb-8">
+              <p className="text-gray-600 mb-6">
                 Zamówienie{" "}
-                <span className="font-semibold">#{orderToCancel}</span> zostanie
-                oznaczone jako{" "}
-                <span className="text-red-600 font-medium">Anulowane</span>. Tej
-                operacji nie można cofnąć.
+                <span className="font-semibold">#{pendingAction.orderId}</span>
+                {ACTION_CONFIG[pendingAction.status].warning && (
+                  <>
+                    <br />
+                    <span className="text-red-600">
+                      {ACTION_CONFIG[pendingAction.status].warning}
+                    </span>
+                  </>
+                )}
               </p>
+
+              {ACTION_CONFIG[pendingAction.status].email && (
+                <label className="flex items-start gap-3 mb-8 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={pendingAction.notify}
+                    onChange={(e) =>
+                      setPendingAction((prev) => ({
+                        ...prev,
+                        notify: e.target.checked,
+                      }))
+                    }
+                    className="mt-1 h-4 w-4"
+                  />
+                  <span className="text-gray-700">
+                    Wyślij klientowi maila o zmianie statusu
+                    {ACTION_CONFIG[pendingAction.status].email.hint && (
+                      <span className="block text-sm text-gray-500 mt-1">
+                        {ACTION_CONFIG[pendingAction.status].email.hint}
+                      </span>
+                    )}
+                  </span>
+                </label>
+              )}
 
               <div className="flex justify-end gap-4">
                 <button
-                  onClick={closeCancelModal}
+                  onClick={() => setPendingAction(null)}
+                  disabled={isSubmitting}
                   className="px-6 py-3 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors duration-200 font-medium"
                 >
                   Cofnij
                 </button>
                 <button
-                  onClick={confirmCancelOrder}
-                  className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium"
+                  onClick={confirmAction}
+                  disabled={isSubmitting}
+                  className={`${ACTION_CONFIG[pendingAction.status].button} px-6 py-3 text-white rounded-lg transition-colors duration-200 font-medium disabled:opacity-50`}
                 >
-                  Tak, anuluj zamówienie
+                  {isSubmitting ? "Zapisywanie..." : "Potwierdź"}
                 </button>
               </div>
             </div>
