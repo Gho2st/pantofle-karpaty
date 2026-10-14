@@ -26,6 +26,7 @@ export async function GET(request) {
             name: true,
             price: true,
             promoPrice: true,
+            promoStartDate: true,
             promoEndDate: true,
             images: true,
           },

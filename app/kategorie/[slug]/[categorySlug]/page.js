@@ -31,6 +31,7 @@ async function getCategoryData(categorySlug) {
       price: true,
       lowestPrice: true,
       promoPrice: true,
+      promoStartDate: true,
       promoEndDate: true,
       sortOrder: true,
     },

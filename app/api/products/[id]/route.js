@@ -16,6 +16,7 @@ export async function GET(request, context) {
         name: true,
         price: true,
         promoPrice: true, // DODANE
+        promoStartDate: true,
         promoEndDate: true, // DODANE
         images: true,
         description: true,

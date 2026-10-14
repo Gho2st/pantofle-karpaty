@@ -1,6 +1,6 @@
 // app/lib/pricing.js
-// Logika cen liczona po stronie serwera — musi zgadzać się z koszykiem
-// (app/context/cartContext.js, app/koszyk/CartContent.js).
+// Logika cen — wspólna dla serwera (checkout) i przeglądarki (cartContext),
+// więc nie może importować niczego serwerowego.
 
 export const FREE_DELIVERY_THRESHOLD = 200;
 export const DELIVERY_COSTS = { paczkomat: 13.99, kurier: 15.99 };
@@ -11,11 +11,17 @@ export function getCurrentPrice(product) {
   if (!product) return 0;
   if (!product.promoEndDate || !product.promoPrice) return product.price;
 
+  const now = new Date();
   const promoEnd = new Date(product.promoEndDate);
   if (isNaN(promoEnd.getTime())) return product.price;
 
-  const isPromoActive =
-    product.promoPrice < product.price && promoEnd >= new Date();
+  // Zaplanowana promocja nie obowiązuje przed datą startu
+  const promoStart = product.promoStartDate
+    ? new Date(product.promoStartDate)
+    : null;
+  if (promoStart && promoStart > now) return product.price;
+
+  const isPromoActive = product.promoPrice < product.price && promoEnd >= now;
   return isPromoActive ? product.promoPrice : product.price;
 }
 

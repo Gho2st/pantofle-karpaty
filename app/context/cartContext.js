@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
+import { getCurrentPrice } from "@/app/lib/pricing";
 
 const CartContext = createContext();
 
@@ -18,25 +19,6 @@ export const CartProvider = ({ children }) => {
   const [availabilityErrors, setAvailabilityErrors] = useState([]);
   const [availableQuantities, setAvailableQuantities] = useState({});
 
-  const getCurrentPrice = (product) => {
-    if (!product) return 0;
-
-    if (!product.promoEndDate || !product.promoPrice) {
-      return product.price;
-    }
-
-    const now = new Date();
-    const promoEnd = new Date(product.promoEndDate);
-
-    if (isNaN(promoEnd.getTime())) {
-      console.warn("→ Nieprawidłowa data promocji:", product.promoEndDate);
-      return product.price;
-    }
-
-    const isPromoActive = product.promoPrice < product.price && promoEnd >= now;
-
-    return isPromoActive ? product.promoPrice : product.price;
-  };
 
   const consolidateCartItems = (items) => {
     const map = new Map();
@@ -187,6 +169,7 @@ export const CartProvider = ({ children }) => {
           name: product.name,
           price: product.price, // ← oryginalna
           promoPrice: product.promoPrice, // ← dodane
+          promoStartDate: product.promoStartDate,
           promoEndDate: product.promoEndDate, // ← dodane
           images: product.images || ["/placeholder.png"],
         },
