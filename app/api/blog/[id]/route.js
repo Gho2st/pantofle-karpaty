@@ -44,6 +44,15 @@ export async function PUT(req, { params }) {
     ctaSecondaryUrl,
   } = body;
 
+  const previous = await prisma.post.findUnique({
+    where: { id: parseInt(params.id) },
+    select: { slug: true },
+  });
+
+  if (!previous) {
+    return NextResponse.json({ error: "Nie znaleziono" }, { status: 404 });
+  }
+
   const post = await prisma.post.update({
     where: { id: parseInt(params.id) },
     data: {
@@ -70,6 +79,9 @@ export async function PUT(req, { params }) {
   });
   revalidatePath("/blog");
   revalidatePath(`/blog/${post.slug}`);
+  if (previous.slug !== post.slug) {
+    revalidatePath(`/blog/${previous.slug}`); // ← stary adres przestaje serwować wpis z cache
+  }
   return NextResponse.json(post);
 }
 
