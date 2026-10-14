@@ -44,6 +44,30 @@ async function getOrder(id) {
   return order;
 }
 
+// Wygasłe zamówienie: bez danych do przelewu i bez ponawiania płatności —
+// towar wrócił już na stan.
+function ExpiredNotice({ orderId }) {
+  return (
+    <div className="bg-gray-100 p-6 rounded-lg mt-6 text-center">
+      <h2 className="text-xl font-semibold text-gray-700 mb-2">
+        Zamówienie wygasło
+      </h2>
+      <p className="text-gray-600">
+        Zamówienie nr {orderId} nie zostało opłacone w terminie i zostało
+        anulowane. Prosimy nie dokonywać płatności — jeśli nadal chcesz kupić
+        te produkty, złóż nowe zamówienie. W razie pytań napisz do nas:{" "}
+        <a
+          href="mailto:mwidel@pantofle-karpaty.pl"
+          className="text-blue-600 hover:underline"
+        >
+          mwidel@pantofle-karpaty.pl
+        </a>
+        .
+      </p>
+    </div>
+  );
+}
+
 export default async function OrderConfirmationPage({ params, searchParams }) {
   const { id } = await params;
   const resolvedSearchParams = await searchParams;
@@ -131,10 +155,17 @@ export default async function OrderConfirmationPage({ params, searchParams }) {
           Potwierdzenie wysłaliśmy na <strong>{order.email}</strong>.
         </p>
 
-        {order.paymentMethod === "traditional" && (
-          <TraditionalPaymentInstructions order={order} />
+        {order.status === "EXPIRED" ? (
+          <ExpiredNotice orderId={order.id} />
+        ) : (
+          <>
+            {order.paymentMethod === "traditional" &&
+              order.status === "PENDING" && (
+                <TraditionalPaymentInstructions order={order} />
+              )}
+            {order.paymentMethod === "stripe" && <StripeStatus order={order} />}
+          </>
         )}
-        {order.paymentMethod === "stripe" && <StripeStatus order={order} />}
 
         <OrderSummary order={order} />
 

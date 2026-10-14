@@ -49,21 +49,17 @@ export default function StripeStatus({ order }) {
     );
   }
 
-  if (order.status === "PENDING" || order.status === "EXPIRED") {
+  if (order.status === "PENDING") {
     return (
       <div className="bg-orange-100 p-6 rounded-lg mt-6 text-center">
         <div className="flex justify-center items-center mb-4">
           <AlertCircle className="w-8 h-8 text-orange-600 mr-2" />
           <h2 className="text-xl font-semibold text-orange-700">
-            {order.status === "EXPIRED"
-              ? "Sesja płatności wygasła"
-              : "Płatność w toku"}
+            Płatność w toku
           </h2>
         </div>
         <p className="text-gray-700">
-          {order.status === "EXPIRED"
-            ? `Sesja płatności dla zamówienia nr ${order.id} wygasła, ponieważ płatność nie została zakończona.`
-            : `Oczekujemy na potwierdzenie Twojej płatności dla zamówienia nr ${order.id}. Jeśli nie dokonałeś jeszcze płatności, możesz spróbować ponownie.`}
+          {`Oczekujemy na potwierdzenie Twojej płatności dla zamówienia nr ${order.id}. Jeśli nie dokonałeś jeszcze płatności, możesz spróbować ponownie.`}
           Możesz spróbować ponownie lub skontaktować się z nami pod adresem{" "}
           <a
             href="mailto:mwidel@pantofle-karpaty.pl"

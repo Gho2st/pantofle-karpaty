@@ -110,12 +110,25 @@ export async function POST(request) {
     // Dane klienta bierzemy z bazy, nie z żądania
     const order = await prisma.order.findUnique({
       where: { id: parseInt(orderId) },
-      select: { id: true, email: true, firstName: true, lastName: true },
+      select: {
+        id: true,
+        status: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+      },
     });
     if (!order) {
       return NextResponse.json(
         { message: "Nie znaleziono zamówienia." },
         { status: 404 }
+      );
+    }
+    // Do klientów z wygasłymi zamówieniami nie wysyłamy żadnych maili
+    if (order.status === "EXPIRED") {
+      return NextResponse.json(
+        { message: "Zamówienie wygasło – e-mail nie został wysłany." },
+        { status: 400 }
       );
     }
     const customerName = `${order.firstName} ${order.lastName}`;
