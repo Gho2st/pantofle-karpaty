@@ -14,6 +14,14 @@ export function expireOrder(orderId, paymentId) {
   );
 }
 
+// Nieopłacony przelew tradycyjny po terminie → EXPIRED, towar wraca na stan.
+export function expireUnpaidTransfer(orderId) {
+  return releaseOrder(
+    { id: orderId, status: "PENDING", paymentMethod: "traditional" },
+    "EXPIRED",
+  );
+}
+
 // Anulowanie przez admina → CANCELLED, towar wraca na stan.
 export function cancelOrder(orderId) {
   return releaseOrder(
