@@ -25,11 +25,14 @@ export async function POST(request) {
       valid: true,
       type: discount.type,
       value: discount.value,
-      message: `Rabat ${
-        discount.type === "percentage"
-          ? `${discount.value}%`
-          : `${discount.value} PLN`
-      }`,
+      message:
+        discount.type === "free_delivery"
+          ? "Darmowa dostawa"
+          : `Rabat ${
+              discount.type === "percentage"
+                ? `${discount.value}%`
+                : `${discount.value} PLN`
+            }`,
     });
   } catch (error) {
     return NextResponse.json({ error: "Błąd serwera" }, { status: 500 });

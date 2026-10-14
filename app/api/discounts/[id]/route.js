@@ -30,7 +30,7 @@ export async function PUT(request, { params }) {
       data: {
         code: body.code.toUpperCase().trim(),
         type: body.type || "percentage",
-        value: parseFloat(body.value),
+        value: body.type === "free_delivery" ? 0 : parseFloat(body.value),
         minOrderValue: body.minOrderValue
           ? parseFloat(body.minOrderValue)
           : null,

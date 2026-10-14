@@ -66,7 +66,7 @@ export async function POST(request) {
     });
   }
 
-  if (!body.code || !body.value) {
+  if (!body.code || (body.type !== "free_delivery" && !body.value)) {
     return new Response(
       JSON.stringify({ error: "Kod i wartość są wymagane" }),
       {
@@ -81,7 +81,7 @@ export async function POST(request) {
       data: {
         code: body.code.toUpperCase().trim(),
         type: body.type || "percentage",
-        value: parseFloat(body.value),
+        value: body.type === "free_delivery" ? 0 : parseFloat(body.value),
         minOrderValue: body.minOrderValue
           ? parseFloat(body.minOrderValue)
           : null,

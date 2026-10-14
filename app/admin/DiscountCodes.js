@@ -12,6 +12,13 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 
+const formatDiscount = (code) =>
+  code.type === "free_delivery"
+    ? "Darmowa dostawa"
+    : code.type === "percentage"
+      ? `${code.value}%`
+      : `${code.value} PLN`;
+
 export default function DiscountCodes() {
   const [codes, setCodes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +65,7 @@ export default function DiscountCodes() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          value: parseFloat(form.value),
+          value: form.type === "free_delivery" ? 0 : parseFloat(form.value),
           minOrderValue: form.minOrderValue
             ? parseFloat(form.minOrderValue)
             : null,
@@ -178,23 +185,26 @@ export default function DiscountCodes() {
                 >
                   <option value="percentage">Procentowy (%)</option>
                   <option value="fixed">Kwotowy (PLN)</option>
+                  <option value="free_delivery">Darmowa dostawa</option>
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Wartość {form.type === "percentage" ? "(%)" : "(PLN)"}
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  step={form.type === "percentage" ? "1" : "0.01"}
-                  value={form.value}
-                  onChange={(e) => setForm({ ...form, value: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500 text-sm"
-                />
-              </div>
+              {form.type !== "free_delivery" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Wartość {form.type === "percentage" ? "(%)" : "(PLN)"}
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    step={form.type === "percentage" ? "1" : "0.01"}
+                    value={form.value}
+                    onChange={(e) => setForm({ ...form, value: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500 text-sm"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -337,9 +347,7 @@ export default function DiscountCodes() {
                         {code.code}
                       </td>
                       <td className="px-4 py-3">
-                        {code.type === "percentage"
-                          ? `${code.value}%`
-                          : `${code.value} PLN`}
+                        {formatDiscount(code)}
                       </td>
                       <td className="px-4 py-3 text-gray-600">
                         {code.minOrderValue ? `${code.minOrderValue} PLN` : "—"}
@@ -422,9 +430,7 @@ export default function DiscountCodes() {
                     <div>
                       <span className="font-medium">Rabat:</span>
                       <div>
-                        {code.type === "percentage"
-                          ? `${code.value}%`
-                          : `${code.value} PLN`}
+                        {formatDiscount(code)}
                       </div>
                     </div>
                     <div>

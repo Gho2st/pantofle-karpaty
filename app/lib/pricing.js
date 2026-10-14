@@ -44,8 +44,10 @@ export function validateDiscount(discount, subtotal) {
   return { discount };
 }
 
-export function getDiscountAmount(discount, subtotal) {
+export function getDiscountAmount(discount, subtotal, deliveryCost = 0) {
   if (!discount) return 0;
+  // Darmowa dostawa: rabat równy kosztowi dostawy (0, gdy dostawa i tak darmowa)
+  if (discount.type === "free_delivery") return round2(deliveryCost);
   const amount =
     discount.type === "percentage"
       ? (subtotal * discount.value) / 100

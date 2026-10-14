@@ -94,6 +94,9 @@ export default function CartContent() {
   const calculateDiscountAmount = () => {
     if (!appliedDiscount) return 0;
     const subtotal = parseFloat(calculateSubtotal());
+    if (appliedDiscount.type === "free_delivery") {
+      return calculateDeliveryCost();
+    }
     if (appliedDiscount.type === "percentage") {
       return (subtotal * appliedDiscount.value) / 100;
     }
@@ -410,9 +413,11 @@ export default function CartContent() {
                           Kod: <strong>{appliedDiscount.code}</strong>
                         </p>
                         <p className="text-xs text-green-700">
-                          {appliedDiscount.type === "percentage"
-                            ? `-${appliedDiscount.value}%`
-                            : `-${appliedDiscount.value.toFixed(2)} PLN`}
+                          {appliedDiscount.type === "free_delivery"
+                            ? "Darmowa dostawa"
+                            : appliedDiscount.type === "percentage"
+                              ? `-${appliedDiscount.value}%`
+                              : `-${appliedDiscount.value.toFixed(2)} PLN`}
                         </p>
                       </div>
                     </div>

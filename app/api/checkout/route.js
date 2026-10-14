@@ -116,6 +116,8 @@ export async function POST(req) {
         }
         subtotal = round2(subtotal);
 
+        const deliveryCost = getDeliveryCost(deliveryMethod, subtotal);
+
         let discountAmount = 0;
         let appliedCode = null;
         if (discountCode) {
@@ -125,11 +127,10 @@ export async function POST(req) {
             subtotal,
           );
           if (error) throw new CheckoutError(`Kod rabatowy: ${error}`);
-          discountAmount = getDiscountAmount(discount, subtotal);
+          discountAmount = getDiscountAmount(discount, subtotal, deliveryCost);
           appliedCode = discount.code;
         }
 
-        const deliveryCost = getDeliveryCost(deliveryMethod, subtotal);
         const totalAmount = round2(subtotal + deliveryCost - discountAmount);
 
         const order = await tx.order.create({
