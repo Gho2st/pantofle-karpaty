@@ -232,7 +232,7 @@ export async function POST(req) {
       // {CHECKOUT_SESSION_ID} podstawia Stripe — strona zamówienia weryfikuje nim płatność.
       // Doklejamy ręcznie, bo URL zakodowałby nawiasy klamrowe.
       success_url: `${redirectUrl}${redirectUrl.includes("?") ? "&" : "?"}payment=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/profil`,
+      cancel_url: `${redirectUrl}${redirectUrl.includes("?") ? "&" : "?"}status=error`,
       line_items: [
         {
           price_data: {

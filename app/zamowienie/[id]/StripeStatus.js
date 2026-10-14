@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { CheckCircle, AlertCircle } from "lucide-react";
 
-export default function StripeStatus({ order }) {
+export default function StripeStatus({ order, retryToken }) {
   const [isRetrying, setIsRetrying] = useState(false);
   const [error, setError] = useState(null);
 
@@ -16,6 +16,7 @@ export default function StripeStatus({ order }) {
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({ retryToken }),
       });
       if (!response.ok) {
         const errorData = await response.json();

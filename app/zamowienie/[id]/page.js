@@ -8,6 +8,7 @@ import StripeStatus from "./StripeStatus";
 import TraditionalPaymentInstructions from "../TraditionalPaymentInstructions";
 import OrderSummary from "./OrderSummary";
 import { expireOrder } from "@/app/lib/releaseOrder";
+import { createRetryToken } from "@/app/lib/retryToken";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
@@ -163,7 +164,14 @@ export default async function OrderConfirmationPage({ params, searchParams }) {
               order.status === "PENDING" && (
                 <TraditionalPaymentInstructions order={order} />
               )}
-            {order.paymentMethod === "stripe" && <StripeStatus order={order} />}
+            {order.paymentMethod === "stripe" && (
+              <StripeStatus
+                order={order}
+                retryToken={
+                  order.status === "PENDING" ? createRetryToken(order.id) : null
+                }
+              />
+            )}
           </>
         )}
 

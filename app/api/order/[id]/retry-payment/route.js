@@ -3,6 +3,8 @@ import prisma from "@/app/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import Stripe from "stripe";
+import crypto from "crypto";
+import { verifyRetryToken } from "@/app/lib/retryToken";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
@@ -39,20 +41,15 @@ export async function POST(request, { params }) {
       );
     }
 
-    // Authorization check
-    if (session && session.user && session.user.email) {
-      const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-      });
-      if (
-        !user ||
-        (order.email !== session.user.email && session.user.role !== "ADMIN")
-      ) {
-        return NextResponse.json(
-          { error: "Brak autoryzacji" },
-          { status: 403 },
-        );
-      }
+    // Autoryzacja: właściciel, admin albo gość z tokenem wydanym przez stronę zamówienia
+    const isOwner =
+      !!session?.user?.email && order.email === session.user.email;
+    const isAdmin = session?.user?.role === "ADMIN";
+    const { retryToken } = await request.json().catch(() => ({}));
+    const isGuest = !isOwner && !isAdmin;
+
+    if (isGuest && !verifyRetryToken(order.id, retryToken)) {
+      return NextResponse.json({ error: "Brak autoryzacji" }, { status: 403 });
     }
 
     if (order.status !== "PENDING") {
@@ -74,6 +71,13 @@ export async function POST(request, { params }) {
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL.replace(/\/$/, "");
 
+    // Gość nie ma już jednorazowego linku (zużył go przy wejściu na stronę),
+    // więc po powrocie ze Stripe potrzebuje nowego — inaczej trafi na "brak dostępu".
+    const guestToken = isGuest ? crypto.randomBytes(20).toString("hex") : null;
+    const orderUrl = `${baseUrl}/zamowienie/${order.id}?${
+      guestToken ? `guestToken=${guestToken}&` : ""
+    }`;
+
     const stripeSession = await stripe.checkout.sessions.create({
       mode: "payment",
       currency: "pln",
@@ -81,8 +85,8 @@ export async function POST(request, { params }) {
       metadata: {
         orderId: order.id.toString(),
       },
-      success_url: `${baseUrl}/zamowienie/${order.id}?status=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/zamowienie/${order.id}?status=error`,
+      success_url: `${orderUrl}status=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${orderUrl}status=error`,
       line_items: [
         {
           price_data: {
@@ -99,7 +103,11 @@ export async function POST(request, { params }) {
 
     await prisma.order.update({
       where: { id: order.id },
-      data: { paymentId: stripeSession.id, status: "PENDING" },
+      data: {
+        paymentId: stripeSession.id,
+        status: "PENDING",
+        ...(guestToken && { guestToken }),
+      },
     });
 
     return NextResponse.json(
@@ -110,9 +118,7 @@ export async function POST(request, { params }) {
     console.error("Błąd podczas generowania nowej sesji płatności:", error);
     return NextResponse.json(
       {
-        error:
-          error.message ||
-          "Błąd serwera podczas generowania nowej sesji płatności",
+        error: "Błąd serwera podczas generowania nowej sesji płatności",
       },
       { status: 500 },
     );
