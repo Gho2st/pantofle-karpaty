@@ -1,8 +1,9 @@
 export const revalidate = 0;
 import prisma from "@/app/lib/prisma";
+import { SITE_URL } from "@/app/lib/site";
 
 export default async function sitemap() {
-  const baseUrl = "https://www.pantofle-karpaty.pl";
+  const baseUrl = SITE_URL;
 
   // 1. Pobieramy wszystkie aktywne produkty
   const products = await prisma.product.findMany({
@@ -80,12 +81,6 @@ export default async function sitemap() {
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/o-nas`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.5,
     },
     {
       url: `${baseUrl}/kontakt`,

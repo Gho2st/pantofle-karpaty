@@ -1,3 +1,5 @@
+import { SITE_URL } from "@/app/lib/site";
+
 export default function robots() {
   return {
     rules: {
@@ -12,6 +14,6 @@ export default function robots() {
         "/api/",
       ],
     },
-    sitemap: "https://www.pantofle-karpaty.pl/sitemap.xml",
+    sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

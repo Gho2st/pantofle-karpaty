@@ -1,6 +1,9 @@
 import prisma from "@/app/lib/prisma";
 import { notFound } from "next/navigation";
 import ProductDetails from "@/app/components/ProductDetails";
+import { cache } from "react";
+import { getCurrentPrice } from "@/app/lib/pricing";
+import { SITE_URL } from "@/app/lib/site";
 
 const SPECIAL_PARTNERS = {
   "kapcie-zdobione-skora-owcza": "kapcie-meskie-skorzane-welna",
@@ -22,7 +25,8 @@ const fixJsonField = (field) => {
 
 // ─── Shared data fetcher ──────────────────────────────────────────────────────
 
-async function getProductData(slug) {
+// cache: generateMetadata i strona dzielą jedno zapytanie na żądanie
+const getProductData = cache(async (slug) => {
   const [product, partnerSlug] = [
     await prisma.product.findFirst({
       where: { slug, deletedAt: null },
@@ -32,6 +36,8 @@ async function getProductData(slug) {
         slug: true,
         price: true,
         promoPrice: true,
+        promoStartDate: true,
+        promoEndDate: true,
         lowestPrice: true,
         description: true,
         description2: true,
@@ -81,7 +87,7 @@ async function getProductData(slug) {
     : null;
 
   return { product, partner, partnerSlug, colorVariants };
-}
+});
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
@@ -92,7 +98,7 @@ export async function generateMetadata({ params }) {
   if (!data) return { title: "Produkt nie znaleziony | Pantofle Karpaty" };
 
   const { product } = data;
-  const currentPrice = product.promoPrice || product.price;
+  const currentPrice = getCurrentPrice(product);
 
   return {
     title: `${product.name} – ${currentPrice} zł | Pantofle Karpaty`,
@@ -120,22 +126,51 @@ export default async function ProductPage({ params }) {
   const sizes = fixJsonField(product.sizes);
   const partnerImage = partner ? fixJsonField(partner.images)?.[0] : null;
 
+  // Dane strukturalne dla Google (cena i dostępność w wynikach wyszukiwania)
+  const productSchema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    image: images,
+    description: product.description || undefined,
+    sku: String(product.id),
+    brand: { "@type": "Brand", name: "Pantofle Karpaty" },
+    offers: {
+      "@type": "Offer",
+      url: `${SITE_URL}/produkty/${product.slug}`,
+      priceCurrency: "PLN",
+      price: getCurrentPrice(product).toFixed(2),
+      availability: sizes.some((s) => s.stock > 0)
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+      itemCondition: "https://schema.org/NewCondition",
+    },
+  };
+
   return (
-    <ProductDetails
-      product={{
-        ...product,
-        images,
-        sizes,
-        colorVariants,
-        showPartnerTile: !!partner,
-        partnerUrl: partnerSlug ? `/produkty/${partnerSlug}` : null,
-        partnerImage,
-        partnerName: partner?.name || "drugą parę",
-        partnerTitle:
-          slug === "kapcie-zdobione-skora-owcza"
-            ? "Kup też dla Niego"
-            : "Kup też dla Niej",
-      }}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(productSchema).replace(/</g, "\\u003c"),
+        }}
+      />
+      <ProductDetails
+        product={{
+          ...product,
+          images,
+          sizes,
+          colorVariants,
+          showPartnerTile: !!partner,
+          partnerUrl: partnerSlug ? `/produkty/${partnerSlug}` : null,
+          partnerImage,
+          partnerName: partner?.name || "drugą parę",
+          partnerTitle:
+            slug === "kapcie-zdobione-skora-owcza"
+              ? "Kup też dla Niego"
+              : "Kup też dla Niej",
+        }}
+      />
+    </>
   );
 }

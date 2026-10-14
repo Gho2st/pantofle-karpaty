@@ -9,12 +9,18 @@ import { CategoriesProvider } from "./context/categoriesContext";
 import CookieConsent from "./components/CookieConsent";
 import { GoogleTagManager } from "@next/third-parties/google";
 import Script from "next/script";
+import { SITE_URL } from "./lib/site";
 // import Modal from "./components/Modal/Modal";
 
 const josefinSans = Josefin_Sans({
   subsets: ["latin"],
   weight: ["200", "300", "400", "500", "600", "700"],
 });
+
+// metadataBase: względne canonicale i og:image stają się pełnymi adresami
+export const metadata = {
+  metadataBase: new URL(SITE_URL),
+};
 
 export default function RootLayout({ children }) {
   return (
