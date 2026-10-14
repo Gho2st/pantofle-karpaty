@@ -1,19 +1,11 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { escapeHtml, singleLine } from "@/app/lib/escapeHtml";
 
 // === WALIDACJA POLA E-MAIL ===
 function isValidEmail(email) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
-}
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
 
 // === WALIDACJA PÓL ===
@@ -96,7 +88,7 @@ export async function POST(request) {
       from: `"Pantofle Karpaty" <${process.env.SMTP_USER}>`, // Poprawny nadawca
       replyTo: email, // Odpowiedź trafi do klienta
       to: "mwidel@pantofle-karpaty.pl", // Twój e-mail
-      subject: `Kontakt: ${String(name).replace(/[\r\n]/g, " ")} – Pantofle Karpaty`,
+      subject: `Kontakt: ${singleLine(name)} – Pantofle Karpaty`,
       html: createEmailTemplate({ name, text, email }),
     };
 

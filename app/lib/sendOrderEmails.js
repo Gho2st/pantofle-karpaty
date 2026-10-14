@@ -1,7 +1,34 @@
 // app/lib/sendOrderEmails.js
 import nodemailer from "nodemailer";
+import { escapeHtml } from "@/app/lib/escapeHtml";
 
-export async function sendOrderEmails(order, isPaid = false) {
+const TEXT_FIELDS = [
+  "email",
+  "firstName",
+  "lastName",
+  "street",
+  "postalCode",
+  "city",
+  "phone",
+  "paczkomat",
+  "companyName",
+  "nip",
+  "discountCode",
+  "deliveryMethod",
+];
+
+export async function sendOrderEmails(rawOrder, isPaid = false) {
+  // Dane z formularza zamówienia trafiają do HTML maili — escapujemy je.
+  const order = { ...rawOrder };
+  for (const field of TEXT_FIELDS) {
+    if (order[field] != null) order[field] = escapeHtml(order[field]);
+  }
+  order.items = rawOrder.items.map((i) => ({
+    ...i,
+    name: escapeHtml(i.name),
+    size: escapeHtml(i.size),
+  }));
+
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
   const isCompany = !!order.companyName && !!order.nip;
@@ -168,7 +195,7 @@ export async function sendOrderEmails(order, isPaid = false) {
 
   await transporter.sendMail({
     from: `"Pantofle Karpaty" <${process.env.SMTP_USER}>`,
-    to: order.email,
+    to: rawOrder.email,
     subject: `${isPaid ? "Opłacone" : "Dziękujemy"} – Zamówienie #${
       order.id
     } ❤️`,

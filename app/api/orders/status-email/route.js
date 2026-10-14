@@ -3,15 +3,7 @@ import nodemailer from "nodemailer";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/app/lib/prisma";
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+import { escapeHtml } from "@/app/lib/escapeHtml";
 
 // === WALIDACJA E-MAILA ===
 function isValidEmail(email) {
