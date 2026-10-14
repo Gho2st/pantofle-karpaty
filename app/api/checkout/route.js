@@ -156,13 +156,16 @@ export async function POST(req) {
             items: {
               create: cartItems.map((item) => {
                 const product = products.get(item.productId);
+                const currentPrice = getCurrentPrice(product);
                 return {
                   productId: item.productId,
                   name: product.name,
                   size: item.size,
                   quantity: item.quantity,
                   price: product.price,
-                  promoPrice: product.promoPrice || null,
+                  // tylko jeśli promocja faktycznie obowiązywała w chwili zakupu
+                  promoPrice:
+                    currentPrice < product.price ? currentPrice : null,
                 };
               }),
             },

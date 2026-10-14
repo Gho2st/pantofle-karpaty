@@ -20,6 +20,7 @@ export async function GET(request) {
             size: true,
             quantity: true,
             price: true,
+            promoPrice: true,
           },
         },
       },

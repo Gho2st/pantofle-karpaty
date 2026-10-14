@@ -2,24 +2,11 @@
 "use client";
 
 export default function OrderSummary({ order }) {
-  // Funkcja: cena po promocji
-  const getPrice = (item) => {
-    if (item.promoPrice && item.promoEndDate) {
-      const now = new Date();
-      const end = new Date(item.promoEndDate);
-      if (end >= now) {
-        return item.promoPrice;
-      }
-    }
-    return item.price;
-  };
+  // Cena zapłacona: promoPrice jest zapisywane tylko, gdy promocja obowiązywała przy zakupie
+  const getPrice = (item) => item.promoPrice || item.price;
 
-  // Suma produktów
-  const subtotal = order.items.reduce((sum, item) => {
-    return sum + getPrice(item) * item.quantity;
-  }, 0);
-
-  const total = subtotal + order.deliveryCost - (order.discountAmount || 0);
+  // Kwota do zapłaty zawsze z zamówienia — to ją pobrał Stripe / podano w przelewie
+  const total = order.totalAmount;
 
   return (
     <div className="mt-10">
