@@ -58,7 +58,6 @@ export async function GET(request) {
     return NextResponse.json(
       {
         error: "Błąd serwera podczas pobierania danych",
-        details: error.message,
       },
       { status: 500 },
     );

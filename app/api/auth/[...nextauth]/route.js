@@ -2,6 +2,8 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import prisma from "@/app/lib/prisma";
 
+const ROLE_REFRESH_MS = 5 * 60 * 1000;
+
 const authOptions = {
   providers: [
     GoogleProvider({
@@ -62,6 +64,14 @@ const authOptions = {
     async jwt({ token, user }) {
       if (!token.email) return token;
 
+      // Dane z bazy odświeżamy przy logowaniu i potem co 5 minut, a nie przy
+      // każdym żądaniu — zmiana roli (np. odebranie admina) działa najpóźniej po 5 min.
+      const isFresh =
+        !user &&
+        token.id &&
+        Date.now() - (token.refreshedAt || 0) < ROLE_REFRESH_MS;
+      if (isFresh) return token;
+
       const dbUser = await prisma.user.findUnique({
         where: { email: token.email },
         select: {
@@ -75,6 +85,11 @@ const authOptions = {
         token.id = dbUser.id;
         token.role = dbUser.role;
         token.profileComplete = !!dbUser.gender;
+        token.refreshedAt = Date.now();
+      } else {
+        // Użytkownik usunięty z bazy — nie zostawiamy mu starej roli w tokenie
+        token.id = null;
+        token.role = null;
       }
 
       return token;
