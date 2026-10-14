@@ -4,8 +4,6 @@ import { useState, useEffect } from "react";
 import Category from "./Category";
 import Orders from "./Orders";
 import DiscountCodes from "./DiscountCodes";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import { Menu, X } from "lucide-react";
 import BlogAdmin from "./blogAdmin";
 import Dashboard from "./Dashboard";
@@ -115,7 +113,6 @@ export default function Admin({ session }) {
         </div>
       </div>
 
-      <ToastContainer position="bottom-right" autoClose={3000} />
     </div>
   );
 }

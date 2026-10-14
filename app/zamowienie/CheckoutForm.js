@@ -7,7 +7,6 @@ import { toast } from "react-toastify";
 import CartSummary from "./CartSummary";
 import ShippingDetailsForm from "./ShippingDetailsForm";
 import PaymentMethodSelector from "./PaymentMethodSelector";
-import { ToastContainer } from "react-toastify";
 
 const PageLoader = ({ text }) => (
   <div className="container mx-auto py-20 flex flex-col items-center justify-center">
@@ -363,7 +362,6 @@ export default function CheckoutForm({
           </button>
         </form>
       )}
-      <ToastContainer position="bottom-right" autoClose={3000} />
     </div>
   );
 }

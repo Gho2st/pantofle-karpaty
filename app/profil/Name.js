@@ -1,8 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 
 export default function Name() {
   const { data: session, status } = useSession();
@@ -99,7 +98,6 @@ export default function Name() {
 
   return (
     <div className="max-w-7xl mx-auto p-6">
-      <ToastContainer position="bottom-right" autoClose={3000} />
       <h1 className="text-3xl font-bold text-gray-900 mb-6">Dane osobowe</h1>
       <div className="space-y-4">
         <div>

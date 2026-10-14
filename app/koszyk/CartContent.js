@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { useCart } from "@/app/context/cartContext";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import {
   CheckCircle,
   AlertCircle,
@@ -482,7 +482,6 @@ export default function CartContent() {
           </div>
         </div>
       )}
-      <ToastContainer position="bottom-right" autoClose={3000} />
     </div>
   );
 }
