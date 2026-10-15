@@ -15,6 +15,21 @@ export async function generateStaticParams() {
   return posts.map(({ slug }) => ({ slug }));
 }
 
+// Autorzy robią śródtytuły jako akapit z samym pogrubionym, kolorowym tekstem.
+// Zamieniamy taki akapit na <h2> (kolor zostaje) — dostaje rozmiar i odstępy
+// nagłówka, a Google widzi strukturę artykułu. Pogrubienie w zdaniu nie pasuje do wzorca.
+function promoteHeadings(html) {
+  return html
+    .replace(
+      /<p>(<span style="[^"]*">)<strong>([^<]+)<\/strong>(<\/span>)<\/p>/g,
+      "<h2>$1$2$3</h2>",
+    )
+    .replace(
+      /<p><strong>(<span style="[^"]*">)([^<]+)(<\/span>)<\/strong><\/p>/g,
+      "<h2>$1$2$3</h2>",
+    );
+}
+
 async function getPost(slug) {
   return prisma.post.findFirst({
     where: { slug, status: "published" },
@@ -167,7 +182,7 @@ export default async function BlogPostPage({ params }) {
             prose-ul:text-gray-600 prose-ol:text-gray-600
             prose-blockquote:border-l-red-200 prose-blockquote:text-gray-500 prose-blockquote:italic
             prose-img:rounded-xl"
-          dangerouslySetInnerHTML={{ __html: post.content }}
+          dangerouslySetInnerHTML={{ __html: promoteHeadings(post.content) }}
         />
 
         {/* ==================== CTA ==================== */}
@@ -204,7 +219,7 @@ export default async function BlogPostPage({ params }) {
                       ? post.ctaSecondaryUrl
                       : post.ctaSecondaryUrl
                   }
-                  className="inline-flex items-center gap-2 border border-red-700 text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-red-700/30 transition-colors"
+                  className="inline-flex items-center gap-2 border border-white/40 text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-white/10 transition-colors"
                 >
                   {post.ctaSecondaryLabel}
                 </Link>
