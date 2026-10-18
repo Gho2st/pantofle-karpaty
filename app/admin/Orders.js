@@ -15,6 +15,73 @@ const DELIVERY_LABELS = { paczkomat: "Paczkomat InPost", kurier: "Kurier" };
 // Cena zapłacona: promoPrice jest zapisywane tylko, gdy promocja obowiązywała przy zakupie
 const paidPrice = (item) => item.promoPrice || item.price;
 
+// Stan płatności ze Stripe dla oczekującego zamówienia (bez logowania do Stripe)
+function StripePaymentInfo({ orderId }) {
+  const [info, setInfo] = useState(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/orders/${orderId}/stripe`)
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then(setInfo)
+      .catch(() => setFailed(true));
+  }, [orderId]);
+
+  const box = "mb-4 text-sm px-3 py-2 rounded-lg border";
+  if (failed)
+    return (
+      <p className={`${box} bg-gray-50 text-gray-500 border-gray-200`}>
+        Nie udało się pobrać stanu płatności ze Stripe.
+      </p>
+    );
+  if (!info)
+    return (
+      <p className={`${box} bg-gray-50 text-gray-500 border-gray-200`}>
+        Sprawdzam płatność w Stripe…
+      </p>
+    );
+
+  const until = new Date(info.expiresAt).toLocaleString("pl-PL", {
+    day: "numeric",
+    month: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  if (info.paid)
+    return (
+      <p className={`${box} bg-green-50 text-green-800 border-green-200`}>
+        Stripe: płatność przyjęta — status zaktualizuje się za chwilę.
+      </p>
+    );
+  if (info.sessionStatus === "expired")
+    return (
+      <p className={`${box} bg-gray-50 text-gray-600 border-gray-200`}>
+        Stripe: sesja płatności wygasła
+        {info.failure && ` (ostatnia próba: ${info.failure.reason})`}.
+      </p>
+    );
+  if (info.failure)
+    return (
+      <div className={`${box} bg-red-50 text-red-800 border-red-200`}>
+        <p className="font-medium">
+          Płatność nieudana
+          {info.failure.method && ` (${info.failure.method})`}:{" "}
+          {info.failure.reason}
+        </p>
+        <p className="mt-1 text-red-700">
+          Klient może dokończyć płatność (np. BLIK-iem) w swoim zamówieniu do{" "}
+          {until}. Warto się z nim skontaktować.
+        </p>
+      </div>
+    );
+  return (
+    <p className={`${box} bg-gray-50 text-gray-600 border-gray-200`}>
+      Stripe: klient nie próbował jeszcze zapłacić. Płatność aktywna do {until}.
+    </p>
+  );
+}
+
 function matchesSearch(order, query) {
   const q = query.trim().toLowerCase().replace(/^#/, "");
   if (!q) return true;
@@ -403,6 +470,12 @@ export default function Orders() {
                       {statusText}
                     </span>
                   </div>
+
+                  {order.status === "PENDING" &&
+                    order.paymentMethod === "stripe" &&
+                    order.paymentId && (
+                      <StripePaymentInfo orderId={order.id} />
+                    )}
 
                   {transferDaysLeft !== null && (
                     <p
