@@ -20,6 +20,12 @@ const josefinSans = Josefin_Sans({
 // metadataBase: względne canonicale i og:image stają się pełnymi adresami
 export const metadata = {
   metadataBase: new URL(SITE_URL),
+  // Weryfikacja domeny pantofle-karpaty.pl w Meta Business (Bezpieczeństwo marki → Domeny)
+  verification: {
+    other: {
+      "facebook-domain-verification": "h4mbq0dv3944aymqkhns7wdb62botz",
+    },
+  },
 };
 
 export default function RootLayout({ children }) {
