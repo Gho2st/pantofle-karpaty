@@ -1,6 +1,7 @@
 // app/lib/sendOrderEmails.js
 import nodemailer from "nodemailer";
 import { escapeHtml } from "@/app/lib/escapeHtml";
+import { BANK_TRANSFER, transferTitle } from "@/app/lib/bankTransfer";
 
 const TEXT_FIELDS = [
   "email",
@@ -60,6 +61,22 @@ export async function sendOrderEmails(rawOrder, isPaid = false) {
       </div>`;
   }
 
+  // Przelew tradycyjny: dane do przelewu w mailu, żeby klient miał je pod ręką
+  const isTransfer = !isPaid && rawOrder.paymentMethod === "traditional";
+  const transferInfo = isTransfer
+    ? `
+      <div style="background:#fff8e1;padding:20px;border-radius:8px;border-left:5px solid #ffb300;margin:25px 0;font-size:15px;">
+        <strong style="font-size:17px;">Dane do przelewu</strong><br>
+        <span style="color:#666;">Prosimy o wpłatę w ciągu ${BANK_TRANSFER.deadline}.</span>
+        <table style="margin:12px 0 0;">
+          <tr><td style="padding:6px 12px 6px 0;border:0;color:#666;">Odbiorca:</td><td style="padding:6px 0;border:0;"><strong>${BANK_TRANSFER.recipient}</strong></td></tr>
+          <tr><td style="padding:6px 12px 6px 0;border:0;color:#666;">Numer konta (${BANK_TRANSFER.bank}):</td><td style="padding:6px 0;border:0;"><strong>${BANK_TRANSFER.account}</strong></td></tr>
+          <tr><td style="padding:6px 12px 6px 0;border:0;color:#666;">Kwota:</td><td style="padding:6px 0;border:0;"><strong>${order.totalAmount.toFixed(2)} zł</strong></td></tr>
+          <tr><td style="padding:6px 12px 6px 0;border:0;color:#666;">Tytuł przelewu:</td><td style="padding:6px 0;border:0;"><strong>${transferTitle(order.id)}</strong></td></tr>
+        </table>
+      </div>`
+    : "";
+
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT) || 465,
@@ -109,9 +126,13 @@ export async function sendOrderEmails(rawOrder, isPaid = false) {
         ${
           isPaid
             ? "Płatność za Twoje zamówienie została pomyślnie przyjęta! Już zabieramy się za pakowanie ❤️"
-            : "Dziękujemy serdecznie za zakup w <strong>Pantofle Karpaty</strong>! Twoje zamówienie zostało przyjęte i zaraz zabieramy się za pakowanie"
+            : isTransfer
+              ? "Dziękujemy serdecznie za zakup w <strong>Pantofle Karpaty</strong>! Twoje zamówienie zostało przyjęte — wyślemy je zaraz po zaksięgowaniu wpłaty."
+              : "Dziękujemy serdecznie za zakup w <strong>Pantofle Karpaty</strong>! Twoje zamówienie zostało przyjęte i zaraz zabieramy się za pakowanie"
         }
       </p>
+
+      ${transferInfo}
 
       <div class="info-box">
         <strong>Adres dostawy:</strong><br>

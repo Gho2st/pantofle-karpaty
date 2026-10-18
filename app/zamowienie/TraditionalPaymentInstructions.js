@@ -1,4 +1,5 @@
 import React from "react";
+import { BANK_TRANSFER, transferTitle } from "@/app/lib/bankTransfer";
 
 export default function TraditionalPaymentInstructions({ order }) {
   if (!order || order.paymentMethod !== "traditional") {
@@ -10,20 +11,23 @@ export default function TraditionalPaymentInstructions({ order }) {
       <h3 className="text-lg font-semibold mb-2">
         Instrukcje przelewu tradycyjnego
       </h3>
-      <p>Proszę dokonać przelewu na poniższe dane w ciągu 7 dni roboczych:</p>
+      <p>
+        Proszę dokonać przelewu na poniższe dane w ciągu{" "}
+        {BANK_TRANSFER.deadline}:
+      </p>
       <ul className="list-disc ml-5 mt-2">
         <li>
-          <strong>Nazwa odbiorcy:</strong> Firma KARPATY Maciej Wideł
+          <strong>Nazwa odbiorcy:</strong> {BANK_TRANSFER.recipient}
         </li>
         <li>
-          <strong>Numer konta (PKO BP):</strong> PL 06 1020 3453 0000 8602 0009
-          7758
+          <strong>Numer konta ({BANK_TRANSFER.bank}):</strong>{" "}
+          {BANK_TRANSFER.account}
         </li>
         <li>
           <strong>Kwota:</strong> {order.totalAmount.toFixed(2)} PLN
         </li>
         <li>
-          <strong>Tytuł przelewu:</strong> Zamówienie #{order.id}
+          <strong>Tytuł przelewu:</strong> {transferTitle(order.id)}
         </li>
       </ul>
       <p className="mt-2">
