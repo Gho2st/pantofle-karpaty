@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "react-toastify";
+import { trackPixel, pixelContents } from "@/app/lib/metaPixel";
 import { useCart } from "@/app/context/cartContext";
 import SizeChart from "@/app/components/Sizes";
 import {
@@ -154,6 +155,16 @@ export default function ProductDetails({ product }) {
   const currentPrice = product ? getCurrentPrice(product) : null;
   const isPromoActive = product ? currentPrice < product.price : false;
 
+  // Meta Pixel: obejrzenie produktu
+  useEffect(() => {
+    trackPixel("ViewContent", {
+      ...pixelContents([{ id: product.id, quantity: 1, price: currentPrice }]),
+      content_name: product.name,
+      value: currentPrice,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
+
   useEffect(() => {
     if (images.length > 0 && images[0]) {
       setMainImage(images[0]);
@@ -193,7 +204,13 @@ export default function ProductDetails({ product }) {
     e.preventDefault();
     if (!selectedSize) return toast.error("Wybierz rozmiar");
     try {
-      await addToCart(product.id, selectedSize, quantity);
+      const added = await addToCart(product.id, selectedSize, quantity);
+      if (!added) return;
+      trackPixel("AddToCart", {
+        ...pixelContents([{ id: product.id, quantity, price: currentPrice }]),
+        content_name: product.name,
+        value: Math.round(currentPrice * quantity * 100) / 100,
+      });
       setIsAdded(true);
       setShowCartLink(true);
       setTimeout(() => setIsAdded(false), 2000);

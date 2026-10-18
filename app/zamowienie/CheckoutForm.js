@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import CartSummary from "./CartSummary";
 import ShippingDetailsForm from "./ShippingDetailsForm";
 import PaymentMethodSelector from "./PaymentMethodSelector";
+import { trackPixel, pixelContents } from "@/app/lib/metaPixel";
 
 const PageLoader = ({ text }) => (
   <div className="container mx-auto py-20 flex flex-col items-center justify-center">
@@ -99,6 +100,24 @@ export default function CheckoutForm({
     const discount = discountValue || 0;
     return (subtotal + deliveryCost - discount).toFixed(2);
   }, [calculateSubtotal, calculateDeliveryCost, discountValue]);
+
+  // Meta Pixel: rozpoczęcie zamówienia (raz, gdy koszyk się wczyta)
+  const checkoutTracked = useRef(false);
+  useEffect(() => {
+    if (checkoutTracked.current || cartItems.length === 0) return;
+    checkoutTracked.current = true;
+    trackPixel("InitiateCheckout", {
+      ...pixelContents(
+        cartItems.map((item) => ({
+          id: item.productId,
+          quantity: item.quantity,
+          price: getCurrentPrice(item.product),
+        }))
+      ),
+      num_items: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+      value: parseFloat(calculateTotal()),
+    });
+  }, [cartItems, calculateTotal, getCurrentPrice]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

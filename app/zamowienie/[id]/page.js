@@ -7,6 +7,7 @@ import Stripe from "stripe";
 import StripeStatus from "./StripeStatus";
 import TraditionalPaymentInstructions from "../TraditionalPaymentInstructions";
 import OrderSummary from "./OrderSummary";
+import PurchaseTracker from "./PurchaseTracker";
 import { expireOrder } from "@/app/lib/releaseOrder";
 import { createRetryToken } from "@/app/lib/retryToken";
 
@@ -143,6 +144,15 @@ export default async function OrderConfirmationPage({ params, searchParams }) {
     order.status = updatedOrder.status;
   }
 
+  // Meta Pixel: zakup opłacony przez Stripe albo złożone zamówienie na przelew.
+  // Tylko świeże zamówienia — oglądanie starych w profilu nie raportuje zakupu.
+  const isFreshOrder =
+    Date.now() - new Date(order.createdAt).getTime() < 24 * 3600e3;
+  const trackPurchase =
+    isFreshOrder &&
+    ((order.paymentMethod === "stripe" && order.status === "PAID") ||
+      (order.paymentMethod === "traditional" && order.status === "PENDING"));
+
   // === TREŚĆ STRONY ===
   return (
     <div className="max-w-3xl mx-auto my-12 2xl:my-24 px-4">
@@ -176,6 +186,18 @@ export default async function OrderConfirmationPage({ params, searchParams }) {
         )}
 
         <OrderSummary order={order} />
+
+        {trackPurchase && (
+          <PurchaseTracker
+            orderId={order.id}
+            value={order.totalAmount}
+            items={order.items.map((item) => ({
+              id: item.productId,
+              quantity: item.quantity,
+              price: item.promoPrice || item.price,
+            }))}
+          />
+        )}
 
         <div className="mt-10">
           <h2 className="text-2xl font-semibold mb-4 border-b pb-2 text-gray-800">

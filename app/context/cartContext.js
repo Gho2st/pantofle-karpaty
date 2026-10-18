@@ -193,8 +193,10 @@ export const CartProvider = ({ children }) => {
         });
         await fetchCart();
       }
+      return true;
     } catch (error) {
       toast.error(error.message || "Błąd dodawania do koszyka");
+      return false;
     }
   };
 

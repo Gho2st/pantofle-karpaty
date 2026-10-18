@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
+import { flushPixelQueue } from "@/app/lib/metaPixel";
 
 const CookieConsent = () => {
   const [showBanner, setShowBanner] = useState(false);
@@ -10,6 +12,8 @@ const CookieConsent = () => {
     analytics_storage: "denied",
   });
   const fbPixelLoaded = useRef(false);
+  const lastPixelPath = useRef(null);
+  const pathname = usePathname();
 
   // === Facebook Pixel ===
   const loadFacebookPixel = () => {
@@ -49,6 +53,9 @@ const CookieConsent = () => {
     window.fbq("consent", "grant");
     window.fbq("track", "PageView");
     fbPixelLoaded.current = true;
+    lastPixelPath.current = window.location.pathname;
+    // Zdarzenia z komponentów, które wyrenderowały się przed załadowaniem Pixela
+    flushPixelQueue();
   };
 
   // === Cofnięcie zgody dla Facebook Pixel ===
@@ -92,6 +99,14 @@ const CookieConsent = () => {
       setShowBanner(true);
     }
   }, []);
+
+  // === PageView przy nawigacji ===
+  // Next.js zmienia strony bez przeładowania, więc Pixel sam widzi tylko pierwszą odsłonę
+  useEffect(() => {
+    if (!fbPixelLoaded.current || lastPixelPath.current === pathname) return;
+    lastPixelPath.current = pathname;
+    window.fbq("track", "PageView");
+  }, [pathname]);
 
   // === Zapis zgody ===
   const saveConsent = (newConsent) => {
