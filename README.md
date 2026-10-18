@@ -1,6 +1,6 @@
 # Pantofle Karpaty – Profesjonalny Sklep Internetowy
 
-**Live:** [sklep-pantofle-karpaty.pl](https://sklep-pantofle-karpaty.pl)
+**Live:** [pantofle-karpaty.pl](https://www.pantofle-karpaty.pl)
 
 Nowoczesna, w pełni funkcjonalna platforma e-commerce dla polskiego producenta tradycyjnych pantofli i kapci skórzanych/wełnianych z Karpat.
 

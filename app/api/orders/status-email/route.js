@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/app/lib/prisma";
 import { escapeHtml } from "@/app/lib/escapeHtml";
+import { SITE_URL } from "@/app/lib/site";
 
 // === WALIDACJA E-MAILA ===
 function isValidEmail(email) {
@@ -52,7 +53,7 @@ function createStatusEmailTemplate({
         <hr style="border: 1px solid #eee; margin: 25px 0;">
         <p style="font-size: 14px; color: #777; text-align: center;">
           Dziękujemy za zakupy w <strong>Pantofle Karpaty</strong>!<br>
-          <a href="https://sklep-pantofle-karpaty.pl" style="color: #fa7070; text-decoration: none;">sklep-pantofle-karpaty.pl</a>
+          <a href="${SITE_URL}" style="color: #fa7070; text-decoration: none;">pantofle-karpaty.pl</a>
         </p>
       </div>
     </div>
