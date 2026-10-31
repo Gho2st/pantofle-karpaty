@@ -4,6 +4,11 @@ import prisma from "@/app/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { cancelOrder } from "@/app/lib/releaseOrder";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2023-10-16",
+});
 
 export async function PATCH(request, { params }) {
   const session = await getServerSession(authOptions);
@@ -38,7 +43,7 @@ export async function PATCH(request, { params }) {
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      select: { status: true },
+      select: { status: true, paymentMethod: true, paymentId: true },
     });
 
     if (!order) {
@@ -106,6 +111,21 @@ export async function PATCH(request, { params }) {
         },
       },
     });
+
+    // Sesja Stripe jest aktywna do 24 h. Po zmianie statusu (anulowanie, ręczne
+    // opłacenie, wysyłka) zamykamy ją, żeby klient nie mógł zapłacić za
+    // anulowane zamówienie ani zapłacić drugi raz.
+    if (
+      order.status === "PENDING" &&
+      order.paymentMethod === "stripe" &&
+      order.paymentId
+    ) {
+      try {
+        await stripe.checkout.sessions.expire(order.paymentId);
+      } catch {
+        // sesja już opłacona albo wygasła — nie ma czego zamykać
+      }
+    }
 
     return NextResponse.json(
       {

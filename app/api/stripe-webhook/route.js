@@ -3,10 +3,29 @@ import Stripe from "stripe";
 import prisma from "@/app/lib/prisma";
 import { sendOrderEmails } from "@/app/lib/sendOrderEmails";
 import { expireOrder } from "@/app/lib/releaseOrder";
+import nodemailer from "nodemailer";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
 });
+
+// Płatność za zamówienie, które nie czeka już na zapłatę (np. anulowane w tej
+// samej chwili, gdy klient płacił) — pieniądze wpłynęły, trzeba zdecydować ręcznie.
+async function alertPaymentForClosedOrder(orderId, status, amount) {
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT) || 465,
+    secure: true,
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  });
+  await transporter.sendMail({
+    from: `"Pantofle Karpaty" <${process.env.SMTP_USER}>`,
+    to: "mwidel@pantofle-karpaty.pl",
+    subject: `UWAGA: płatność za zamówienie #${orderId} (status: ${status})`,
+    html: `<p>Stripe przyjął płatność <strong>${amount.toFixed(2)} zł</strong> za zamówienie <strong>#${orderId}</strong>, które ma status <strong>${status}</strong>.</p>
+      <p>Status nie został zmieniony, a towar z tego zamówienia wrócił wcześniej na stan. Zwróć płatność w panelu Stripe albo skontaktuj się z klientem i zrealizuj zamówienie ręcznie.</p>`,
+  });
+}
 
 export async function POST(req) {
   const rawBody = await req.text();
@@ -53,11 +72,29 @@ export async function POST(req) {
       return NextResponse.json({ received: true });
     }
 
-    // Aktualizujemy status
-    await prisma.order.update({
-      where: { id: orderIdNum },
+    // Opłacone może zostać tylko zamówienie oczekujące — anulowane/wygasłe ma
+    // już towar z powrotem na stanie
+    const { count } = await prisma.order.updateMany({
+      where: { id: orderIdNum, status: "PENDING" },
       data: { status: "PAID" },
     });
+    if (count === 0) {
+      console.error(
+        `Płatność za zamówienie #${orderIdNum} w statusie ${order.status} — status bez zmian`,
+      );
+      if (["CANCELLED", "EXPIRED"].includes(order.status)) {
+        try {
+          await alertPaymentForClosedOrder(
+            orderIdNum,
+            order.status,
+            session.amount_total / 100,
+          );
+        } catch (mailError) {
+          console.error("Błąd wysyłania ostrzeżenia:", mailError);
+        }
+      }
+      return NextResponse.json({ received: true });
+    }
 
     // WYSYŁAMY MAILE – dopiero teraz!
     try {
