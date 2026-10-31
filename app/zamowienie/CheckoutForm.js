@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import CartSummary from "./CartSummary";
 import ShippingDetailsForm from "./ShippingDetailsForm";
 import PaymentMethodSelector from "./PaymentMethodSelector";
+import { Lock, RotateCcw } from "lucide-react";
 import { trackPixel, pixelContents } from "@/app/lib/metaPixel";
 
 const PageLoader = ({ text }) => (
@@ -373,12 +374,32 @@ export default function CheckoutForm({
               cartItems.length === 0 ||
               (deliveryMethod === "paczkomat" && !formData.parcelLocker)
             }
-            className="mt-6 w-full bg-red-600 text-white py-3 rounded-md hover:bg-red-700 disabled:opacity-50 transition"
+            className="mt-6 w-full bg-red-600 text-white py-3.5 rounded-md font-medium hover:bg-red-700 disabled:opacity-50 transition"
           >
+            {/* "Zamawiam i płacę" — wymagane przez prawo konsumenckie (obowiązek zapłaty) */}
             {isStripeProcessing
-              ? "Przetwarzanie..."
-              : `Złóż zamówienie i zapłać (${calculateTotal()} PLN)`}
+              ? paymentMethod === "stripe"
+                ? "Przekierowujemy do płatności…"
+                : "Składamy zamówienie…"
+              : `Zamawiam i płacę · ${calculateTotal()} zł`}
           </button>
+          {deliveryMethod === "paczkomat" && !formData.parcelLocker && (
+            <p className="mt-2 text-center text-sm text-gray-500">
+              Wybierz paczkomat na mapie, aby złożyć zamówienie.
+            </p>
+          )}
+          <div className="mt-4 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-gray-500">
+            <span className="flex items-center gap-1.5">
+              <Lock className="h-3.5 w-3.5" />
+              {paymentMethod === "stripe"
+                ? "Bezpieczna płatność przez Stripe"
+                : "Bezpieczne zamówienie"}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <RotateCcw className="h-3.5 w-3.5" />
+              Zwrot w ciągu 30 dni
+            </span>
+          </div>
         </form>
       )}
     </div>

@@ -52,34 +52,35 @@ export default function StripeStatus({ order, retryToken }) {
 
   if (order.status === "PENDING") {
     return (
-      <div className="bg-orange-100 p-6 rounded-lg mt-6 text-center">
-        <div className="flex justify-center items-center mb-4">
-          <AlertCircle className="w-8 h-8 text-orange-600 mr-2" />
-          <h2 className="text-xl font-semibold text-orange-700">
-            Płatność w toku
+      <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-6 text-center">
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-2 mb-2">
+          <AlertCircle className="w-6 h-6 text-amber-600 shrink-0" />
+          <h2 className="text-xl font-semibold text-gray-900">
+            Zamówienie czeka na płatność
           </h2>
         </div>
         <p className="text-gray-700">
-          {`Oczekujemy na potwierdzenie Twojej płatności dla zamówienia nr ${order.id}. Jeśli nie dokonałeś jeszcze płatności, możesz spróbować ponownie.`}
-          Możesz spróbować ponownie lub skontaktować się z nami pod adresem{" "}
-          <a
-            href="mailto:mwidel@pantofle-karpaty.pl"
-            className="text-blue-600 hover:underline"
-          >
-            mwidel@pantofle-karpaty.pl
-          </a>
-          .
+          Jeśli płatność nie została dokończona, możesz zapłacić teraz — BLIK-iem,
+          kartą, Apple Pay lub Google Pay. Jeśli już zapłaciłeś, status
+          zaktualizuje się w ciągu kilku minut.
         </p>
-        {error && <p className="text-red-600 mt-2">{error}</p>}
+        {error && <p className="text-red-600 mt-3">{error}</p>}
         <button
           onClick={handleRetryPayment}
           disabled={isRetrying}
-          className={`mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 ${
-            isRetrying ? "opacity-50 cursor-not-allowed" : ""
-          }`}
+          className="mt-5 w-full sm:w-auto bg-red-600 text-white font-medium px-8 py-3 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isRetrying ? "Generowanie sesji..." : "Spróbuj ponownie"}
+          {isRetrying ? "Przekierowujemy do płatności…" : "Dokończ płatność"}
         </button>
+        <p className="text-sm text-gray-500 mt-4">
+          Masz problem z płatnością? Napisz:{" "}
+          <a
+            href="mailto:mwidel@pantofle-karpaty.pl"
+            className="text-red-700 hover:underline"
+          >
+            mwidel@pantofle-karpaty.pl
+          </a>
+        </p>
       </div>
     );
   }

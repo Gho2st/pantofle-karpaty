@@ -89,7 +89,7 @@ export default function ShippingDetailsForm({
   const validatePhone = (value) => {
     const cleaned = value.replace(/[\s\-\+]/g, "");
     if (cleaned.length !== 9 || !/^\d+$/.test(cleaned)) {
-      return "Podaj numer telefonu – dokładnie 9 cyfr (np. 666521401)";
+      return "Podaj numer telefonu – dokładnie 9 cyfr (np. 600123456)";
     }
     return undefined;
   };
@@ -226,7 +226,7 @@ export default function ShippingDetailsForm({
           setTouchedFields={setTouchedFields}
           validateField={getFieldError}
           setErrors={setErrors}
-          placeholder="666521401"
+          placeholder="np. 600 123 456"
         />
 
         <div className="md:col-span-2">
