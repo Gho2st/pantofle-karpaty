@@ -16,6 +16,10 @@ export const CartProvider = ({ children }) => {
   const { data: session, status } = useSession();
 
   const [cartItems, setCartItems] = useState([]);
+  // Koszyk wczytuje się po załadowaniu strony (localStorage / API) —
+  // do tego czasu pusty cartItems nie znaczy "pusty koszyk"
+  const [localCartLoaded, setLocalCartLoaded] = useState(false);
+  const [serverCartLoaded, setServerCartLoaded] = useState(false);
   const [availabilityErrors, setAvailabilityErrors] = useState([]);
   const [availableQuantities, setAvailableQuantities] = useState({});
 
@@ -47,11 +51,15 @@ export const CartProvider = ({ children }) => {
         localStorage.removeItem("cart");
       }
     }
+    setLocalCartLoaded(true);
   }, []);
 
   // === 2. Pobierz koszyk z API (tylko dla zalogowanych) ===
   const fetchCart = useCallback(async () => {
-    if (!session?.user?.id) return;
+    if (!session?.user?.id) {
+      setServerCartLoaded(true);
+      return;
+    }
 
     try {
       const response = await fetch("/api/cart");
@@ -66,6 +74,8 @@ export const CartProvider = ({ children }) => {
     } catch (error) {
       console.error("fetchCart error:", error);
       setCartItems([]);
+    } finally {
+      setServerCartLoaded(true);
     }
   }, [session?.user?.id]);
 
@@ -294,6 +304,10 @@ export const CartProvider = ({ children }) => {
         availableQuantities,
         fetchCart,
         getCurrentPrice,
+        loading:
+          !localCartLoaded ||
+          status === "loading" ||
+          (status === "authenticated" && !serverCartLoaded),
       }}
     >
       {children}

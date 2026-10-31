@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/app/context/cartContext";
 import { toast } from "react-toastify";
 import {
@@ -26,12 +27,14 @@ export default function CartContent() {
     setAvailabilityErrors,
     availableQuantities,
     getCurrentPrice,
+    loading: isCartLoading,
   } = useCart();
 
   const [deliveryMethod, setDeliveryMethod] = useState("paczkomat");
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const [isAvailable, setIsAvailable] = useState(true);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const router = useRouter();
 
   const [discountCode, setDiscountCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState(null);
@@ -73,7 +76,9 @@ export default function CartContent() {
       params.append("discountCode", appliedDiscount.code);
       params.append("discountValue", calculateDiscountAmount().toFixed(2));
     }
-    window.location.href = `/zamowienie?${params.toString()}`;
+    // Nawigacja bez przeładowania: koszyk jest już wczytany, więc strona
+    // zamówienia nie miga pustym koszykiem, a "Wstecz" wraca do świeżego koszyka
+    router.push(`/zamowienie?${params.toString()}`);
   };
 
   const calculateSubtotal = () => {
@@ -174,7 +179,11 @@ export default function CartContent() {
 
       <h1 className="text-3xl font-bold mb-8">Twój Koszyk</h1>
 
-      {cartItems.length === 0 ? (
+      {isCartLoading ? (
+        <div className="flex justify-center py-24">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-red-600" />
+        </div>
+      ) : cartItems.length === 0 ? (
         <div className="text-center py-16">
           <ShoppingCart className="w-24 h-24 mx-auto text-gray-300" />
           <h2 className="mt-6 text-2xl font-semibold text-gray-800">
