@@ -8,7 +8,22 @@ const OPTIONS = [
     value: "stripe",
     title: "Płatność online",
     description: "Wysyłamy najszybciej — zaraz po opłaceniu zamówienia.",
-    badges: ["BLIK", "Karta", "Apple Pay", "Google Pay"],
+    // Logotypy: BLIK (oficjalne, blik.com), pozostałe z Simple Icons (CC0)
+    logos: [
+      { src: "/payments/blik.svg", alt: "BLIK", className: "h-5" },
+      { src: "/payments/apple-pay.svg", alt: "Apple Pay", className: "h-5" },
+      {
+        src: "/payments/google-pay.svg",
+        alt: "Google Pay",
+        className: "h-3.5",
+      },
+      { src: "/payments/visa.svg", alt: "Visa", className: "h-3" },
+      {
+        src: "/payments/mastercard.svg",
+        alt: "Mastercard",
+        className: "h-4",
+      },
+    ],
     Icon: Smartphone,
   },
   {
@@ -16,7 +31,7 @@ const OPTIONS = [
     title: "Przelew tradycyjny",
     description:
       "Dane do przelewu wyślemy mailem. Wysyłamy po zaksięgowaniu wpłaty.",
-    badges: [],
+    logos: [],
     Icon: Landmark,
   },
 ];
@@ -36,7 +51,7 @@ export default function PaymentMethodSelector({
     <fieldset>
       <legend className="text-lg font-semibold mb-3">Metoda płatności</legend>
       <div className="flex flex-col gap-3">
-        {OPTIONS.map(({ value, title, description, badges, Icon }) => {
+        {OPTIONS.map(({ value, title, description, logos, Icon }) => {
           const selected = paymentMethod === value;
           return (
             <label
@@ -70,14 +85,19 @@ export default function PaymentMethodSelector({
                 <span className="block text-sm text-gray-600 mt-1">
                   {description}
                 </span>
-                {badges.length > 0 && (
-                  <span className="flex flex-wrap gap-1.5 mt-2">
-                    {badges.map((badge) => (
+                {logos.length > 0 && (
+                  <span className="flex flex-wrap gap-1.5 mt-2.5">
+                    {logos.map(({ src, alt, className }) => (
                       <span
-                        key={badge}
-                        className="text-xs font-medium px-2 py-0.5 rounded border border-gray-200 bg-white text-gray-700"
+                        key={alt}
+                        className="flex h-8 items-center justify-center rounded border border-gray-200 bg-white px-2"
                       >
-                        {badge}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={src}
+                          alt={alt}
+                          className={`${className} w-auto`}
+                        />
                       </span>
                     ))}
                   </span>
