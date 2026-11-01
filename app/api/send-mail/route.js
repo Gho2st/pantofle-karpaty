@@ -8,6 +8,29 @@ function isValidEmail(email) {
   return emailRegex.test(email);
 }
 
+// === OCHRONA PRZED SPAMEM ===
+const MIN_FILL_TIME_MS = 3000;
+
+// Losowy ciąg typu "ybFaRKrawdPRgasX": długie słowo bez spacji, w którym
+// wielkość liter zmienia się wiele razy (prawdziwe imiona i zdania tak nie wyglądają)
+function looksRandom(value) {
+  const text = String(value || "").trim();
+  if (text.length < 10 || /\s/.test(text) || !/^[A-Za-z]+$/.test(text)) {
+    return false;
+  }
+  const caseSwitches = (text.match(/[a-z][A-Z]/g) || []).length;
+  return caseSwitches >= 3;
+}
+
+function spamReason({ website, fillTimeMs, name, text }) {
+  if (website) return "wypełnione pole-pułapka";
+  // Brak pomiaru = wysłane z pominięciem formularza (bot prosto do API)
+  if (typeof fillTimeMs !== "number") return "wysłane z pominięciem formularza";
+  if (fillTimeMs < MIN_FILL_TIME_MS) return "wysłane zbyt szybko";
+  if (looksRandom(name) || looksRandom(text)) return "losowy ciąg znaków";
+  return null;
+}
+
 // === WALIDACJA PÓL ===
 function validateFields(fields) {
   return Object.entries(fields).every(
@@ -41,7 +64,17 @@ function createEmailTemplate({ name, text, email }) {
 // === GŁÓWNA FUNKCJA POST ===
 export async function POST(request) {
   try {
-    const { text, name, email } = await request.json();
+    const { text, name, email, website, fillTimeMs } = await request.json();
+
+    // === 0. Spam: bot dostaje "sukces", żeby nie próbował obejść blokady ===
+    const reason = spamReason({ website, fillTimeMs, name, text });
+    if (reason) {
+      console.log(`Formularz kontaktowy: odrzucony spam (${reason})`);
+      return NextResponse.json(
+        { message: "Wiadomość wysłana prawidłowo!" },
+        { status: 200 }
+      );
+    }
 
     // === 1. Walidacja pól ===
     if (!validateFields({ name, email, text })) {

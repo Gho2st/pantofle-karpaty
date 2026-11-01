@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Phone, Mail, Clock } from "lucide-react";
 
 export default function ContactForm() {
@@ -12,6 +12,9 @@ export default function ContactForm() {
   const [isSending, setIsSending] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formError, setFormError] = useState("");
+  // Ochrona przed botami: pole-pułapka (honeypot) i czas otwarcia formularza
+  const [website, setWebsite] = useState("");
+  const startedAt = useRef(Date.now());
 
   const validateField = (name, value) => {
     switch (name) {
@@ -57,7 +60,12 @@ export default function ContactForm() {
       const response = await fetch("/api/send-mail", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          website,
+          // czas wypełniania liczony w całości w przeglądarce (bez zależności od zegara klienta)
+          fillTimeMs: Date.now() - startedAt.current,
+        }),
       });
       if (response.ok) {
         setFormSubmitted(true);
@@ -172,6 +180,23 @@ export default function ContactForm() {
             )}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+              {/* Pułapka na boty: niewidoczne dla ludzi, boty wypełniają każde pole */}
+              <div
+                aria-hidden="true"
+                className="absolute -left-[9999px] h-0 w-0 overflow-hidden"
+              >
+                <label>
+                  Strona internetowa
+                  <input
+                    type="text"
+                    name="website"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                  />
+                </label>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-xs uppercase tracking-widest text-gray-400 mb-2">
