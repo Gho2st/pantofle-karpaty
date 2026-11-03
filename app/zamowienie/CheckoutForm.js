@@ -9,6 +9,9 @@ import ShippingDetailsForm from "./ShippingDetailsForm";
 import PaymentMethodSelector from "./PaymentMethodSelector";
 import { Lock, RotateCcw } from "lucide-react";
 import { trackPixel, pixelContents } from "@/app/lib/metaPixel";
+import PendingPaymentBanner, {
+  savePendingPayment,
+} from "@/app/components/PendingPaymentBanner";
 
 const PageLoader = ({ text }) => (
   <div className="container mx-auto py-20 flex flex-col items-center justify-center">
@@ -316,6 +319,7 @@ export default function CheckoutForm({
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Błąd serwera");
 
+      if (data.pendingPayment) savePendingPayment(data.pendingPayment);
       clearCart();
       window.location.href = data.redirectUrl;
     } catch (error) {
@@ -330,6 +334,7 @@ export default function CheckoutForm({
 
   return (
     <div className="container mx-auto py-8">
+      <PendingPaymentBanner />
       <CartSummary
         cartItems={cartItems}
         deliveryMethod={deliveryMethod}

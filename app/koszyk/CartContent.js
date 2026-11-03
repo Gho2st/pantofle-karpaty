@@ -16,6 +16,7 @@ import {
 import Collection from "../components/Collection";
 import LoadingOverlay from "./LoadingOverlay";
 import QuantityInput from "./QuantityInput";
+import PendingPaymentBanner from "../components/PendingPaymentBanner";
 
 export default function CartContent() {
   const {
@@ -178,6 +179,8 @@ export default function CartContent() {
       {isRedirecting && <LoadingOverlay text="Przechodzenie do kasy..." />}
 
       <h1 className="text-3xl font-bold mb-8">Twój Koszyk</h1>
+
+      <PendingPaymentBanner />
 
       {isCartLoading ? (
         <div className="flex justify-center py-24">

@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 import crypto from "crypto";
 import { sendOrderEmails } from "@/app/lib/sendOrderEmails";
+import { createRetryToken } from "@/app/lib/retryToken";
 import {
   createCheckoutSession,
   FIRST_SESSION_MINUTES,
@@ -239,7 +240,15 @@ export async function POST(req) {
       data: { paymentId: stripeSession.id },
     });
 
-    return NextResponse.json({ redirectUrl: stripeSession.url });
+    // Dane do banera "Dokończ płatność", gdy klient wróci do sklepu bez płacenia
+    return NextResponse.json({
+      redirectUrl: stripeSession.url,
+      pendingPayment: {
+        orderId: createdOrder.id,
+        totalAmount: createdOrder.totalAmount,
+        retryToken: createRetryToken(createdOrder.id, 24 * 60 * 60 * 1000),
+      },
+    });
   } catch (error) {
     if (error instanceof CheckoutError) {
       return NextResponse.json({ error: error.message }, { status: 400 });

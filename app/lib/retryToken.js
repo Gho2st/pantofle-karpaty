@@ -14,8 +14,8 @@ function sign(payload) {
     .digest("hex");
 }
 
-export function createRetryToken(orderId) {
-  const expires = Date.now() + TTL_MS;
+export function createRetryToken(orderId, ttlMs = TTL_MS) {
+  const expires = Date.now() + ttlMs;
   return `${expires}.${sign(`${orderId}.${expires}`)}`;
 }
 
