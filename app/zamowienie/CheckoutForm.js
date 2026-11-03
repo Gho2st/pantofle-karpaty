@@ -105,6 +105,17 @@ export default function CheckoutForm({
     return (subtotal + deliveryCost - discount).toFixed(2);
   }, [calculateSubtotal, calculateDeliveryCost, discountValue]);
 
+  // Powrót ze Stripe przyciskiem "Wstecz": przeglądarka przywraca stronę
+  // z pamięci w stanie "Przetwarzanie płatności…" (kółko kręci się bez końca).
+  // Odświeżamy ją, żeby pokazać aktualny stan (baner "Dokończ płatność").
+  useEffect(() => {
+    const onPageShow = (event) => {
+      if (event.persisted) window.location.reload();
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
+
   // Meta Pixel: rozpoczęcie zamówienia (raz, gdy koszyk się wczyta)
   const checkoutTracked = useRef(false);
   useEffect(() => {
