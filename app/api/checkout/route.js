@@ -2,9 +2,12 @@ import { NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
-import Stripe from "stripe";
 import crypto from "crypto";
 import { sendOrderEmails } from "@/app/lib/sendOrderEmails";
+import {
+  createCheckoutSession,
+  FIRST_SESSION_MINUTES,
+} from "@/app/lib/stripeCheckout";
 import {
   DELIVERY_COSTS,
   getCurrentPrice,
@@ -15,10 +18,6 @@ import {
 } from "@/app/lib/pricing";
 
 class CheckoutError extends Error {}
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
-});
 
 function isValidEmail(email) {
   const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -228,25 +227,11 @@ export async function POST(req) {
       return NextResponse.json({ redirectUrl });
     }
 
-    const stripeSession = await stripe.checkout.sessions.create({
-      mode: "payment",
-      currency: "pln",
-      customer_email: formData.email,
-      metadata: { orderId: createdOrder.id.toString() },
-      // {CHECKOUT_SESSION_ID} podstawia Stripe — strona zamówienia weryfikuje nim płatność.
-      // Doklejamy ręcznie, bo URL zakodowałby nawiasy klamrowe.
-      success_url: `${redirectUrl}${redirectUrl.includes("?") ? "&" : "?"}payment=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${redirectUrl}${redirectUrl.includes("?") ? "&" : "?"}status=error`,
-      line_items: [
-        {
-          price_data: {
-            currency: "pln",
-            product_data: { name: `Zamówienie #${createdOrder.id}` },
-            unit_amount: Math.round(createdOrder.totalAmount * 100),
-          },
-          quantity: 1,
-        },
-      ],
+    // Krótka pierwsza sesja — po jej wygaśnięciu klient dostaje przypomnienie mailem
+    const stripeSession = await createCheckoutSession({
+      order: createdOrder,
+      guestToken,
+      expiresInMinutes: FIRST_SESSION_MINUTES,
     });
 
     await prisma.order.update({

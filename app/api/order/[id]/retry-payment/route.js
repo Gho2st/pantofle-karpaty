@@ -2,13 +2,9 @@ import { NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import Stripe from "stripe";
 import crypto from "crypto";
 import { verifyRetryToken } from "@/app/lib/retryToken";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
-});
+import { createCheckoutSession } from "@/app/lib/stripeCheckout";
 
 export async function POST(request, { params }) {
   const session = await getServerSession(authOptions);
@@ -69,36 +65,15 @@ export async function POST(request, { params }) {
       );
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL.replace(/\/$/, "");
-
     // Gość nie ma już jednorazowego linku (zużył go przy wejściu na stronę),
     // więc po powrocie ze Stripe potrzebuje nowego — inaczej trafi na "brak dostępu".
     const guestToken = isGuest ? crypto.randomBytes(20).toString("hex") : null;
-    const orderUrl = `${baseUrl}/zamowienie/${order.id}?${
-      guestToken ? `guestToken=${guestToken}&` : ""
-    }`;
 
-    const stripeSession = await stripe.checkout.sessions.create({
-      mode: "payment",
-      currency: "pln",
-      customer_email: order.email,
-      metadata: {
-        orderId: order.id.toString(),
-      },
-      success_url: `${orderUrl}status=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${orderUrl}status=error`,
-      line_items: [
-        {
-          price_data: {
-            currency: "pln",
-            product_data: {
-              name: `Zamówienie #${order.id}`,
-            },
-            unit_amount: Math.round(order.totalAmount * 100),
-          },
-          quantity: 1,
-        },
-      ],
+    // Klient sam wrócił do płatności — mail z przypomnieniem już mu nie przysługuje
+    const stripeSession = await createCheckoutSession({
+      order,
+      guestToken,
+      reminderSent: true,
     });
 
     await prisma.order.update({

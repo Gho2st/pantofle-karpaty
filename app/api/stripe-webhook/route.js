@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import prisma from "@/app/lib/prisma";
 import { sendOrderEmails } from "@/app/lib/sendOrderEmails";
 import { expireOrder } from "@/app/lib/releaseOrder";
+import { sendPaymentReminder } from "@/app/lib/sendPaymentReminder";
 import nodemailer from "nodemailer";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -112,6 +113,18 @@ export async function POST(req) {
     const orderId = session.metadata?.orderId;
 
     if (orderId) {
+      // Pierwsza (godzinna) sesja wygasła → jeden mail z przypomnieniem i nowa,
+      // dobowa sesja. Dopiero gdy wygaśnie sesja po przypomnieniu, zamówienie wygasa.
+      if (session.metadata?.reminderSent !== "1") {
+        try {
+          if (await sendPaymentReminder(parseInt(orderId), session.id)) {
+            return NextResponse.json({ received: true });
+          }
+        } catch (error) {
+          console.error(`Błąd przypomnienia dla #${orderId}:`, error);
+        }
+      }
+
       const expired = await expireOrder(parseInt(orderId), session.id);
       if (expired) {
         console.log(
