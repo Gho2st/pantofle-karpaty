@@ -2,6 +2,7 @@
 // Tworzenie sesji płatności Stripe dla zamówienia — wspólne dla checkoutu,
 // ponowienia płatności i maila z przypomnieniem.
 import Stripe from "stripe";
+import { orderPageUrl } from "@/app/lib/orderAccess";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
@@ -18,11 +19,8 @@ export async function createCheckoutSession({
   reminderSent = false,
   expiresInMinutes = null,
 }) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const orderUrl = new URL(`/zamowienie/${order.id}`, baseUrl);
-  if (guestToken) orderUrl.searchParams.set("guestToken", guestToken);
-  const url = orderUrl.toString();
-  const sep = url.includes("?") ? "&" : "?";
+  // Gość wraca przez wymianę tokenu na ciasteczko (działa też "Wstecz")
+  const { href: url, sep } = orderPageUrl(order.id, guestToken);
 
   return stripe.checkout.sessions.create({
     mode: "payment",

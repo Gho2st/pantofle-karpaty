@@ -10,6 +10,8 @@ import OrderSummary from "./OrderSummary";
 import PurchaseTracker from "./PurchaseTracker";
 import { expireOrder } from "@/app/lib/releaseOrder";
 import { createRetryToken } from "@/app/lib/retryToken";
+import { cookies } from "next/headers";
+import { hasOrderAccess, orderAccessCookie } from "@/app/lib/orderAccess";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
@@ -81,11 +83,25 @@ export default async function OrderConfirmationPage({ params, searchParams }) {
   // === AUTORYZACJA ===
   const userEmail = session?.user?.email;
   const isOwner = userEmail && order.user?.email === userEmail;
+  // Stary sposób (?guestToken=) — dla linków z płatności sprzed wprowadzenia ciasteczka
   const isGuestWithToken =
-    !session && resolvedSearchParams.guestToken === order.guestToken;
+    !session &&
+    !!resolvedSearchParams.guestToken &&
+    resolvedSearchParams.guestToken === order.guestToken;
+  // Ciasteczko z /api/order/[id]/access — działa przy "Wstecz" i odświeżeniu
+  const cookieStore = await cookies();
+  const hasAccessCookie = hasOrderAccess(
+    cookieStore.get(orderAccessCookie(order.id))?.value,
+    order.id,
+  );
 
   // 1. LINK JUŻ WYGASŁ (token był, ale go nie ma)
-  if (!session && resolvedSearchParams.guestToken && !order.guestToken) {
+  if (
+    !session &&
+    !hasAccessCookie &&
+    resolvedSearchParams.guestToken &&
+    !order.guestToken
+  ) {
     return (
       <div className="max-w-md mx-auto mt-20 p-8 bg-white rounded-xl shadow text-center">
         <h1 className="text-2xl font-bold text-red-600 mb-4">Link wygasł</h1>
@@ -117,7 +133,7 @@ export default async function OrderConfirmationPage({ params, searchParams }) {
   }
 
   // 3. BRAK DOSTĘPU → przekieruj
-  if (!isOwner && !isGuestWithToken) {
+  if (!isOwner && !isGuestWithToken && !hasAccessCookie) {
     redirect("/zamowienie/brak-dostepu");
   }
 

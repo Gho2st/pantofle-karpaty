@@ -5,6 +5,7 @@ import { authOptions } from "../auth/[...nextauth]/route";
 import crypto from "crypto";
 import { sendOrderEmails } from "@/app/lib/sendOrderEmails";
 import { createRetryToken } from "@/app/lib/retryToken";
+import { orderPageUrl } from "@/app/lib/orderAccess";
 import {
   createCheckoutSession,
   FIRST_SESSION_MINUTES,
@@ -214,10 +215,10 @@ export async function POST(req) {
       },
     );
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const orderUrl = new URL(`/zamowienie/${createdOrder.id}`, baseUrl);
-    if (isGuest && guestToken) orderUrl.searchParams.set("guestToken", guestToken);
-    const redirectUrl = orderUrl.toString();
+    const { href: redirectUrl } = orderPageUrl(
+      createdOrder.id,
+      isGuest ? guestToken : null,
+    );
 
     // TYLKO PRZY PRZELEWIE TRADYCYJNYM → WYSYŁAMY MAILE OD RAZU
     if (paymentMethod !== "stripe") {
