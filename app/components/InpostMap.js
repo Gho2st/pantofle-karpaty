@@ -105,13 +105,13 @@ const InPostGeowidget = ({
       <div className="space-y-4">
         {showMap ? (
           // Stan początkowy - brak wybranego punktu
-          <div className="p-4 bg-gray-50 rounded-lg text-center">
+          <div className="p-4 bg-gray-50 rounded-xl text-center">
             <p className="text-gray-600">Proszę wybrać paczkomat na mapie</p>
           </div>
         ) : (
           // Wybrany punkt + przycisk zmiany
           <div className="space-y-3">
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-semibold text-green-800">
                   ✓ Wybrany Paczkomat

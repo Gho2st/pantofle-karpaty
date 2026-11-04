@@ -35,7 +35,7 @@ export default function StripeStatus({ order, retryToken }) {
 
   if (order.status === "PAID") {
     return (
-      <div className="bg-green-100 p-6 rounded-lg mt-6 text-center">
+      <div className="rounded-2xl border border-green-200 bg-green-50 p-6 text-center">
         <div className="flex justify-center items-center mb-4">
           <CheckCircle className="w-8 h-8 text-green-600 mr-2" />
           <h2 className="text-xl font-semibold text-green-700">
@@ -52,7 +52,7 @@ export default function StripeStatus({ order, retryToken }) {
 
   if (order.status === "PENDING") {
     return (
-      <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-6 text-center">
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
         <div className="flex flex-col sm:flex-row justify-center items-center gap-2 mb-2">
           <AlertCircle className="w-6 h-6 text-amber-600 shrink-0" />
           <h2 className="text-xl font-semibold text-gray-900">
@@ -68,7 +68,7 @@ export default function StripeStatus({ order, retryToken }) {
         <button
           onClick={handleRetryPayment}
           disabled={isRetrying}
-          className="mt-5 w-full sm:w-auto bg-red-600 text-white font-medium px-8 py-3 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="mt-5 w-full sm:w-auto bg-red-600 text-white font-medium px-8 py-3.5 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isRetrying ? "Przekierowujemy do płatności…" : "Dokończ płatność"}
         </button>
@@ -87,7 +87,7 @@ export default function StripeStatus({ order, retryToken }) {
 
   // Handle CANCELLED or other statuses
   return (
-    <div className="bg-red-100 p-6 rounded-lg mt-6 text-center">
+    <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
       <div className="flex justify-center items-center mb-4">
         <AlertCircle className="w-8 h-8 text-red-600 mr-2" />
         <h2 className="text-xl font-semibold text-red-700">

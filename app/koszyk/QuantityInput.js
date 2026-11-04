@@ -43,17 +43,17 @@ export default function QuantityInput({
     if (num !== value) onChange(num);
   };
 
-  const containerClass = `flex items-center rounded-md border overflow-hidden transition-all ${
+  const containerClass = `inline-flex items-center rounded-xl border overflow-hidden transition-all ${
     error ? "border-red-500 ring-2 ring-red-200" : "border-gray-300"
   } ${
     disabled ? "bg-gray-100" : "bg-white"
   } focus-within:ring-2 focus-within:ring-red-300 focus-within:border-red-300`;
 
   const buttonClass =
-    "flex-shrink-0 w-8 h-8 flex items-center justify-center text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+    "flex-shrink-0 w-9 h-9 flex items-center justify-center text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
   const inputClass =
-    "w-12 h-8 text-center p-1 text-gray-900 focus:outline-none disabled:bg-gray-100";
+    "w-10 h-9 text-center p-1 text-sm text-gray-900 focus:outline-none disabled:bg-gray-100";
 
   return (
     <div className={containerClass}>

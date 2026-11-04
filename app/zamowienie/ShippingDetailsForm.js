@@ -40,10 +40,10 @@ const InputField = ({
         value={value}
         onChange={onChange}
         onBlur={handleBlur}
-        className={`w-full px-3 py-2 border rounded-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 ${
+        className={`w-full px-4 py-2.5 border rounded-xl text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/40 ${
           error && isTouched
-            ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-            : "border-gray-300 focus:border-blue-500"
+            ? "border-red-500 focus:border-red-500"
+            : "border-gray-300 focus:border-red-500"
         }`}
         {...rest}
       />
@@ -117,7 +117,7 @@ export default function ShippingDetailsForm({
         }
       `}</style>
 
-      <h2 className="text-xl font-semibold mb-4">Dane dostawy</h2>
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">Dane dostawy</h2>
 
       <div className="mb-4">
         <label className="flex items-center cursor-pointer">
@@ -125,7 +125,7 @@ export default function ShippingDetailsForm({
             type="checkbox"
             checked={isCompanyPurchase}
             onChange={handleCompanyPurchaseToggle}
-            className="mr-2 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+            className="mr-2 h-4 w-4 rounded border-gray-300 accent-red-600"
           />
           <span className="text-sm font-medium">
             Zakup na firmę (faktura VAT)
@@ -305,7 +305,7 @@ export default function ShippingDetailsForm({
               name="courierInstructions"
               value={formData.courierInstructions || ""}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500 transition-all"
               rows={3}
               placeholder="Np. zostaw paczkę u sąsiada pod numerem 5"
             />

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Copy, Check, Landmark } from "lucide-react";
 import { BANK_TRANSFER, transferTitle } from "@/app/lib/bankTransfer";
+import { formatPrice } from "@/app/components/checkout/CheckoutUI";
 
 function CopyRow({ label, value, copyValue }) {
   const [copied, setCopied] = useState(false);
@@ -50,7 +51,7 @@ export default function TraditionalPaymentInstructions({ order }) {
   const amount = order.totalAmount.toFixed(2);
 
   return (
-    <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
       <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
         <Landmark className="h-5 w-5 text-amber-700" />
         Dane do przelewu
@@ -66,7 +67,11 @@ export default function TraditionalPaymentInstructions({ order }) {
         value={BANK_TRANSFER.account}
         copyValue={BANK_TRANSFER.account.replace(/\s/g, "")}
       />
-      <CopyRow label="Kwota" value={`${amount} zł`} copyValue={amount} />
+      <CopyRow
+        label="Kwota"
+        value={formatPrice(order.totalAmount)}
+        copyValue={amount}
+      />
       <CopyRow label="Tytuł przelewu" value={transferTitle(order.id)} />
 
       <p className="text-xs text-gray-500 mt-3">

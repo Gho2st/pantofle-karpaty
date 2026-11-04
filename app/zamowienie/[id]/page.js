@@ -7,6 +7,12 @@ import Stripe from "stripe";
 import StripeStatus from "./StripeStatus";
 import TraditionalPaymentInstructions from "../TraditionalPaymentInstructions";
 import OrderSummary from "./OrderSummary";
+import {
+  CARD,
+  PRIMARY_BUTTON,
+  PageShell,
+  SectionTitle,
+} from "@/app/components/checkout/CheckoutUI";
 import PurchaseTracker from "./PurchaseTracker";
 import { expireOrder } from "@/app/lib/releaseOrder";
 import { createRetryToken } from "@/app/lib/retryToken";
@@ -41,7 +47,10 @@ async function getOrder(id) {
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: { items: true, user: true },
+    include: {
+      items: { include: { product: { select: { images: true } } } },
+      user: true,
+    },
   });
 
   if (!order) notFound();
@@ -52,7 +61,7 @@ async function getOrder(id) {
 // towar wrócił już na stan.
 function ExpiredNotice({ orderId }) {
   return (
-    <div className="bg-gray-100 p-6 rounded-lg mt-6 text-center">
+    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-6 text-center">
       <h2 className="text-xl font-semibold text-gray-700 mb-2">
         Zamówienie wygasło
       </h2>
@@ -102,24 +111,27 @@ export default async function OrderConfirmationPage({ params, searchParams }) {
     resolvedSearchParams.guestToken &&
     !order.guestToken
   ) {
+    // Adres maskowany — stary link może otworzyć ktoś inny niż klient
+    const [local, domain] = order.email.split("@");
+    const maskedEmail = `${local.slice(0, 2)}***@${domain}`;
     return (
-      <div className="max-w-md mx-auto mt-20 p-8 bg-white rounded-xl shadow text-center">
-        <h1 className="text-2xl font-bold text-red-600 mb-4">Link wygasł</h1>
-        <p className="text-gray-600 mb-4">
-          Ten link do potwierdzenia zamówienia był{" "}
-          <strong>jednorazowy</strong> i już nie działa.
-        </p>
-        <p className="text-sm text-gray-500">
-          Sprawdź swoją skrzynkę email – wysłaliśmy Ci potwierdzenie na:
-          <br />
-          <strong className="text-blue-600">{order.email}</strong>
-        </p>
-        <a
-          href="/"
-          className="inline-block mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-        >
-          Wróć na stronę główną
-        </a>
+      <div className="max-w-md mx-auto my-16 px-4">
+        <div className={`${CARD} text-center`}>
+          <h1 className="text-xl font-semibold text-gray-900 mb-3">
+            Link wygasł
+          </h1>
+          <p className="text-gray-600 mb-3">
+            Ten link do potwierdzenia zamówienia był jednorazowy i już nie
+            działa.
+          </p>
+          <p className="text-sm text-gray-500">
+            Potwierdzenie zamówienia wysłaliśmy na adres{" "}
+            <strong className="text-gray-900">{maskedEmail}</strong>.
+          </p>
+          <a href="/" className={`${PRIMARY_BUTTON} mt-6`}>
+            Wróć na stronę główną
+          </a>
+        </div>
       </div>
     );
   }
@@ -171,86 +183,97 @@ export default async function OrderConfirmationPage({ params, searchParams }) {
 
   // === TREŚĆ STRONY ===
   return (
-    <div className="max-w-3xl mx-auto my-12 2xl:my-24 px-4">
-      <div className="bg-white p-6 sm:p-8 rounded-xl shadow-lg border border-gray-100">
-        <h1 className="text-3xl font-bold text-center text-gray-800 mb-4">
-          Dziękujemy za Twoje zamówienie!
-        </h1>
-        <p className="text-lg text-center text-gray-600 mb-8">
-          Otrzymaliśmy Twoje zamówienie o numerze <strong>#{order.id}</strong>.
-          <br />
+    <PageShell
+      step={3}
+      title="Dziękujemy za zamówienie!"
+      subtitle={
+        <>
+          Zamówienie <strong>#{order.id}</strong> zostało przyjęte.
           Potwierdzenie wysłaliśmy na <strong>{order.email}</strong>.
-        </p>
-
-        {order.status === "EXPIRED" ? (
-          <ExpiredNotice orderId={order.id} />
-        ) : (
-          <>
-            {order.paymentMethod === "traditional" &&
-              order.status === "PENDING" && (
-                <TraditionalPaymentInstructions order={order} />
+        </>
+      }
+    >
+      <div className="lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start">
+        <div className="lg:col-span-2 space-y-6">
+          {order.status === "EXPIRED" ? (
+            <ExpiredNotice orderId={order.id} />
+          ) : (
+            <>
+              {order.paymentMethod === "traditional" &&
+                order.status === "PENDING" && (
+                  <TraditionalPaymentInstructions order={order} />
+                )}
+              {order.paymentMethod === "stripe" && (
+                <StripeStatus
+                  order={order}
+                  retryToken={
+                    order.status === "PENDING"
+                      ? createRetryToken(order.id)
+                      : null
+                  }
+                />
               )}
-            {order.paymentMethod === "stripe" && (
-              <StripeStatus
-                order={order}
-                retryToken={
-                  order.status === "PENDING" ? createRetryToken(order.id) : null
-                }
-              />
-            )}
-          </>
-        )}
+            </>
+          )}
 
-        <OrderSummary order={order} />
-
-        {trackPurchase && (
-          <PurchaseTracker
-            orderId={order.id}
-            value={order.totalAmount}
-            items={order.items.map((item) => ({
-              id: item.productId,
-              quantity: item.quantity,
-              price: item.promoPrice || item.price,
-            }))}
-          />
-        )}
-
-        <div className="mt-10">
-          <h2 className="text-2xl font-semibold mb-4 border-b pb-2 text-gray-800">
-            Adres dostawy
-          </h2>
-          <div className="bg-gray-50 p-5 rounded-lg">
-            <p className="font-semibold text-gray-900">
-              {order.firstName} {order.lastName}
-            </p>
-            <p className="text-gray-700">
-              {order.email} | tel: {order.phone}
-            </p>
-            <p className="text-gray-700">{order.street}</p>
-            <p className="text-gray-700">
-              {order.postalCode} {order.city}
-            </p>
-            {order.deliveryMethod === "paczkomat" && (
-              <p className="font-semibold text-gray-900 mt-3">
-                Paczkomat: {order.paczkomat}
-              </p>
-            )}
+          <div className={CARD}>
+            <SectionTitle>Dostawa</SectionTitle>
+            <div className="grid gap-4 sm:grid-cols-2 text-sm">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">
+                  Odbiorca
+                </p>
+                <p className="font-medium text-gray-900">
+                  {order.firstName} {order.lastName}
+                </p>
+                <p className="text-gray-600">{order.email}</p>
+                <p className="text-gray-600">tel. {order.phone}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">
+                  {order.deliveryMethod === "paczkomat"
+                    ? "Paczkomat InPost"
+                    : "Adres (kurier InPost)"}
+                </p>
+                {order.deliveryMethod === "paczkomat" && (
+                  <p className="font-medium text-gray-900">{order.paczkomat}</p>
+                )}
+                <p className="text-gray-600">{order.street}</p>
+                <p className="text-gray-600">
+                  {order.postalCode} {order.city}
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="mt-12 text-center text-sm text-gray-500">
-          <p>
+          <p className="text-sm text-gray-500">
             Masz pytania? Napisz na{" "}
             <a
               href="mailto:mwidel@pantofle-karpaty.pl"
-              className="text-blue-600 underline"
+              className="text-red-700 hover:underline"
             >
               mwidel@pantofle-karpaty.pl
             </a>{" "}
             lub zadzwoń: <strong>+48 608 238 103</strong>
           </p>
         </div>
+
+        <div className="mt-6 lg:mt-0 lg:sticky lg:top-24">
+          <OrderSummary order={order} />
+        </div>
       </div>
-    </div>
+
+      {trackPurchase && (
+        <PurchaseTracker
+          orderId={order.id}
+          value={order.totalAmount}
+          items={order.items.map((item) => ({
+            id: item.productId,
+            quantity: item.quantity,
+            price: item.promoPrice || item.price,
+          }))}
+        />
+      )}
+    </PageShell>
   );
 }

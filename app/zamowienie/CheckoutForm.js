@@ -8,15 +8,20 @@ import CartSummary from "./CartSummary";
 import ShippingDetailsForm from "./ShippingDetailsForm";
 import PaymentMethodSelector from "./PaymentMethodSelector";
 import { Lock, RotateCcw } from "lucide-react";
+import {
+  CARD,
+  PRIMARY_BUTTON,
+  formatPrice,
+} from "@/app/components/checkout/CheckoutUI";
 import { trackPixel, pixelContents } from "@/app/lib/metaPixel";
 import PendingPaymentBanner, {
   savePendingPayment,
 } from "@/app/components/PendingPaymentBanner";
 
 const PageLoader = ({ text }) => (
-  <div className="container mx-auto py-20 flex flex-col items-center justify-center">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-    <span className="mt-4 text-lg text-gray-700">{text}</span>
+  <div className="py-20 flex flex-col items-center justify-center">
+    <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-red-600"></div>
+    <span className="mt-4 text-gray-600">{text}</span>
   </div>
 );
 
@@ -343,80 +348,94 @@ export default function CheckoutForm({
     return <PageLoader text="Ładowanie danych zamówienia..." />;
   }
 
+  const summary = (
+    <CartSummary
+      cartItems={cartItems}
+      deliveryMethod={deliveryMethod}
+      calculateSubtotal={calculateSubtotal}
+      calculateDeliveryCost={calculateDeliveryCost}
+      calculateTotal={calculateTotal}
+      discountCode={discountCode}
+      discountValue={discountValue}
+    />
+  );
+
   return (
-    <div className="container mx-auto py-8">
+    <div>
       <PendingPaymentBanner />
-      <CartSummary
-        cartItems={cartItems}
-        deliveryMethod={deliveryMethod}
-        calculateSubtotal={calculateSubtotal}
-        calculateDeliveryCost={calculateDeliveryCost}
-        calculateTotal={calculateTotal}
-        isProcessing={isStripeProcessing}
-        discountCode={discountCode}
-        discountValue={discountValue}
-      />
-      {cartItems.length > 0 && (
-        <form
-          ref={formRef}
-          className="bg-white rounded-lg shadow-md p-6 mb-6"
-          onSubmit={handleSubmit}
-        >
-          <ShippingDetailsForm
-            formData={formData}
-            handleInputChange={handleInputChange}
-            isCompanyPurchase={isCompanyPurchase}
-            handleCompanyPurchaseToggle={handleCompanyPurchaseToggle}
-            deliveryMethod={deliveryMethod}
-            INPOST_TOKEN={INPOST_TOKEN}
-            handlePointSelection={handlePointSelection}
-            session={session}
-            errors={errors}
-            touchedFields={touchedFields}
-            setTouchedFields={setTouchedFields}
-            validateField={validateField}
-            setErrors={setErrors}
-          />
-          <div className="mt-6">
-            <PaymentMethodSelector
-              paymentMethod={paymentMethod}
-              handlePaymentMethodChange={handlePaymentMethodChange}
-            />
+      {cartItems.length === 0 ? (
+        summary
+      ) : (
+        <div className="lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start">
+          {/* Na telefonie podsumowanie nad formularzem, na komputerze z boku */}
+          <div className="mb-6 lg:mb-0 lg:order-last lg:sticky lg:top-24">
+            {summary}
           </div>
-          <button
-            type="submit"
-            disabled={
-              isStripeProcessing ||
-              cartItems.length === 0 ||
-              (deliveryMethod === "paczkomat" && !formData.parcelLocker)
-            }
-            className="mt-6 w-full bg-red-600 text-white py-3.5 rounded-md font-medium hover:bg-red-700 disabled:opacity-50 transition"
+          <form
+            ref={formRef}
+            className="lg:col-span-2 space-y-6"
+            onSubmit={handleSubmit}
           >
-            {/* "Zamawiam i płacę" — wymagane przez prawo konsumenckie (obowiązek zapłaty) */}
-            {isStripeProcessing
-              ? paymentMethod === "stripe"
-                ? "Przekierowujemy do płatności…"
-                : "Składamy zamówienie…"
-              : `Zamawiam i płacę · ${calculateTotal()} zł`}
-          </button>
-          {deliveryMethod === "paczkomat" && !formData.parcelLocker && (
-            <p className="mt-2 text-center text-sm text-gray-500">
-              Wybierz paczkomat na mapie, aby złożyć zamówienie.
-            </p>
-          )}
-          <div className="mt-4 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-gray-500">
-            <span className="flex items-center gap-1.5">
-              <Lock className="h-3.5 w-3.5" />
-              {paymentMethod === "stripe"
-                ? "Bezpieczna płatność przez Stripe"
-                : "Bezpieczne zamówienie"}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <RotateCcw className="h-3.5 w-3.5" />
-              Zwrot w ciągu 30 dni
-            </span>
-          </div>
-        </form>
+            <div className={CARD}>
+              <ShippingDetailsForm
+                formData={formData}
+                handleInputChange={handleInputChange}
+                isCompanyPurchase={isCompanyPurchase}
+                handleCompanyPurchaseToggle={handleCompanyPurchaseToggle}
+                deliveryMethod={deliveryMethod}
+                INPOST_TOKEN={INPOST_TOKEN}
+                handlePointSelection={handlePointSelection}
+                session={session}
+                errors={errors}
+                touchedFields={touchedFields}
+                setTouchedFields={setTouchedFields}
+                validateField={validateField}
+                setErrors={setErrors}
+              />
+            </div>
+            <div className={CARD}>
+              <PaymentMethodSelector
+                paymentMethod={paymentMethod}
+                handlePaymentMethodChange={handlePaymentMethodChange}
+              />
+            </div>
+            <div>
+              <button
+                type="submit"
+                disabled={
+                  isStripeProcessing ||
+                  cartItems.length === 0 ||
+                  (deliveryMethod === "paczkomat" && !formData.parcelLocker)
+                }
+                className={PRIMARY_BUTTON}
+              >
+                {/* "Zamawiam i płacę" — wymagane przez prawo konsumenckie (obowiązek zapłaty) */}
+                {isStripeProcessing
+                  ? paymentMethod === "stripe"
+                    ? "Przekierowujemy do płatności…"
+                    : "Składamy zamówienie…"
+                  : `Zamawiam i płacę · ${formatPrice(calculateTotal())}`}
+              </button>
+              {deliveryMethod === "paczkomat" && !formData.parcelLocker && (
+                <p className="mt-2 text-center text-sm text-gray-500">
+                  Wybierz paczkomat na mapie, aby złożyć zamówienie.
+                </p>
+              )}
+              <div className="mt-4 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-gray-500">
+                <span className="flex items-center gap-1.5">
+                  <Lock className="h-3.5 w-3.5" />
+                  {paymentMethod === "stripe"
+                    ? "Bezpieczna płatność przez Stripe"
+                    : "Bezpieczne zamówienie"}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Zwrot w ciągu 30 dni
+                </span>
+              </div>
+            </div>
+          </form>
+        </div>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import CheckoutForm from "./CheckoutForm";
+import { PageShell } from "../components/checkout/CheckoutUI";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../api/auth/[...nextauth]/route";
 import prisma from "../lib/prisma";
@@ -40,11 +41,7 @@ export default async function CheckoutPage({ searchParams }) {
     : 0;
 
   return (
-    <div className="max-w-4xl mx-auto my-12 2xl:my-24 px-4">
-      <h1 className="text-2xl lg:text-3xl font-bold text-center mb-8">
-        Finalizacja zamówienia
-      </h1>
-
+    <PageShell step={2} title="Dane i płatność">
       <Suspense fallback={<div className="text-center py-6">Ładowanie...</div>}>
         <CheckoutForm
           session={session}
@@ -55,6 +52,6 @@ export default async function CheckoutPage({ searchParams }) {
           discountValue={discountValue}
         />
       </Suspense>
-    </div>
+    </PageShell>
   );
 }

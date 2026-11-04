@@ -4,6 +4,7 @@
 // koszyk i nie miał jak wrócić do płatności.
 import { useEffect, useState } from "react";
 import { AlertCircle } from "lucide-react";
+import { formatPrice } from "@/app/components/checkout/CheckoutUI";
 
 const STORAGE_KEY = "pendingPayment";
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -73,7 +74,7 @@ export default function PendingPaymentBanner() {
   };
 
   return (
-    <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
+    <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
       <AlertCircle className="hidden sm:block h-6 w-6 shrink-0 text-amber-600" />
       <div className="flex-1">
         <p className="font-semibold text-gray-900">
@@ -81,7 +82,7 @@ export default function PendingPaymentBanner() {
         </p>
         <p className="text-sm text-gray-600">
           Produkty czekają na Ciebie — dokończ płatność{" "}
-          {pending.totalAmount.toFixed(2)} zł, bez ponownego składania
+          {formatPrice(pending.totalAmount)}, bez ponownego składania
           zamówienia.
         </p>
         {error && <p className="text-sm text-red-600 mt-1">{error}</p>}
@@ -90,7 +91,7 @@ export default function PendingPaymentBanner() {
         type="button"
         onClick={resumePayment}
         disabled={isRedirecting}
-        className="shrink-0 bg-red-600 text-white font-medium px-5 py-2.5 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+        className="shrink-0 bg-red-600 text-white font-medium px-5 py-2.5 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
       >
         {isRedirecting ? "Przekierowujemy…" : "Dokończ płatność"}
       </button>

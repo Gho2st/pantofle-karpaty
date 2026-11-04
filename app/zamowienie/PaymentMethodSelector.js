@@ -49,14 +49,16 @@ export default function PaymentMethodSelector({
 
   return (
     <fieldset>
-      <legend className="text-lg font-semibold mb-3">Metoda płatności</legend>
+      <legend className="text-lg font-semibold text-gray-900 mb-4">
+        Metoda płatności
+      </legend>
       <div className="flex flex-col gap-3">
         {OPTIONS.map(({ value, title, description, logos, Icon }) => {
           const selected = paymentMethod === value;
           return (
             <label
               key={value}
-              className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-red-600 has-[:focus-visible]:ring-offset-2 ${
+              className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-red-600 has-[:focus-visible]:ring-offset-2 ${
                 selected
                   ? "border-red-600 bg-red-50/50"
                   : "border-gray-200 hover:border-gray-300"
@@ -109,7 +111,7 @@ export default function PaymentMethodSelector({
       </div>
 
       {inAppBrowser && paymentMethod === "stripe" && (
-        <p className="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
+        <p className="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3">
           Przeglądasz sklep w aplikacji Instagram lub Facebook — Apple Pay może
           tu nie działać. Zapłacisz BLIK-iem lub kartą, albo otwórz stronę w
           przeglądarce: <strong>⋯ → Otwórz w przeglądarce</strong>.
