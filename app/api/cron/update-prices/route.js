@@ -1,6 +1,7 @@
 // app/api/cron/update-lowest-price/route.js
 import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
+import { revalidateCatalog } from "@/app/lib/revalidateCatalog";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,9 @@ export async function GET(request) {
       data: { lowestPrice },
     });
   }
+
+  // Najniższa cena z 30 dni jest na stronach produktów — odśwież cache
+  revalidateCatalog();
 
   return NextResponse.json({
     message: "lowestPrice zaktualizowane dla wszystkich produktów",

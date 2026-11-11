@@ -3,6 +3,7 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
 import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { revalidateCatalog } from "@/app/lib/revalidateCatalog";
 
 const s3Client = new S3Client({
   region: "eu-central-1",
@@ -87,6 +88,8 @@ export async function DELETE(request, { params }) {
         data: { deletedAt: new Date() },
       });
     });
+
+    revalidateCatalog();
 
     return NextResponse.json({
       message: "Produkt usunięty: zdjęcia z S3 + koszyki + soft delete",

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
+import { revalidateCatalog } from "@/app/lib/revalidateCatalog";
 
 function validateSizes(sizes) {
   if (!sizes) return true; // sizes jest opcjonalne
@@ -183,6 +184,8 @@ export async function POST(request) {
         colorHex,
       },
     });
+
+    revalidateCatalog();
 
     return NextResponse.json({
       message: "Produkt dodany pomyślnie",

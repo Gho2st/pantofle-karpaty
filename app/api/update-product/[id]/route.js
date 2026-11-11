@@ -8,6 +8,7 @@ import {
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
+import { revalidateCatalog } from "@/app/lib/revalidateCatalog";
 
 const BUCKET_NAME = "pantofle-karpaty";
 
@@ -365,6 +366,8 @@ export async function PUT(request, { params }) {
         },
       });
     });
+
+    revalidateCatalog();
 
     return NextResponse.json({
       message: "Produkt zaktualizowany pomyślnie",

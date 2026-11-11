@@ -3,6 +3,15 @@ import prisma from "@/app/lib/prisma";
 import { notFound } from "next/navigation";
 import CollectionTitle from "@/app/components/CollectionTitle";
 
+// Strona generowana przy pierwszym wejściu i serwowana z cache Vercela
+// (bez zapytań do bazy przy każdym wejściu). Odświeżana raz na dobę, a od razu
+// po zmianach w panelu admina (revalidateCatalog) i zmianach stanów
+// (zamówienie, anulowanie, wygaśnięcie).
+export const revalidate = 86400;
+export async function generateStaticParams() {
+  return [];
+}
+
 const CATEGORY_SEO = {
   "dla-kobiet": {
     title: "Pantofle damskie – ręcznie robione z wełny | Pantofle Karpaty",

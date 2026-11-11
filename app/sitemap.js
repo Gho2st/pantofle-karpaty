@@ -1,4 +1,5 @@
-export const revalidate = 0;
+// Odświeżana raz na dobę — roboty nie budzą bazy przy każdym pobraniu
+export const revalidate = 86400;
 import prisma from "@/app/lib/prisma";
 import { SITE_URL } from "@/app/lib/site";
 

@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
+import { revalidateCatalog } from "@/app/lib/revalidateCatalog";
 
 const s3Client = new S3Client({
   region: "eu-central-1",
@@ -111,6 +112,8 @@ export async function POST(request) {
         image: imageUrl,
       },
     });
+
+    revalidateCatalog();
 
     return NextResponse.json({
       message: "Kategoria utworzona pomyślnie",

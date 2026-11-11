@@ -1,5 +1,6 @@
 // app/lib/releaseOrder.js
 import prisma from "@/app/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 // Zamówienia w tych statusach trzymają towar zdjęty ze stanu.
 const ACTIVE_STATUSES = ["PENDING", "PAID", "SHIPPED"];
@@ -34,7 +35,7 @@ export function cancelOrder(orderId) {
 // (webhook + strona zamówienia, podwójne kliknięcie) towar wraca tylko raz.
 // Zwraca false, jeśli zamówienie nie spełniało warunku.
 async function releaseOrder(where, newStatus) {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const { count } = await tx.order.updateMany({
       where,
       data: { status: newStatus },
@@ -42,6 +43,7 @@ async function releaseOrder(where, newStatus) {
     if (count === 0) return false;
 
     const orderId = where.id;
+    const slugs = [];
 
     const order = await tx.order.findUnique({
       where: { id: orderId },
@@ -60,6 +62,7 @@ async function releaseOrder(where, newStatus) {
       const sizeIndex = sizes.findIndex((s) => s.size === item.size);
       if (sizeIndex === -1) continue;
       sizes[sizeIndex].stock += item.quantity;
+      slugs.push(product.slug);
       await tx.product.update({
         where: { id: item.productId },
         data: { sizes: JSON.stringify(sizes) },
@@ -73,6 +76,15 @@ async function releaseOrder(where, newStatus) {
       });
     }
 
-    return true;
+    return slugs;
   });
+  if (!result) return false;
+
+  // Towar wrócił na stan — odśwież cache stron tych produktów. Przy wywołaniu
+  // w trakcie renderowania strony (expireOrder na stronie zamówienia) Next.js
+  // na to nie pozwala; wtedy strony odświeżą się same po czasie z `revalidate`.
+  try {
+    for (const slug of result) revalidatePath(`/produkty/${slug}`);
+  } catch {}
+  return true;
 }

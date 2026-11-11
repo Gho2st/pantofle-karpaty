@@ -5,6 +5,15 @@ import { cache } from "react";
 import { getCurrentPrice } from "@/app/lib/pricing";
 import { SITE_URL } from "@/app/lib/site";
 
+// Strona generowana przy pierwszym wejściu i serwowana z cache Vercela
+// (bez zapytań do bazy przy każdym wejściu). Odświeżana raz na dobę, a od razu
+// po zmianach w panelu admina (revalidateCatalog) i zmianach stanów
+// (zamówienie, anulowanie, wygaśnięcie).
+export const revalidate = 86400;
+export async function generateStaticParams() {
+  return [];
+}
+
 const SPECIAL_PARTNERS = {
   "kapcie-zdobione-skora-owcza": "kapcie-meskie-skorzane-welna",
   "kapcie-meskie-skorzane-welna": "kapcie-zdobione-skora-owcza",

@@ -3,6 +3,7 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
 import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { revalidateCatalog } from "@/app/lib/revalidateCatalog";
 
 const s3Client = new S3Client({
   region: process.env.AWS_S3_REGION,
@@ -120,6 +121,8 @@ export async function DELETE(request, { params }) {
 
       return { deletedCategoryId: categoryId };
     });
+
+    revalidateCatalog();
 
     return NextResponse.json({
       message: "Kategoria i podkategorie zostały usunięte (soft delete)",

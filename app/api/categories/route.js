@@ -1,14 +1,13 @@
 import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
+import { CATALOG_TAG } from "@/app/lib/revalidateCatalog";
 
-export async function GET(request) {
-  const { searchParams } = new URL(request.url);
-  const parentId = searchParams.get("parentId")
-    ? parseInt(searchParams.get("parentId"))
-    : null;
-
-  try {
-    const categories = await prisma.category.findMany({
+// Lista kategorii jest pobierana przez przeglądarkę przy każdym wejściu do sklepu —
+// bez cache każde wejście (także robotów) budziło bazę. Czyszczone przez revalidateCatalog.
+const getCategories = unstable_cache(
+  (parentId) =>
+    prisma.category.findMany({
       where: {
         parentId,
         deletedAt: null, // TYLKO AKTYWNE KATEGORIE
@@ -47,7 +46,19 @@ export async function GET(request) {
         },
       },
       orderBy: { id: "asc" },
-    });
+    }),
+  ["categories"],
+  { tags: [CATALOG_TAG], revalidate: 86400 },
+);
+
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const parentId = searchParams.get("parentId")
+    ? parseInt(searchParams.get("parentId"))
+    : null;
+
+  try {
+    const categories = await getCategories(parentId);
 
     return NextResponse.json({
       message: "Kategorie pobrane pomyślnie",

@@ -3,6 +3,15 @@ import { notFound } from "next/navigation";
 import CollectionTitle from "@/app/components/CollectionTitle";
 import Link from "next/link";
 
+// Strona generowana przy pierwszym wejściu i serwowana z cache Vercela
+// (bez zapytań do bazy przy każdym wejściu). Odświeżana raz na dobę, a od razu
+// po zmianach w panelu admina (revalidateCatalog) i zmianach stanów
+// (zamówienie, anulowanie, wygaśnięcie).
+export const revalidate = 86400;
+export async function generateStaticParams() {
+  return [];
+}
+
 // ─── Shared data fetcher ──────────────────────────────────────────────────────
 
 async function getCategoryData(categorySlug) {

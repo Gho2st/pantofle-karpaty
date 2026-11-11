@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import prisma from "@/app/lib/prisma";
 import { NextResponse } from "next/server";
+import { revalidateCatalog } from "@/app/lib/revalidateCatalog";
 
 export async function PATCH(request, { params }) {
   const session = await getServerSession(authOptions);
@@ -36,6 +37,8 @@ export async function PATCH(request, { params }) {
       where: { id: productId },
       data: { deletedAt: null },
     });
+
+    revalidateCatalog();
 
     return NextResponse.json({
       message: "Produkt przywrócony",

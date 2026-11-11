@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import prisma from "@/app/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
@@ -91,7 +92,7 @@ export async function POST(req) {
     }
 
     // === GŁÓWNA TRANSAKCJA ===
-    const { createdOrder, guestToken } = await prisma.$transaction(
+    const { createdOrder, guestToken, productSlugs } = await prisma.$transaction(
       async (tx) => {
         // walidacja stocku + ceny z bazy
         const products = new Map();
@@ -211,9 +212,16 @@ export async function POST(req) {
           });
         }
 
-        return { createdOrder: order, guestToken };
+        return {
+          createdOrder: order,
+          guestToken,
+          productSlugs: [...products.values()].map((p) => p.slug),
+        };
       },
     );
+
+    // Strony produktów są cache'owane — odśwież kupione, żeby pokazywały aktualny stan
+    for (const slug of productSlugs) revalidatePath(`/produkty/${slug}`);
 
     const { href: redirectUrl } = orderPageUrl(
       createdOrder.id,
