@@ -4,6 +4,7 @@ import ProductDetails from "@/app/components/ProductDetails";
 import { cache } from "react";
 import { getCurrentPrice } from "@/app/lib/pricing";
 import { SITE_URL } from "@/app/lib/site";
+import { formatPrice } from "@/app/components/checkout/CheckoutUI";
 
 // Strona generowana przy pierwszym wejściu i serwowana z cache Vercela
 // (bez zapytań do bazy przy każdym wejściu). Odświeżana raz na dobę, a od razu
@@ -15,8 +16,8 @@ export async function generateStaticParams() {
 }
 
 const SPECIAL_PARTNERS = {
-  "kapcie-zdobione-skora-owcza": "kapcie-meskie-skorzane-welna",
-  "kapcie-meskie-skorzane-welna": "kapcie-zdobione-skora-owcza",
+  "kapcie-zdobione-skora-owcza-karmel": "kapcie-meskie-skorzane-welna-karmel",
+  "kapcie-meskie-skorzane-welna-karmel": "kapcie-zdobione-skora-owcza-karmel",
 };
 
 const fixJsonField = (field) => {
@@ -100,6 +101,25 @@ const getProductData = cache(async (slug) => {
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
+// Opis dla Google: nazwa na początku (warianty kolorystyczne mają wspólny opis,
+// a Google traktuje identyczne opisy jako duplikaty) i ~155 znaków (dłuższe ucina)
+function metaDescription(product) {
+  const text = `${product.name}. ${
+    product.description ||
+    "Ręcznie robione pantofle z Karpat — tradycja, naturalne materiały i ciepło."
+  }`
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (text.length <= 155) return text;
+  return (
+    text
+      .slice(0, 154)
+      .replace(/\s+\S*$/, "")
+      .replace(/[\s.,;:–-]+$/, "") + "…"
+  );
+}
+
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   const data = await getProductData(slug);
@@ -109,12 +129,13 @@ export async function generateMetadata({ params }) {
   const { product } = data;
   const currentPrice = getCurrentPrice(product);
 
+  const description = metaDescription(product);
+
   return {
-    title: `${product.name} – ${currentPrice} zł | Pantofle Karpaty`,
-    description:
-      product.description ||
-      `Kup ${product.name.toLowerCase()} – ręcznie robione pantofle z Karpat. Tradycja, wełna, ciepło.`,
+    title: `${product.name.trim()} – ${formatPrice(currentPrice)} | Pantofle Karpaty`,
+    description,
     openGraph: {
+      description,
       images: product.images?.[0] ? [product.images[0]] : [],
     },
     alternates: { canonical: `/produkty/${slug}` },
@@ -175,7 +196,7 @@ export default async function ProductPage({ params }) {
           partnerImage,
           partnerName: partner?.name || "drugą parę",
           partnerTitle:
-            slug === "kapcie-zdobione-skora-owcza"
+            slug === "kapcie-zdobione-skora-owcza-karmel"
               ? "Kup też dla Niego"
               : "Kup też dla Niej",
         }}

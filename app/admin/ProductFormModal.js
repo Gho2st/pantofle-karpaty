@@ -45,9 +45,9 @@ export default function ProductFormModal() {
     setProductData((prev) => ({
       ...prev,
       // Po prostu zapisujemy wartość. Nie parsujemy jej podczas wpisywania.
+      // Zmiana nazwy NIE zmienia adresu (sluga) — stary adres jest w Google,
+      // reklamach i zakładkach klientów, a nowy startowałby w Google od zera.
       [name]: type === "checkbox" ? checked : value,
-      // Automatyczne generowanie sluga przy zmianie nazwy
-      ...(name === "name" && { slug: generateSlug(value) }),
     }));
   };
 
@@ -219,6 +219,13 @@ export default function ProductFormModal() {
               onChange={handleChange}
               className={inputClass}
             />
+            {productData.slug !== editingProduct.slug && (
+              <p className="mt-1 text-xs text-amber-700">
+                Zmiana adresu sprawi, że stary link (Google, reklamy,
+                zakładki klientów) przestanie działać. Zmieniaj tylko, jeśli
+                to konieczne.
+              </p>
+            )}
           </div>
 
           <div>

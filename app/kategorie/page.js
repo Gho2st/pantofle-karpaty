@@ -1,9 +1,10 @@
 import Collection from "../components/Collection";
 
 export const metadata = {
-  title: "Kategorie odzieży: Męska, Damska, Dziecięca | Pantofle Karpaty",
+  title: "Kapcie i pantofle damskie, męskie i dziecięce | Pantofle Karpaty",
   description:
-    "Odkryj modne kolekcje odzieży dla mężczyzn, kobiet i dzieci. Sukienki, kurtki, koszule, buty – wszystko w jednym miejscu. Wybierz swoją kategorię!",
+    "Wszystkie kategorie Pantofle Karpaty: kapcie i pantofle damskie, męskie i dziecięce, bambosze, klapki i drewniaki ze skóry naturalnej i wełny. Polski producent.",
+  alternates: { canonical: "/kategorie" },
 };
 
 export default function Kategoria() {
